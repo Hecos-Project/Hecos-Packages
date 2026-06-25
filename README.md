@@ -1,50 +1,183 @@
-# Hecos-Packages Repository
+# 📦 Hecos Package Development Guide
 
-Community and official packages for the Hecos ecosystem.
+Welcome to the **Hecos Package Ecosystem**! This guide provides everything developers and AIs need to know to create, structure, and distribute packages (`.hpkg`) for the Hecos platform.
 
-## Structure
+Hecos Packages are modular, hybrid bundles that can contain:
+- **Backend Plugins** (Python logic, LLM tools, Slash commands)
+- **Frontend Widgets** (HTML/JS/CSS for the Sidebar or Control Room)
+- **Central Hub Config Panels** (UI interfaces to configure the module)
+- **Extensions & MCP** (Integrations with the core system)
 
-Each package lives in its own folder:
+---
+
+## 📂 1. Directory Structure
+
+A typical Hecos package source folder follows this structure:
+
+```text
+my_weather_pkg_src/
+├── hpkg_manifest.toml             # [REQUIRED] The source of truth for the package.
+├── main.py                        # [OPTIONAL] Python backend (LLM logic, API calls).
+├── templates/                     # [OPTIONAL] Widget UI (Sidebar / Control Room).
+│   └── my_weather_widget.html
+└── web_ui/                        # [OPTIONAL] Central Hub config panel files.
+    ├── templates/
+    │   └── config_my_weather.html # HTML fragment for the Hub panel.
+    └── static/js/
+        └── my_weather_panel.js    # JS logic for the config panel.
 ```
-Hecos-Packages/
-├── webcam_widget/          # Widget: Live webcam feed
-│   ├── hpkg_manifest.toml  ← Package manifest (source of truth)
-│   ├── main.py             ← Python backend (optional for pure widgets)
-│   └── templates/
-│       └── *.html          ← Widget HTML template
-│
-├── weather/                # Hybrid: Plugin + Widget
-│   ├── hpkg_manifest.toml
-│   ├── main.py             ← Python plugin (LLM tools)
-│   └── widget/
-│       └── *.html          ← Sidebar widget template
-│
-└── ...
-```
 
-## Package Types
+---
 
-| Type     | Description |
-|----------|-------------|
-| `widget` | Frontend-only UI widget (sidebar/room). No LLM tools. |
-| `plugin` | Python backend with LLM tools. No visual widget. |
-| `hybrid` | Both: Python plugin + sidebar widget. |
+## 📜 2. The `hpkg_manifest.toml`
 
-## Building a .hpkg File
+The manifest is the core of any Hecos package. The Package Manager (`HPM`) uses it to register everything dynamically.
 
-A `.hpkg` file is simply a ZIP archive renamed to `.hpkg`:
-```powershell
-Compress-Archive -Path .\webcam_widget\* -DestinationPath .\webcam_widget-1.0.0.hpkg
-```
-Then upload the `.hpkg` file to the Hecos Package Manager.
-
-## Manifest Format
-
-See any `hpkg_manifest.toml` for the full format. Minimum required:
+### Basic Package Info
 ```toml
-[package]
-name    = "My Package"
-tag     = "MY_PKG"
-version = "1.0.0"
-type    = "widget"  # or "plugin" or "hybrid"
+id          = "weather_pro"         # Unique identifier (lowercase, underscores)
+name        = "Weather Pro"         # Display Name
+version     = "1.0.0"
+hecos_min_version = "0.34.0"        # Minimum required Hecos version
+type        = "plugin"              # "plugin", "widget", "extension", or "mcp"
+author      = "Hecos Team"
+description = "Hybrid weather module with LLM tools, widget, and config panel."
 ```
+
+### Runtime Configuration
+```toml
+tag            = "WEATHER_PRO"      # Global uppercase tag used in plugins.yaml
+lazy_load      = true               # If true, loaded only when needed by LLM
+is_class_based = true               # If true, Hecos instantiates it as a class
+
+target_dir  = "plugins"             # Target directory (usually "plugins" or "extensions")
+plugin_dir  = "plugin/weather_pro/" # Install path relative to target_dir
+```
+
+### LLM Tools & Function Calling
+Declare the schema so the Hecos AI knows how to use your module.
+```toml
+[[tool_schema]]
+type = "function"
+[tool_schema.function]
+name = "WEATHER_PRO__get_current_weather"
+description = "Get the current weather conditions for a specific city."
+[tool_schema.function.parameters]
+type = "object"
+[tool_schema.function.parameters.properties.city]
+type = "string"
+```
+
+### Slash Commands
+Register commands that the user can type in the chat UI.
+```toml
+[[slash_commands]]
+command = "/weather"
+description = "Show current weather (/weather Rome)"
+method = "get_current_weather"      # Method mapped in main.py
+[slash_commands.args_schema]
+city = "str?"
+```
+
+### Central Hub Config Panel (Auto-Discovery)
+Allows your module to inject a settings tab directly into the Central Hub.
+```toml
+[config_panel]
+tab_id        = "weather_pro"       # Tab ID (creates #tab-weather_pro)
+tab_label     = "Weather Pro"       # Name on the button
+tab_icon      = "fa-cloud-sun"      # FontAwesome icon
+category      = "CONNETTIVITÀ"      # Under which Hub Category it appears
+template_file = "web_ui/templates/config_weather_pro.html"
+js_file       = "web_ui/static/js/weather_pro_panel.js"
+```
+
+### Default Configurations (Injected into YAML)
+When installed, HPM injects these into `hecos/config/data/plugins.yaml`.
+**Important**: Use a flat `[config_defaults]` table. HPM automatically nests it under `plugins.YOUR_TAG`.
+```toml
+[config_defaults]
+default_city = "Rome"
+units        = "celsius"
+```
+
+### Sidebar / Control Room Widgets
+Inject UI directly into the Hecos workspace.
+```toml
+[[widgets]]
+extension_path = "web_ui/extensions/weather_pro_widget/"
+```
+
+### Dependencies
+```toml
+dependencies    = ["CORE_MODULE"]   # Other Hecos plugins required
+pip_requirements = ["requests", "pytz"] # Python pip packages
+```
+
+---
+
+## 🎨 3. Central Hub Config Panels
+
+To make your module configurable, you can integrate a custom UI panel into the Hecos Central Hub.
+
+**How it works:**
+1. You declare `[config_panel]` in your manifest.
+2. The HPM Installer extracts your HTML into `hecos/modules/web_ui/templates/modules/`.
+3. When the user opens the Hub, Hecos calls `GET /api/hub/panels`, reads your package from SQLite, and automatically generates the navigation buttons in the chosen `category`.
+4. Your HTML fragment is lazy-loaded (only fetched when the user clicks the tab).
+
+**Best Practices for HTML UI:**
+- Wrap everything in `<div id="tab-YOUR_TAB_ID" class="panel">`.
+- Use the Hecos platform CSS classes:
+  - `.card` for container blocks.
+  - `.card-title` for section headers.
+  - `.field`, `.config-input`, `.btn btn-primary` for forms.
+  - `.toggle-row` and `.switch` for ON/OFF checkboxes.
+- Use `fetch('/hecos/config')` via API to save/load settings to the master YAML.
+
+---
+
+## 🔐 4. Security & Cryptographic Signing
+
+Hecos enforces a strict verification process for packages to prevent malicious code execution.
+
+### Dev Mode (Unsigned Packages)
+If you are developing locally, you can create a simple ZIP archive and rename the extension to `.hpkg`. To install it, you must check the **"Allow unsigned packages"** checkbox in the Package Manager.
+
+### Production (Signed Packages)
+For distribution, packages must be cryptographically signed using Ed25519 keys.
+
+1. **Generate a Keypair:**
+   Use the Hecos compiler/CLI tool to generate your Author Keys.
+   *This outputs a `private.pem` (keep secret!) and a `public.pem`.*
+   
+2. **Whitelisting:**
+   To be trusted globally by a vanilla Hecos installation, your public key must be included in the `core/package_manager/trusted_keys/` folder of the official Hecos distribution, or the user must manually import your public key.
+
+3. **Signing Process:**
+   The compiler hashes all files in your package, creates a cryptographic signature using your private key, and embeds `manifest.json`, `signature.sig`, and `public.pem` into the final `.hpkg` ZIP container.
+
+---
+
+## 🛠️ 5. Packaging Process
+
+Currently, you can package a module in two ways:
+
+**Method A: Simple ZIP (Unsigned)**
+```powershell
+# Navigate into your package source folder
+cd my_weather_pkg_src
+
+# Zip all contents (not the parent folder itself)
+Compress-Archive -Path * -DestinationPath ../weather_pro-1.0.0.hpkg
+```
+*Note: Must be installed with "Allow unsigned packages" enabled.*
+
+**Method B: Hecos Compiler (Signed)**
+Run the official HPM compiler script/tool, pointing it to your source folder and your private key. The tool will automatically validate your TOML, convert it to `manifest.json`, generate hashes, and output a signed `.hpkg` ready for production distribution.
+
+---
+
+## 💡 Quick Tips for AIs & Developers
+- **Modularity:** Always check if your logic is better suited as a native Core Module (for heavy OS integration) or as a `.hpkg` (for dynamic, distributable features).
+- **CSS Isolation:** When writing widgets or config panels, avoid polluting global CSS. Use specific IDs or inline variables.
+- **Auto-Discovery:** Hecos handles Hub injection automatically. **Do not** manually edit core files like `config_manifest.js` or `_PANEL_MAP` in `routes_config_core.py` when creating a package.

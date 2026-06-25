@@ -1,0 +1,9 @@
+2026-06-23 12:57:06,285 [INFO] HPM_Builder: Avvio HPM Builder completato.
+2026-06-24 08:45:34,030 [INFO] HPM_Builder: Avvio HPM Builder completato.
+2026-06-24 08:50:57,385 [DEBUG] HPM_Builder: Usando la chiave privata: C:\Hecos\hecos\data\trusted_keys\hpm_private.pem
+2026-06-24 08:50:57,432 [DEBUG] HPM_Builder: Usando la chiave privata: C:\Hecos\hecos\data\trusted_keys\hpm_private.pem
+2026-06-24 08:50:57,561 [DEBUG] HPM_Builder: Usando la chiave privata: C:\Hecos\hecos\data\trusted_keys\hpm_private.pem
+2026-06-25 06:43:20,875 [INFO] HPM_Builder: Avvio HPM Builder completato.
+2026-06-25 07:00:27,303 [INFO] HPM_Builder: Avvio HPM Builder completato.
+2026-06-25 07:01:12,157 [INFO] HPM_Builder: Decompressione di weather_pro-1.0.0.hpkg in extracted_weather_pro-1.0.0...
+2026-06-25 07:01:12,187 [INFO] HPM_Builder: Decompressione completata con successo.
