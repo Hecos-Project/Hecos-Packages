@@ -39,7 +39,7 @@ id          = "weather_pro"         # Unique identifier (lowercase, underscores)
 name        = "Weather Pro"         # Display Name
 version     = "1.0.0"
 hecos_min_version = "0.34.0"        # Minimum required Hecos version
-type        = "plugin"              # "plugin", "widget", "extension", or "mcp"
+type        = "plugin"              # core_module | plugin | app | extension | widget | persona | theme | skill_pack
 author      = "Hecos Team"
 description = "Hybrid weather module with LLM tools, widget, and config panel."
 ```
@@ -50,8 +50,10 @@ tag            = "WEATHER_PRO"      # Global uppercase tag used in plugins.yaml
 lazy_load      = true               # If true, loaded only when needed by LLM
 is_class_based = true               # If true, Hecos instantiates it as a class
 
-target_dir  = "plugins"             # Target directory (usually "plugins" or "extensions")
-plugin_dir  = "plugin/weather_pro/" # Install path relative to target_dir
+# Target directory is now AUTO-RESOLVED based on the 'type' field.
+# e.g., 'app' -> 'apps/', 'persona' -> 'personas/', 'plugin' -> 'plugins/'
+# You can override it explicitly using target_dir if absolutely necessary.
+plugin_dir  = "plugin/weather_pro/" # Path inside the ZIP containing the backend code
 ```
 
 ### LLM Tools & Function Calling
@@ -115,8 +117,9 @@ extension_path = "web_ui/extensions/weather_pro_widget/"
 
 ### Dependencies
 ```toml
-dependencies    = ["CORE_MODULE"]   # Other Hecos plugins required
-pip_requirements = ["requests", "pytz"] # Python pip packages
+dependencies          = ["some_core_pkg"] # Hard requirements (blocks install if missing)
+optional_dependencies = ["voice_pack"]    # Enhancements (warns only, does not block)
+pip_requirements      = ["requests", "pytz"] # Python pip packages
 ```
 
 ---
@@ -139,7 +142,7 @@ To make your module configurable, you can integrate a custom UI panel into the H
   - `.field`, `.config-input`, `.btn btn-primary` for forms.
   - `.toggle-row` and `.switch` for ON/OFF checkboxes.
 - **State initialization:** Because your HTML is lazy-loaded and injected dynamically by the Hub, `DOMContentLoaded` won't work inside your panel JS. Use a `MutationObserver` to detect when your `#tab-YOUR_TAB_ID` is added to the DOM to initialize things like dropdowns.
-- **Saving state:** You can hook into the global `window.saveConfig(true)` to save settings to the master YAML, or use your own custom endpoints defined in `api_routes_file` to persist configuration autonomously to your plugin's directory. For modern custom dialogs (alerts, confirms), use `window.showToast(msg, 'success'|'error')` and `window.hpmShowConfirm(msg, btnLabel, callback)`.
+- **Saving state:** You can hook into the global `window.saveConfig(true)` to save settings to the master YAML, or use your own custom endpoints defined in `api_routes_file` to persist configuration autonomously to your module's directory. For modern custom dialogs (alerts, confirms), use `window.showToast(msg, 'success'|'error')` and `window.hpmShowConfirm(msg, btnLabel, callback)`.
 
 ---
 

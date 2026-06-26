@@ -7,6 +7,7 @@ icon = "🎨"
 category = "PLUGINS"
 plugin_tag = "IMAGE_GEN"
 is_class_based = true
+type = "plugin"
 plugin_dir = "."
 lazy_load = true
 
