@@ -79,6 +79,12 @@ method = "get_current_weather"      # Method mapped in main.py
 city = "str?"
 ```
 
+### Autonomous API Routes (Optional)
+If your package needs its own backend endpoints (e.g., to manage its own independent configuration, load presets, or proxy external API calls securely), specify a Python file that exposes an `init_plugin_routes(app, cfg_mgr, root_dir, logger)` function.
+```toml
+api_routes_file = "web/routes.py"
+```
+
 ### Central Hub Config Panel (Auto-Discovery)
 Allows your module to inject a settings tab directly into the Central Hub.
 ```toml
@@ -132,7 +138,8 @@ To make your module configurable, you can integrate a custom UI panel into the H
   - `.card-title` for section headers.
   - `.field`, `.config-input`, `.btn btn-primary` for forms.
   - `.toggle-row` and `.switch` for ON/OFF checkboxes.
-- Use `fetch('/hecos/config')` via API to save/load settings to the master YAML.
+- **State initialization:** Because your HTML is lazy-loaded and injected dynamically by the Hub, `DOMContentLoaded` won't work inside your panel JS. Use a `MutationObserver` to detect when your `#tab-YOUR_TAB_ID` is added to the DOM to initialize things like dropdowns.
+- **Saving state:** You can hook into the global `window.saveConfig(true)` to save settings to the master YAML, or use your own custom endpoints defined in `api_routes_file` to persist configuration autonomously to your plugin's directory. For modern custom dialogs (alerts, confirms), use `window.showToast(msg, 'success'|'error')` and `window.hpmShowConfirm(msg, btnLabel, callback)`.
 
 ---
 
@@ -172,7 +179,10 @@ Compress-Archive -Path * -DestinationPath ../weather_pro-1.0.0.hpkg
 ```
 *Note: Must be installed with "Allow unsigned packages" enabled.*
 
-**Method B: Hecos Compiler (Signed)**
+**Method B: Build Script**
+For structured repositories (like the `Hecos-Packages` folder), you can use a build script like `build_all.py` that automatically reads the `hpkg_manifest.toml`, zips the contents, and outputs the `.hpkg` bundle to the root directory.
+
+**Method C: Hecos Compiler (Signed)**
 Run the official HPM compiler script/tool, pointing it to your source folder and your private key. The tool will automatically validate your TOML, convert it to `manifest.json`, generate hashes, and output a signed `.hpkg` ready for production distribution.
 
 ---
