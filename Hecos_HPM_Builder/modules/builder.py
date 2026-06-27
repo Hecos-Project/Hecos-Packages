@@ -82,6 +82,13 @@ def _build_single_package(target_dir, packages_dir):
             if key in cp and not (target_dir / cp[key]).exists():
                 errors.append(f"File {key} non trovato: {cp[key]}")
 
+    if "readme" in manifest:
+        readme_file = manifest["readme"]
+        if not (target_dir / readme_file).exists():
+            errors.append(f"File readme '{readme_file}' non trovato")
+    else:
+        errors.append("Manca il campo obbligatorio 'readme' (inserire almeno un file README.md)")
+
     if errors:
         log_error("Validazione fallita. Correggi i seguenti errori:")
         for err in errors: log_error(f"  - {err}")

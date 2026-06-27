@@ -176,3 +176,14 @@
 2026-06-26 04:50:57,660 [DEBUG] HPM_Builder: Usando la chiave privata: C:\Hecos\hecos\data\trusted_keys\hpm_private.pem
 2026-06-26 08:42:24,288 [DEBUG] HPM_Builder: Usando la chiave privata: C:\Hecos\hecos\data\trusted_keys\hpm_private.pem
 2026-06-27 14:16:11,064 [DEBUG] HPM_Builder: Usando la chiave privata: C:\Hecos\hecos\data\trusted_keys\hpm_private.pem
+2026-06-27 15:01:42,801 [INFO] HPM_Builder: Avvio HPM Builder completato.
+2026-06-27 15:04:48,665 [INFO] HPM_Builder: Avvio HPM Builder completato.
+2026-06-27 15:53:07,082 [INFO] HPM_Builder: Trovati 1 pacchetti da compilare.
+2026-06-27 15:53:07,086 [INFO] HPM_Builder: Validazione pacchetto 'Image Generation' in corso...
+2026-06-27 15:53:07,087 [DEBUG] HPM_Builder: Validazione superata.
+2026-06-27 15:53:07,088 [INFO] HPM_Builder: Calcolo hash dei file...
+2026-06-27 15:53:07,106 [INFO] HPM_Builder: Generazione payload per firma crittografica...
+2026-06-27 15:53:07,108 [DEBUG] HPM_Builder: Usando la chiave privata: C:\Hecos\hecos\data\trusted_keys\hpm_private.pem
+2026-06-27 15:53:07,114 [INFO] HPM_Builder: Firma applicata con successo.
+2026-06-27 15:53:07,123 [INFO] HPM_Builder: Creazione archivio compresso image_gen-1.0.8.hpkg...
+2026-06-27 15:53:07,160 [INFO] HPM_Builder: DONE -> C:\Hecos-Packages\image_gen-1.0.8.hpkg (34.0 KB)

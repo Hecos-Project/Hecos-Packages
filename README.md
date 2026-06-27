@@ -42,6 +42,8 @@ hecos_min_version = "0.34.0"        # Minimum required Hecos version
 type        = "plugin"              # core_module | plugin | app | extension | widget | persona | theme | skill_pack
 author      = "Hecos Team"
 description = "Hybrid weather module with LLM tools, widget, and config panel."
+icon_url    = "https://example.com/icon.png"       # (Optional) Store catalog icon
+screenshots = ["https://example.com/preview.png"]  # (Optional) Store catalog previews
 ```
 
 ### Runtime Configuration
@@ -182,11 +184,11 @@ Compress-Archive -Path * -DestinationPath ../weather_pro-1.0.0.hpkg
 ```
 *Note: Must be installed with "Allow unsigned packages" enabled.*
 
-**Method B: Build Script**
-For structured repositories (like the `Hecos-Packages` folder), you can use a build script like `build_all.py` that automatically reads the `hpkg_manifest.toml`, zips the contents, and outputs the `.hpkg` bundle to the root directory.
-
-**Method C: Hecos Compiler (Signed)**
-Run the official HPM compiler script/tool, pointing it to your source folder and your private key. The tool will automatically validate your TOML, convert it to `manifest.json`, generate hashes, and output a signed `.hpkg` ready for production distribution.
+**Method B: Hecos HPM Builder (Official CLI)**
+For structured repositories (like the `Hecos-Packages` folder), use the official HPM Builder CLI (`Hecos_HPM_Builder/main.py`). The builder provides an interactive menu to handle the entire package lifecycle:
+- **Build Packages**: Validates your TOML, generates file hashes, applies cryptographic signatures (Ed25519), and compiles into a `.hpkg` bundle. You can build a single package or **Build All** `*_src` folders at once.
+- **Unpack Packages**: Extracts any `.hpkg` back into an editable `[ID]_src` folder for reverse engineering or modification.
+- **Scaffold & Inspect**: Helps create new package skeletons and validates existing bundles for security and integrity.
 
 ---
 

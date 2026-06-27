@@ -1,3 +1,10 @@
+"""
+Hecos HPM Builder
+Version: 1.1.0
+Author: Antonio Meloni
+
+Strumento CLI ufficiale per generare chiavi, firmare crittograficamente, compilare e scompattare in modo sicuro i pacchetti .hpkg per l'ecosistema Hecos.
+"""
 import os
 import sys
 import traceback
@@ -25,7 +32,10 @@ def clear_screen():
 def print_header(title):
     clear_screen()
     print(f"{Fore.CYAN}{'=' * 60}{Style.RESET_ALL}")
-    print(f"   {Fore.WHITE}{Style.BRIGHT}Hecos Package Manager (HPM) Builder — {title}{Style.RESET_ALL}")
+    print(f" {Fore.WHITE}{Style.BRIGHT}Hecos HPM Builder{Style.RESET_ALL} {Fore.LIGHTBLACK_EX}v1.1.0 — by Antonio Meloni{Style.RESET_ALL}")
+    print(f" {Fore.LIGHTBLACK_EX}Strumento ufficiale per la gestione dei pacchetti .hpkg{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{'-' * 60}{Style.RESET_ALL}")
+    print(f"   {Fore.WHITE}{Style.BRIGHT}{title}{Style.RESET_ALL}")
     print(f"{Fore.CYAN}{'=' * 60}{Style.RESET_ALL}\n")
 
 def main_menu():

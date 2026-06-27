@@ -35,6 +35,11 @@ author = "Hecos Developer"
 description = "Descrizione del pacchetto {pkg_name}."
 target_dir = "plugins"
 
+readme = "README.md"
+changelog = "CHANGELOG.md"
+license = "MIT"
+keywords = ["{pkg_id}", "hecos"]
+
 [config_panel]
 tab_id = "{pkg_id}"
 tab_label = "{pkg_name}"
@@ -47,6 +52,12 @@ js_file = "web_ui/static/js/{pkg_id}_panel.js"
         f.write(manifest_content)
 
     # Scrivi file vuoti di esempio
+    with open(src_dir / "README.md", "w", encoding="utf-8") as f:
+        f.write(f"# {pkg_name}\\n\\nDescrizione e istruzioni per l'uso del pacchetto {pkg_name}.\\n")
+        
+    with open(src_dir / "CHANGELOG.md", "w", encoding="utf-8") as f:
+        f.write(f"# Changelog - {pkg_name}\\n\\n## 1.0.0\\n- Initial release\\n")
+
     with open(src_dir / "plugin" / pkg_id / "__init__.py", "w", encoding="utf-8") as f:
         f.write("# Plugin Entry Point\n")
         
