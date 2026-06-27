@@ -38,8 +38,10 @@ def main_menu():
         print(f"1. [KEY]  Generate Keys {Fore.LIGHTBLACK_EX}(Crea coppia chiavi Ed25519){Style.RESET_ALL}")
         print(f"2. [NEW]  Scaffold New Package {Fore.LIGHTBLACK_EX}(Crea scheletro nuovo pacchetto){Style.RESET_ALL}")
         print(f"3. [BLD]  Validate & Build Package {Fore.LIGHTBLACK_EX}(Firma e impacchetta in .hpkg){Style.RESET_ALL}")
-        print(f"4. [CHK]  Inspect & Validate Package {Fore.LIGHTBLACK_EX}(Verifica manifest, firma e file){Style.RESET_ALL}")
-        print(f"5. [EXT]  Extract / Unpack Package {Fore.LIGHTBLACK_EX}(Decomprime pacchetto .hpkg){Style.RESET_ALL}")
+        print(f"4. [ALL]  Build All Packages {Fore.LIGHTBLACK_EX}(Compila tutti i sorgenti *_src){Style.RESET_ALL}")
+        print(f"5. [CHK]  Inspect & Validate Package {Fore.LIGHTBLACK_EX}(Verifica manifest, firma e file){Style.RESET_ALL}")
+        print(f"6. [EXT]  Extract / Unpack Package {Fore.LIGHTBLACK_EX}(Decomprime pacchetto .hpkg){Style.RESET_ALL}")
+        print(f"7. [UNP]  Unpack All Packages {Fore.LIGHTBLACK_EX}(Decomprime tutti i .hpkg in cartelle *_src){Style.RESET_ALL}")
         print(f"0. [EXIT] Chiudi\n")
         
         print(f"{Fore.LIGHTBLACK_EX}Config File: {CONFIG_FILE}{Style.RESET_ALL}")
@@ -59,12 +61,22 @@ def main_menu():
             build_package()
             input(f"\n{Fore.LIGHTBLACK_EX}Premi Invio per tornare al menu...{Style.RESET_ALL}")
         elif choice == '4':
+            print_header("Build All Packages")
+            from modules.builder import build_all_packages
+            build_all_packages()
+            input(f"\n{Fore.LIGHTBLACK_EX}Premi Invio per tornare al menu...{Style.RESET_ALL}")
+        elif choice == '5':
             print_header("Inspect & Validate Package")
             inspect_package()
             input(f"\n{Fore.LIGHTBLACK_EX}Premi Invio per tornare al menu...{Style.RESET_ALL}")
-        elif choice == '5':
+        elif choice == '6':
             print_header("Extract / Unpack Package")
             unpack_package()
+            input(f"\n{Fore.LIGHTBLACK_EX}Premi Invio per tornare al menu...{Style.RESET_ALL}")
+        elif choice == '7':
+            print_header("Unpack All Packages")
+            from modules.builder import unpack_all_packages
+            unpack_all_packages()
             input(f"\n{Fore.LIGHTBLACK_EX}Premi Invio per tornare al menu...{Style.RESET_ALL}")
         elif choice == '0':
             break

@@ -57,17 +57,18 @@ def build_package():
     except:
         return
 
+def _build_single_package(target_dir, packages_dir):
     manifest_path = target_dir / "hpkg_manifest.toml"
     if not manifest_path.exists():
         log_error(f"{manifest_path.name} non trovato in {target_dir}")
-        return
+        return False
 
     # Parsing manifest
     try:
         manifest = tomllib.loads(manifest_path.read_bytes().decode("utf-8"))
     except Exception as e:
         log_error(f"Errore sintassi TOML in {manifest_path.name}: {e}")
-        return
+        return False
 
     log_info(f"Validazione pacchetto '{manifest.get('name', 'Unknown')}' in corso...")
     errors = []
@@ -84,7 +85,7 @@ def build_package():
     if errors:
         log_error("Validazione fallita. Correggi i seguenti errori:")
         for err in errors: log_error(f"  - {err}")
-        return
+        return False
         
     log_debug("Validazione superata.")
 
@@ -138,6 +139,42 @@ def build_package():
             
     size_kb = out_path.stat().st_size / 1024
     log_info(f"DONE -> {out_path} ({size_kb:.1f} KB)")
+    return True
+
+def build_package():
+    packages_dir = get_packages_dir()
+    src_dirs = [d for d in packages_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
+    
+    if not src_dirs:
+        log_warn(f"Nessuna cartella '*_src' trovata in {packages_dir}")
+        return
+        
+    print("Pacchetti disponibili:")
+    for i, d in enumerate(src_dirs):
+        print(f"  {i+1}. {d.name}")
+        
+    choice = input("\nSeleziona il pacchetto da compilare (0 per annullare): ")
+    try:
+        idx = int(choice) - 1
+        if idx == -1: return
+        target_dir = src_dirs[idx]
+    except:
+        return
+
+    _build_single_package(target_dir, packages_dir)
+
+def build_all_packages():
+    packages_dir = get_packages_dir()
+    src_dirs = [d for d in packages_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
+    
+    if not src_dirs:
+        log_warn(f"Nessuna cartella '*_src' trovata in {packages_dir}")
+        return
+
+    log_info(f"Trovati {len(src_dirs)} pacchetti da compilare.")
+    for target_dir in src_dirs:
+        print(f"\n--- Compilazione di {target_dir.name} ---")
+        _build_single_package(target_dir, packages_dir)
 
 def get_available_hpkg():
     packages_dir = get_packages_dir()
@@ -205,23 +242,49 @@ def inspect_package():
     except Exception as e:
         log_error(f"Errore durante la lettura del pacchetto: {e}")
 
+def _unpack_single_package(pkg_path, ask_overwrite=True):
+    try:
+        with zipfile.ZipFile(pkg_path, 'r') as zf:
+            if "hpkg_manifest.toml" not in zf.namelist():
+                log_error(f"Il pacchetto {pkg_path.name} non contiene 'hpkg_manifest.toml'. Uso nome fallback.")
+                out_dir_name = f"{pkg_path.stem}_src"
+            else:
+                manifest_bytes = zf.read("hpkg_manifest.toml")
+                manifest = tomllib.loads(manifest_bytes.decode("utf-8"))
+                manifest_id = manifest.get('id', pkg_path.stem)
+                out_dir_name = f"{manifest_id}_src"
+
+            out_dir = pkg_path.parent / out_dir_name
+
+            if out_dir.exists():
+                if ask_overwrite:
+                    log_warn(f"La cartella {out_dir_name} esiste gia'.")
+                    ans = input("Vuoi sovrascriverla? (s/N): ")
+                    if ans.lower() != 's':
+                        return
+                else:
+                    log_info(f"Sovrascrivo la cartella esistente {out_dir_name}...")
+
+            log_info(f"Decompressione di {pkg_path.name} in {out_dir_name}...")
+            zf.extractall(out_dir)
+            log_info("Decompressione completata con successo.")
+    except Exception as e:
+        log_error(f"Errore durante l'estrazione di {pkg_path.name}: {e}")
+
 def unpack_package():
     pkg_path = get_available_hpkg()
     if not pkg_path: return
+    _unpack_single_package(pkg_path, ask_overwrite=True)
 
-    out_dir_name = f"extracted_{pkg_path.stem}"
-    out_dir = pkg_path.parent / out_dir_name
+def unpack_all_packages():
+    packages_dir = get_packages_dir()
+    hpkg_files = [f for f in packages_dir.glob("*.hpkg")]
+    
+    if not hpkg_files:
+        log_warn(f"Nessun pacchetto .hpkg trovato in {packages_dir}")
+        return
 
-    if out_dir.exists():
-        log_warn(f"La cartella {out_dir_name} esiste gia'.")
-        ans = input("Vuoi sovrascriverla? (s/N): ")
-        if ans.lower() != 's':
-            return
-
-    log_info(f"Decompressione di {pkg_path.name} in {out_dir_name}...")
-    try:
-        with zipfile.ZipFile(pkg_path, 'r') as zf:
-            zf.extractall(out_dir)
-        log_info("Decompressione completata con successo.")
-    except Exception as e:
-        log_error(f"Errore durante l'estrazione: {e}")
+    log_info(f"Trovati {len(hpkg_files)} pacchetti da decomprimere.")
+    for pkg_path in hpkg_files:
+        print(f"\n--- Estrazione di {pkg_path.name} ---")
+        _unpack_single_package(pkg_path, ask_overwrite=False)
