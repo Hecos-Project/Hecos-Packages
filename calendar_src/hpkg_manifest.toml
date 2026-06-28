@@ -1,0 +1,119 @@
+id = "calendar"
+name = "Calendar"
+version = "1.0.0"
+hecos_min_version = "0.34.0"
+type = "plugin"
+author = "Hecos Core Team"
+description = "Core calendar module for Hecos. Stores, displays, and manages time-based events. Provides a shared datetime picker UI component, LLM tools, and REST API for other modules."
+target_dir = "plugins"
+plugin_dir = "."
+
+lazy_load = true
+is_class_based = true
+tag = "CALENDAR"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+
+readme = "README.md"
+readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/calendar_src/README.md"
+license = "MIT"
+
+pip_requirements = ["holidays"]
+
+[config_panel]
+tab_id = "calendar"
+tab_label = "Calendar"
+tab_icon = "<i class=\"far fa-calendar-alt\"></i>"
+template_file = "web_ui/templates/config_calendar.html"
+category = "SISTEMA"
+
+[[widgets]]
+id = "calendar"
+extension_path = "calendar/"
+
+[commands]
+add_event = "Adds an event to the calendar."
+list_events = "Lists upcoming calendar events."
+delete_event = "Deletes a calendar event by ID."
+get_date_info = "Gets current date context, including localized formatting and upcoming holidays."
+
+[[tool_schema]]
+name = "CALENDAR__add_event"
+description = "Adds a new event to the Hecos calendar. Use this when the user says 'add to calendar', 'schedule a meeting', 'remember that on [date]', 'crea un evento', 'segna sul calendario'. Accepts natural language dates."
+
+[tool_schema.parameters]
+type = "object"
+required = ["title", "start"]
+
+[tool_schema.parameters.properties.title]
+type = "string"
+description = "Title/label of the event (e.g. 'Doctor appointment', 'Team standup', 'Dentist')."
+
+[tool_schema.parameters.properties.start]
+type = "string"
+description = "Start date/time in natural language or ISO format ('tomorrow at 10:00', 'next Monday at 14:30', '2026-06-01 09:00')."
+
+[tool_schema.parameters.properties.end]
+type = "string"
+description = "Optional: End date/time. If omitted, the event defaults to 1 hour duration."
+
+[tool_schema.parameters.properties.all_day]
+type = "boolean"
+description = "If true, the event spans the full day with no specific time. Default: false."
+
+[tool_schema.parameters.properties.notes]
+type = "string"
+description = "Optional: Additional notes or description for the event."
+
+[tool_schema.parameters.properties.color]
+type = "string"
+description = "Optional: Color code for the event (e.g. '#3498db', 'red', 'green'). Defaults to the system accent color."
+
+[[tool_schema]]
+name = "CALENDAR__list_events"
+description = "Returns a formatted list of upcoming calendar events. Use when the user asks 'what do I have scheduled?', 'show my calendar', 'cosa ho sul calendario', 'eventi di questa settimana'."
+
+[tool_schema.parameters]
+type = "object"
+
+[tool_schema.parameters.properties.n]
+type = "integer"
+description = "Max number of events to return. Default: 10."
+
+[[tool_schema]]
+name = "CALENDAR__delete_event"
+description = "Deletes a calendar event. Use when the user says 'cancel that appointment', 'remove the event', 'elimina l'evento'. Ask for the event title or ID first using list_events if unsure."
+
+[tool_schema.parameters]
+type = "object"
+required = ["event_id"]
+
+[tool_schema.parameters.properties.event_id]
+type = "string"
+description = "The ID (full UUID or first 8 chars) of the event to delete."
+
+
+[[tool_schema]]
+name = "CALENDAR__get_date_info"
+description = "Returns robust temporal awareness containing the current date/time natively translated, checks if today is a public holiday, and lists upcoming public holidays in a specified country. Crucial for understanding relative dates ('il prossimo ponte', 'oggi è festa?', 'when is christmas?')."
+
+[tool_schema.parameters]
+type = "object"
+
+[tool_schema.parameters.properties.country]
+type = "string"
+description = "The ISO country code (e.g., 'IT' for Italy, 'US' for USA). Default: 'IT'."
+
+[tool_schema.parameters.properties.year]
+type = "integer"
+description = "Optional year to check holidays for. Defaults to current year."
+
+
+[[slash_commands]]
+id = "calendar"
+aliases = ["/calendar", "/calendario", "/appuntamenti"]
+description = "Elenca i prossimi eventi nel calendario"
+usage = "/calendar"
+example = "/calendar"
+icon = "📅"
+method = "list_events"
+requires_args = false
