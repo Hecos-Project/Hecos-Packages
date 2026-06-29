@@ -28,8 +28,8 @@
     function saveSettings() {
         const localeEl = document.getElementById('cal-set-locale');
         const countryEl = document.getElementById('cal-set-country');
-        const calC = (window.cfg && window.cfg.extensions) ? window.cfg.extensions.calendar : {};
-        const locale = localeEl ? localeEl.value : (calC.calendar_locale || s.localeStr || 'en-US');
+        const calC = {}; // We don't read from window.cfg anymore, cal_init.js sets state
+        const locale = localeEl ? localeEl.value : (s.localeStr || 'en-US');
         const country = countryEl ? countryEl.value : (calC.calendar_country || 'US');
 
         const dayColors = ['', '', '', '', '', '', ''];
@@ -59,15 +59,8 @@
             calendar_sync_urls: s.syncUrls
         };
 
-        // CRITICAL: Keep window.cfg in sync synchronously BEFORE the fetch to prevent stale calendar data
-        // overwriting this POST via config_mapper.js buildPayload() during a global dashboard save.
-        if (window.cfg) {
-            window.cfg.extensions = window.cfg.extensions || {};
-            window.cfg.extensions.calendar = calendarDataToSave;
-        }
-
-        // Post settings deeply inside extension structure
-        fetch('/hecos/config', {
+        // Post settings directly to our autonomous endpoint
+        fetch('/api/packages/calendar/config', {
             method  : 'POST',
             headers : { 'Content-Type': 'application/json' },
             body    : JSON.stringify({

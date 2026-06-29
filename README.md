@@ -101,13 +101,68 @@ template_file = "web_ui/templates/config_weather_pro.html"
 js_file       = "web_ui/static/js/weather_pro_panel.js"
 ```
 
-### Default Configurations (Injected into YAML)
-When installed, HPM injects these into `hecos/config/data/plugins.yaml`.
-**Important**: Use a flat `[config_defaults]` table. HPM automatically nests it under `plugins.YOUR_TAG`.
+### Default Configurations (Injected into YAML) — ⚠️ LEGACY / AVOID
+When installed, HPM can inject defaults into `hecos/config/data/system.yaml` via `[config_defaults]`.
+**This is NOT the recommended approach** for new packages (see "Autonomous Config" section below).
+The only valid use of `[config_defaults]` is to declare `enabled = true` so that
+the Central Hub knows the plugin is active. All other settings must live in the package's own TOML.
 ```toml
 [config_defaults]
-default_city = "Rome"
-units        = "celsius"
+enabled = true   # ← Only this. Nothing else.
+```
+
+### ✅ Autonomous Package Configuration (THE STANDARD)
+
+**Every HPM package must manage its own configuration independently, without touching `system.yaml`.**
+This is the pattern established by `image_gen` and must be followed by all packages.
+
+**The pattern:**
+1. Inside your package, create a `<pkg>_config/` folder with:
+   - `defaults.toml` — factory defaults, shipped with the package (read-only)
+   - `config_manager.py` — reads/writes a `<pkg>.toml` file in the same directory
+   - `__init__.py` — empty or re-exports `get_config`, `save_config`
+2. In your `hpkg_manifest.toml`, declare `api_routes_file = "web/routes.py"` and expose GET/POST endpoints.
+3. Your config panel HTML fetches from those endpoints (not from `window.cfg`).
+
+**`config_manager.py` skeleton:**
+```python
+import os
+from pathlib import Path
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+import tomli_w
+
+_THIS_DIR    = Path(__file__).parent.resolve()
+_DEFAULTS    = _THIS_DIR / "defaults.toml"
+_CONFIG_FILE = _THIS_DIR / "my_plugin.toml"   # created at runtime
+
+def get_config() -> dict:
+    if not _CONFIG_FILE.exists():
+        _CONFIG_FILE.write_bytes(_DEFAULTS.read_bytes())
+    return tomllib.loads(_CONFIG_FILE.read_bytes().decode("utf-8"))
+
+def save_config(data: dict) -> bool:
+    _CONFIG_FILE.write_bytes(tomli_w.dumps(data).encode("utf-8"))
+    return True
+```
+
+**`hpkg_manifest.toml` declaration:**
+```toml
+[config_panel]
+tab_id           = "my_plugin"
+tab_label        = "My Plugin"
+tab_icon         = "fa-puzzle-piece"    # Just the FontAwesome class, NO <i> tags
+category         = "SISTEMA"
+template_file    = "web/templates/config_my_plugin.html"
+js_file          = "web/static/js/my_plugin_panel.js"
+api_routes_file  = "web/routes.py"
+config_api_get   = "/hecos/api/plugins/my_plugin/config"
+config_api_post  = "/hecos/api/plugins/my_plugin/config"
+
+[config_defaults]
+enabled = true   # ← ONLY this. Tells the Hub this plugin is active.
 ```
 
 ### Sidebar / Control Room Widgets
@@ -143,8 +198,16 @@ To make your module configurable, you can integrate a custom UI panel into the H
   - `.card-title` for section headers.
   - `.field`, `.config-input`, `.btn btn-primary` for forms.
   - `.toggle-row` and `.switch` for ON/OFF checkboxes.
+- **CRITICAL — `data-icon-injected="true"`:** Hecos has an automatic icon injector that scans every `.card-title` and prepends an icon. If your `card-title` uses `display:flex` (to separate a title from action buttons on the right), add `data-icon-injected="true"` to the `div`. Otherwise the injector will insert a second icon, break the flex layout, and push your text to the center.
+  ```html
+  <!-- ✅ Correct — tells the injector to leave this alone -->
+  <div class="card-title" data-icon-injected="true" style="display:flex; justify-content:space-between; align-items:center;">
+      <span><i class="fas fa-clock"></i> My Panel</span>
+      <div><!-- action buttons --></div>
+  </div>
+  ```
 - **State initialization:** Because your HTML is lazy-loaded and injected dynamically by the Hub, `DOMContentLoaded` won't work inside your panel JS. Use a `MutationObserver` to detect when your `#tab-YOUR_TAB_ID` is added to the DOM to initialize things like dropdowns.
-- **Saving state:** You can hook into the global `window.saveConfig(true)` to save settings to the master YAML, or use your own custom endpoints defined in `api_routes_file` to persist configuration autonomously to your module's directory. For modern custom dialogs (alerts, confirms), use `window.showToast(msg, 'success'|'error')` and `window.hpmShowConfirm(msg, btnLabel, callback)`.
+- **Saving state:** Use your own custom endpoints defined in `api_routes_file` to persist configuration autonomously to your module's TOML file. Do NOT call `window.saveConfig(true)` (that writes to `system.yaml`). For notifications, use `window.showToast(msg, 'success'|'error')` and `window.hpmShowConfirm(msg, btnLabel, callback)`.
 
 ---
 
@@ -196,3 +259,54 @@ For structured repositories (like the `Hecos-Packages` folder), use the official
 - **Modularity:** Always check if your logic is better suited as a native Core Module (for heavy OS integration) or as a `.hpkg` (for dynamic, distributable features).
 - **CSS Isolation:** When writing widgets or config panels, avoid polluting global CSS. Use specific IDs or inline variables.
 - **Auto-Discovery:** Hecos handles Hub injection automatically. **Do not** manually edit core files like `config_manifest.js` or `_PANEL_MAP` in `routes_config_core.py` when creating a package.
+
+---
+
+## 🧠 6. Lessons Learned & Gotchas (The "Wisdom")
+
+During the development and extraction of built-in modules into `.hpkg` packages, we encountered several common pitfalls. Keep these in mind to save debugging time:
+
+1. **Exact File Naming and Paths**
+   - The HPM unpacking engine relies on strict path mapping. If your TOML says `js_file = "web_ui/static/js/my_panel.js"`, ensure the file is *exactly* there in your `_src` folder.
+   - Watch out for typos in the TOML paths! A wrong path means the file won't be copied, and the UI will fail to load or find the JS/CSS.
+
+2. **Dynamic UI Persistence (The "No-Refresh" Rule)**
+   - When a user installs, uninstalls, enables, or disables a package from the Package Manager, **the UI must update instantly without requiring a page refresh or reboot.**
+   - **For Config Panels:** Hecos caches panels in `window._panelCache`. When your package is disabled, Hecos will automatically evict the panel from the DOM and cache. Make sure your JS handles re-initialization if the user re-enables the package and clicks the tab again.
+   - **For Widgets:** If your package injects a widget into the Control Room or Sidebar, the frontend will attempt to load or remove the widget dynamically. Ensure your widget scripts don't break if loaded multiple times or if their DOM elements disappear suddenly.
+
+3. **Widget Layout Conflicts**
+   - If your package injects custom layouts or alters the grid (e.g., resizing grid columns), be careful not to override or conflict with other widgets.
+   - **Never activate mutually exclusive layout switches simultaneously** in your testing or defaults, as this will break the CSS Grid and cause widgets to overlap or become unclickable.
+
+4. **DOM Initialization**
+   - Because panels and widgets are often lazy-loaded (injected via `fetch` after the initial page load), standard events like `window.addEventListener('DOMContentLoaded', ...)` **will not fire** for your scripts.
+   - **Solution:** Use inline scripts that execute immediately upon injection, or attach a `MutationObserver` to watch for your specific `#tab-YOUR_ID` or `#widget-YOUR_ID` appearing in the DOM to run your setup logic.
+
+5. **Package ID Matching**
+   - Ensure the `id` in your manifest exactly matches the folder naming conventions if you are overriding `tab_id`. Mismatches between the package `id`, the `tab_id`, and the actual ID of the `<div>` inside your HTML template are the #1 cause of "Panel not found" errors.
+
+6. **Config Autonomy — Never Write to `system.yaml` / `plugins.yaml`**
+   - Built-in modules used `system.yaml` and `plugins.yaml` for their settings. **HPM packages must NOT do this.**
+   - Each package owns its configuration in a `<pkg>_config/` subfolder, with a `defaults.toml` (factory defaults, read-only) and a `<pkg>.toml` (user config, created at first run).
+   - Only `enabled = true` goes in `[config_defaults]` so the Hub knows the plugin is active. **All other settings go in the package's own TOML.**
+   - See the `image_gen` package (`igen_config/config_manager.py`) as the reference implementation.
+
+7. **`tab_icon` — Class Only, No HTML Tags**
+   - In `[config_panel]`, set `tab_icon` to just the FontAwesome class name (e.g., `"fa-clock"`), **not** a full `<i>` HTML tag.
+   - The Hub renderer wraps it automatically: `<i class="fas fa-clock"></i>`.
+   - If you put `<i class="fas fa-clock"></i>` in the TOML, the renderer will double-wrap it, producing broken HTML and two icons in the sidebar.
+
+8. **Hub Tab Visibility After Refresh**
+   - If your package tab disappears from the sidebar after a page refresh but comes back after toggling enable/disable, the cause is always one of:
+     a. `enabled = true` is missing from `[config_defaults]` in the manifest (so `system.yaml` has no entry, and the Hub can't determine the plugin state).
+     b. The `[config_defaults]` `enabled` key was NOT written to `system.yaml` because an old `disabled` entry already existed (the installer uses `if existing.get(k) is None`, so it won't overwrite `false`). The force-enable in the install route handles this, but if you see the bug, check `system.yaml` for your plugin's `UPPER_TAG.enabled` value.
+
+9. **Backend Panel Caching (`_HPM_PANEL_CACHE`)**
+   - Hecos heavily caches the discovered panel paths in `routes_config_core.py` (via `_HPM_PANEL_CACHE`) to speed up tab rendering.
+   - If you manually copy templates or bypass the HPM installer during development, the backend might cache `None` for your panel ID. 
+   - **Solution:** You must restart Hecos or call `clear_hpm_panel_cache()` dynamically to force the backend to re-discover your `config_YOUR_ID.html` template.
+
+10. **Widget Visibility upon Reactivation (`room_visible`)**
+    - When a package is disabled via the Package Manager, all its widgets are hidden by setting `enabled`, `visible`, and `room_visible` to `False` in the backend state.
+    - When reactivating the package, the backend must restore `room_visible = True` in addition to `visible = True`. If you skip `room_visible`, the widget will be treated as active but confined to the "Sidebar", meaning it will NOT appear in the central Control Room layout by default, leading to user confusion ("the widget is on but I can't see it").

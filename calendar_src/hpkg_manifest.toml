@@ -1,23 +1,31 @@
 id = "calendar"
 name = "Calendar"
-version = "1.0.0"
+version = "1.0.3"
 hecos_min_version = "0.34.0"
 type = "plugin"
-author = "Hecos Core Team"
+author = "Antonio Meloni"
 description = "Core calendar module for Hecos. Stores, displays, and manages time-based events. Provides a shared datetime picker UI component, LLM tools, and REST API for other modules."
 target_dir = "plugins"
 plugin_dir = "."
-
 lazy_load = true
 is_class_based = true
 tag = "CALENDAR"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
-
 readme = "README.md"
 readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/calendar_src/README.md"
 license = "MIT"
+pip_requirements = [
+    "holidays",
+]
+api_routes_file = "calendar/main.py"
+widgets = [
+    { id = "calendar", extension_path = "calendar/" },
+]
 
-pip_requirements = ["holidays"]
+[config_defaults]
+enabled = true
+defaults_file = "calendar_config/defaults.toml"
+template_file = "web_ui/templates/config_calendar.html"
 
 [config_panel]
 tab_id = "calendar"
@@ -25,10 +33,6 @@ tab_label = "Calendar"
 tab_icon = "<i class=\"far fa-calendar-alt\"></i>"
 template_file = "web_ui/templates/config_calendar.html"
 category = "SISTEMA"
-
-[[widgets]]
-id = "calendar"
-extension_path = "calendar/"
 
 [commands]
 add_event = "Adds an event to the calendar."
@@ -42,7 +46,10 @@ description = "Adds a new event to the Hecos calendar. Use this when the user sa
 
 [tool_schema.parameters]
 type = "object"
-required = ["title", "start"]
+required = [
+    "title",
+    "start",
+]
 
 [tool_schema.parameters.properties.title]
 type = "string"
@@ -85,12 +92,13 @@ description = "Deletes a calendar event. Use when the user says 'cancel that app
 
 [tool_schema.parameters]
 type = "object"
-required = ["event_id"]
+required = [
+    "event_id",
+]
 
 [tool_schema.parameters.properties.event_id]
 type = "string"
 description = "The ID (full UUID or first 8 chars) of the event to delete."
-
 
 [[tool_schema]]
 name = "CALENDAR__get_date_info"
@@ -107,10 +115,13 @@ description = "The ISO country code (e.g., 'IT' for Italy, 'US' for USA). Defaul
 type = "integer"
 description = "Optional year to check holidays for. Defaults to current year."
 
-
 [[slash_commands]]
 id = "calendar"
-aliases = ["/calendar", "/calendario", "/appuntamenti"]
+aliases = [
+    "/calendar",
+    "/calendario",
+    "/appuntamenti",
+]
 description = "Elenca i prossimi eventi nel calendario"
 usage = "/calendar"
 example = "/calendar"

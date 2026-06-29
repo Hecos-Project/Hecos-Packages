@@ -15,6 +15,13 @@ def init_routes(app, root_dir: str = None):
     """
     from flask import request, jsonify, render_template
     from flask_login import login_required
+    
+    # Try to load our autonomous config manager
+    try:
+        from hecos.plugins.calendar.calendar_config.config_manager import get_calendar_config, save_calendar_config
+    except ImportError:
+        def get_calendar_config(*args, **kwargs): return {}
+        def save_calendar_config(*args, **kwargs): return False
 
     # ── Internal helpers ───────────────────────────────────────────────────────
 
@@ -107,16 +114,11 @@ def init_routes(app, root_dir: str = None):
 
             country = "IT"
             try:
-                # Use the config manager attached to the app in modules/web_ui/server.py
-                cfg_mgr = getattr(app, 'hecos_config_manager', None)
-                if cfg_mgr:
-                    cal_cfg = cfg_mgr.config.get("extensions", {}).get("calendar", {})
-                    tmp = cal_cfg.get("calendar_country")
-                    if tmp:
-                        country = str(tmp).upper()
-                    logger.info(f"CALENDAR: holidays country={country!r} cal_cfg={cal_cfg}")
-                else:
-                    logger.warning("CALENDAR: config manager not found on app object in holidays endpoint.")
+                cal_cfg = get_calendar_config()
+                tmp = cal_cfg.get("calendar_country")
+                if tmp:
+                    country = str(tmp).upper()
+                logger.info(f"CALENDAR: holidays country={country!r}")
             except Exception as err:
                 logger.error(f"CALENDAR: holidays config read error: {err}")
 
@@ -284,11 +286,7 @@ def init_routes(app, root_dir: str = None):
     def calendar_manual_sync():
         try:
             from hecos.plugins.calendar import sync_manager
-            cfg_mgr = getattr(app, 'hecos_config_manager', None)
-            if not cfg_mgr:
-                return jsonify({"ok": False, "error": "Config manager not found"}), 500
-            
-            sync_urls = cfg_mgr.config.get("extensions", {}).get("calendar", {}).get("calendar_sync_urls", [])
+            sync_urls = get_calendar_config().get("calendar_sync_urls", [])
             
             # Run sync (might take a few seconds)
             count = sync_manager.sync_all(sync_urls)
@@ -366,5 +364,32 @@ def init_routes(app, root_dir: str = None):
             return jsonify({"ok": True, "restored_count": created}), 201
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
+
+    # ── GET /api/packages/calendar/config ──────────────────────────────────────
+    @app.route("/api/packages/calendar/config", methods=["GET"])
+    @login_required
+    def calendar_get_config():
+        return jsonify({
+            "ok": True,
+            "extensions": {
+                "calendar": get_calendar_config()
+            }
+        })
+
+    # ── POST /api/packages/calendar/config ─────────────────────────────────────
+    @app.route("/api/packages/calendar/config", methods=["POST"])
+    @login_required
+    def calendar_set_config():
+        data = request.get_json(silent=True) or {}
+        
+        # Support both wrapped and unwrapped payload formats
+        new_settings = data.get("extensions", {}).get("calendar", {})
+        if not new_settings:
+            new_settings = data
+            
+        success = save_calendar_config(new_settings)
+        if success:
+            return jsonify({"ok": True})
+        return jsonify({"ok": False, "error": "Failed to save config"}), 500
 
     logger.info("CALENDAR", "📅 Calendar WebUI routes registered.")

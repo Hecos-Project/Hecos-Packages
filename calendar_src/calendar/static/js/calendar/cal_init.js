@@ -13,7 +13,7 @@
         if (!el || !window.FullCalendar) return;
 
         try {
-            const resp = await fetch('/hecos/config');
+            const resp = await fetch('/api/packages/calendar/config');
             const data = await resp.json();
             const calCfg = (data.extensions || {}).calendar || {};
             
