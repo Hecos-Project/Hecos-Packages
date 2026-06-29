@@ -1,0 +1,4 @@
+[weather_pro]
+enabled = true
+default_city = ""
+units = "celsius"

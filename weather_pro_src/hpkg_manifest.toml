@@ -1,0 +1,79 @@
+id = "weather_pro"
+name = "Weather Pro"
+version = "1.0.1"
+hecos_min_version = "0.34.0"
+type = "plugin"
+author = "Hecos Team"
+description = "Hybrid weather module: AI plugin (current weather + 7-day forecast via Open-Meteo) + sidebar/Control Room widget with live data and daily forecast cards. Fully autonomous package with its own TOML configuration."
+target_dir = "plugins"
+plugin_dir = "plugin/weather_pro/"
+tag = "WEATHER_PRO"
+lazy_load = true
+is_class_based = true
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+
+widgets = [
+    { id = "weather_pro_widget", extension_path = "web_ui/extensions/weather_pro_widget/" },
+]
+
+[commands]
+get_current_weather = "Get current weather for a city or user's location."
+get_weather_forecast = "Get 7-day daily weather forecast for a city."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "WEATHER_PRO__get_current_weather"
+description = "Get the current weather conditions for a specific city. If city is omitted, uses the user's profile city or IP geolocation."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.city]
+type = "string"
+description = "City name, e.g. 'Rome' or 'London'. Leave empty to auto-detect."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "WEATHER_PRO__get_weather_forecast"
+description = "Get a 7-day daily weather forecast (min/max temp, conditions, precipitation probability) for a city."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.city]
+type = "string"
+description = "City name. Leave empty to use user's default location."
+
+[[slash_commands]]
+command = "/weather"
+description = "Show current weather (optionally for a city: /weather Rome)"
+method = "get_current_weather"
+
+[slash_commands.args_schema]
+city = "str?"
+
+[[slash_commands]]
+command = "/forecast"
+description = "Show 7-day forecast (optionally for a city: /forecast Milan)"
+method = "get_weather_forecast"
+
+[slash_commands.args_schema]
+city = "str?"
+
+[config_panel]
+tab_id        = "weather_pro"
+tab_label     = "Weather Pro"
+tab_icon      = "fa-cloud-sun"
+category      = "CONNETTIVITÀ"
+template_file = "web/templates/config_weather_pro.html"
+api_routes_file  = "web/routes.py"
+config_api_get   = "/hecos/api/plugins/weather_pro/config"
+config_api_post  = "/hecos/api/plugins/weather_pro/config"
+
+[config_defaults]
+enabled = true
+# All other settings (default_city, units) live in weather_pro_config/weather_pro.toml
