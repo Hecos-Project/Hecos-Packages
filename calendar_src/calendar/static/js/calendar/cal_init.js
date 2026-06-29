@@ -129,7 +129,15 @@
         });
         s.calendar.render();
 
-        // Fix FullCalendar sizing when initialised inside a hidden tab
+        // FullCalendar calculates column widths at render time. When the panel is
+        // lazy-loaded, the container may have width=0 at the instant the first render()
+        // runs (browser hasn't painted yet). Force several re-renders so at least one
+        // catches the real layout dimensions.
+        [50, 150, 400].forEach(ms => setTimeout(() => {
+            if (s.calendar) s.calendar.render();
+        }, ms));
+
+        // Also watch for future tab activations (user switches away and back)
         const tabEl = document.getElementById('tab-calendar');
         if (tabEl) {
             const observer = new MutationObserver((mutations) => {
@@ -144,13 +152,13 @@
     }
 
     // Bind public refresh function mapping to state
-    window.hcal.refresh = () => { if (s.calendar) s.calendar.refetchEvents(); };
+    window.hcal.refresh = () => { if (s.calendar) { s.calendar.refetchEvents(); s.calendar.render(); } };
 
-    // Initialise on load
+    // Initialise on load — use a longer delay so the container has real dimensions
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', () => setTimeout(init, 50));
     } else {
-        setTimeout(init, 100);
+        setTimeout(init, 50);
     }
 
     // Close popup on outside click
