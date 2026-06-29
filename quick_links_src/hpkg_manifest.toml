@@ -1,0 +1,10 @@
+name = "Quick Links"
+version = "1.0.0"
+hecos_min_version = "0.35.0"
+type = "widget"
+author = "Hecos Team"
+description = "A user-managed sidebar widget to store and quickly access your favorite links."
+
+[[widgets]]
+id = "quick_links"
+extension_path = "web_ui/extensions/quick_links"
