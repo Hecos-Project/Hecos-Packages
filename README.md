@@ -310,3 +310,136 @@ During the development and extraction of built-in modules into `.hpkg` packages,
 10. **Widget Visibility upon Reactivation (`room_visible`)**
     - When a package is disabled via the Package Manager, all its widgets are hidden by setting `enabled`, `visible`, and `room_visible` to `False` in the backend state.
     - When reactivating the package, the backend must restore `room_visible = True` in addition to `visible = True`. If you skip `room_visible`, the widget will be treated as active but confined to the "Sidebar", meaning it will NOT appear in the central Control Room layout by default, leading to user confusion ("the widget is on but I can't see it").
+
+---
+
+## 🚀 7. Store Distribution Workflow
+
+The **Hecos Package Store** is powered by a static `index.json` catalog hosted on GitHub Pages (`hecos-project.github.io/store/index.json`). The download links point directly to raw files in the `Hecos-Packages` repository — **no GitHub Releases needed**.
+
+### The `packages/` Folder Convention
+
+All compiled `.hpkg` files must be placed in the `packages/` subfolder of this repository:
+```
+Hecos-Packages/
+├── packages/
+│   ├── weather_pro-1.0.1.hpkg
+│   ├── voice_visualizer-1.0.0.hpkg
+│   ├── quick_links-1.0.0.hpkg
+│   └── ...
+├── weather_pro_src/
+├── voice_visualizer_src/
+└── ...
+```
+
+The `download_url` in `index.json` always follows this pattern:
+```
+https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/packages/<pkg_id>-<version>.hpkg
+```
+
+> [!IMPORTANT]
+> **Never use `releases/latest/download/` URLs** in the store catalog. Since all packages live in a single monorepo, using `latest` release would break all other package links the moment a new release is created for any single package. Always use raw GitHub URLs pointing to the `packages/` folder.
+
+### Updating the Store Catalog (Automated)
+
+The store `index.json` is maintained automatically using the **Hecos HPM Builder**. After compiling a package, use menu option **`9. [CAT] Build Store Catalog`**:
+
+1. The builder scans all `.hpkg` files in the `packages/` folder.
+2. For each file, it opens the embedded `hpkg_manifest.toml`, reads the name/version/author/description, and computes the file size and SHA-256 hash automatically.
+3. It writes the final `Hecos-Website/store/index.json` ready for deployment.
+
+**Complete developer workflow:**
+```
+1. Edit code in <pkg>_src/
+2. Build via HPM Builder → option 3 (or 4 for all packages)
+3. The .hpkg lands in packages/
+4. Run HPM Builder → option 9 [CAT] to regenerate index.json
+5. git push on both Hecos-Packages and Hecos-Website
+6. GitHub Pages deploys the new catalog (takes ~1-3 minutes)
+```
+
+Hecos clients cache the catalog for 1 hour. To force an immediate refresh, open:
+`https://localhost:7070/api/hpm/store/catalog?refresh=1`
+
+---
+
+## 🎛️ 8. Widget-Only Packages (Pure Frontend Pattern)
+
+For **pure frontend widgets** with no Python backend (no LLM tools, no slash commands), use the simplified widget-only pattern. The `voice_visualizer` and `quick_links` packages are the canonical reference implementations for this category.
+
+### When to use it
+- Your package is purely visual / UI (e.g., a clock, a news ticker, a visualizer).
+- It has no backend API calls that require Python.
+- Configuration (if any) can be stored in `localStorage` or via a minimal JSON file in the workspace.
+
+### Manifest Pattern
+```toml
+# hpkg_manifest.toml — Widget-Only Package
+
+id          = "my_widget"
+name        = "My Widget"
+version     = "1.0.0"
+hecos_min_version = "0.35.0"
+type        = "widget"          # ← MUST be "widget", not "plugin"
+author      = "Hecos Team"
+description = "A pure frontend widget."
+
+# No: tag, plugin_dir, is_class_based, tool_schema, slash_commands
+# No: api_routes_file, config_panel, config_defaults
+
+[[widgets]]
+id             = "my_widget"    # ← matches the widget ID in the sidebar/Control Room
+extension_path = "web_ui/extensions/my_widget"
+```
+
+### Folder Structure
+```text
+my_widget_src/
+├── hpkg_manifest.toml
+└── web_ui/
+    └── extensions/
+        └── my_widget/
+            ├── main.py                  # Registers routes + serves static files
+            ├── __init__.py
+            ├── templates/
+            │   └── my_widget_widget.html
+            └── static/
+                ├── css/
+                │   └── my_widget.css
+                └── js/
+                    └── my_widget.js
+```
+
+### `main.py` Minimal Pattern
+```python
+"""
+My Widget — Minimal Extension
+"""
+import os
+from hecos.core.logging import logger
+
+def init_routes(app, root_dir: str = None):
+    from flask import send_from_directory, jsonify
+    from flask_login import login_required
+
+    _static_dir = os.path.join(os.path.dirname(__file__), "static")
+
+    @app.route("/ext/my_widget/static/<path:filename>")
+    def my_widget_static(filename):
+        return send_from_directory(_static_dir, filename)
+
+    # Add any lightweight API routes here if needed
+    # e.g., @app.route("/api/widgets/my_widget/status")
+
+    logger.debug("MyWidget", "My Widget routes registered.")
+```
+
+### Configuration Strategy for Widget-Only Packages
+| Need | Solution |
+|------|----------|
+| Simple user preference (theme, mode) | `localStorage` in the browser JS |
+| Server-side state (e.g., TTS speaking status) | Lightweight `GET` endpoint in `main.py` |
+| Complex persistent config | Add a minimal `routes.py` with a JSON file in `workspace/` |
+
+> [!TIP]
+> **Do NOT add a config panel or `api_routes_file` unless you actually need them.** Widget-only packages are intentionally lightweight. The `quick_links` widget is an example of a widget that DOES use a backend route (to persist links server-side); the `voice_visualizer` uses only `localStorage` and a single status endpoint — both are valid patterns depending on your needs.
