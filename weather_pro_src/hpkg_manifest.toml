@@ -1,6 +1,7 @@
 id = "weather_pro"
 name = "Weather Pro"
 version = "1.0.1"
+readme = "README.md"
 hecos_min_version = "0.34.0"
 type = "plugin"
 author = "Hecos Team"

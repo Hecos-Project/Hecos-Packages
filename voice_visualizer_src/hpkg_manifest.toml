@@ -1,6 +1,7 @@
 id = "voice_visualizer"
 name = "Voice Visualizer"
 version = "1.0.0"
+readme = "README.md"
 hecos_min_version = "0.35.0"
 type = "widget"
 author = "Hecos Team"
