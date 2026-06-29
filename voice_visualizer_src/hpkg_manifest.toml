@@ -1,0 +1,20 @@
+id = "voice_visualizer"
+name = "Voice Visualizer"
+version = "1.0.0"
+hecos_min_version = "0.35.0"
+type = "widget"
+author = "Hecos Team"
+description = "Retro-80s voice animation. Shows KITT-style scanner or a pixelated talking mouth when Hecos speaks."
+target_dir = "plugins"
+widgets = [
+    { id = "voice_visualizer", extension_path = "web_ui/extensions/voice_visualizer" },
+]
+signature = "pzn0qKtI/aKBfvm121/mi4XYL8smoy25FJj0anUZRe38wNncsGKP9WXyUxZqLHAgWiw7PZp72Apc/wbF+eM0Dg=="
+
+[file_hashes]
+"web_ui/extensions/voice_visualizer/main.py" = "38bfa14f2539021778f667a5fc87a5c9f9cbc2b8acff097cf430f261d7d83e97"
+"web_ui/extensions/voice_visualizer/manifest.json" = "66e0758c6e4196f75560c1313f2d0865edda1cb788f81c5dcdb2ddbbd1f14f12"
+"web_ui/extensions/voice_visualizer/__init__.py" = "9bd05c970481b8a325d969b13b1cd26a970a5e07a6fdc49c410e36e933146cbf"
+"web_ui/extensions/voice_visualizer/static/voice_visualizer.css" = "b11889dfeebdf517abc33af190421f3612e5a5252a9d87e601a8409463a517d6"
+"web_ui/extensions/voice_visualizer/static/voice_visualizer.js" = "6ac619503d0d8a8df6520438105a291634cd8c7fc21dcaeae1d1510d583e6b6c"
+"web_ui/extensions/voice_visualizer/templates/voice_visualizer_widget.html" = "663d5c5940fd37ce1c4761a9e77ab7d3dacd70f77626e601efae34b8c55134ee"
