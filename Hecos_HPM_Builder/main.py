@@ -54,6 +54,7 @@ def main_menu():
         print(f"6. [EXT]  Extract / Unpack Package {Fore.LIGHTBLACK_EX}(Decomprime pacchetto .hpkg){Style.RESET_ALL}")
         print(f"7. [UNP]  Unpack All Packages {Fore.LIGHTBLACK_EX}(Decomprime tutti i .hpkg in cartelle *_src){Style.RESET_ALL}")
         print(f"8. [EDT]  Edit Manifest {Fore.LIGHTBLACK_EX}(Modifica versione, autore, nome...){Style.RESET_ALL}")
+        print(f"9. [CAT]  Build Store Catalog {Fore.LIGHTBLACK_EX}(Genera index.json per lo Store online){Style.RESET_ALL}")
         print(f"0. [EXIT] Chiudi\n")
         
         print(f"{Fore.LIGHTBLACK_EX}Config File: {CONFIG_FILE}{Style.RESET_ALL}")
@@ -93,6 +94,11 @@ def main_menu():
         elif choice == '8':
             print_header("Edit Manifest")
             edit_manifest()
+            input(f"\n{Fore.LIGHTBLACK_EX}Premi Invio per tornare al menu...{Style.RESET_ALL}")
+        elif choice == '9':
+            print_header("Build Store Catalog")
+            from modules.store_generator import generate_store_catalog
+            generate_store_catalog()
             input(f"\n{Fore.LIGHTBLACK_EX}Premi Invio per tornare al menu...{Style.RESET_ALL}")
         elif choice == '0':
             break
