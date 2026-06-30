@@ -6,7 +6,9 @@ CONFIG_FILE = Path(__file__).parent.parent / "config.json"
 
 DEFAULT_CONFIG = {
     "hecos_path": "C:/Hecos/hecos",
-    "packages_path": "C:/Hecos-Packages"
+    "packages_path": "C:/Hecos-Packages/packages",
+    "src_path": "C:/Hecos-Packages",
+    "private_key_path": "C:/hpm_private.pem"
 }
 
 _config_cache = None
@@ -53,5 +55,17 @@ def get_hecos_root() -> Path:
 def get_trusted_keys_dir() -> Path:
     return get_hecos_root() / "data" / "trusted_keys"
 
+def get_private_key_path() -> Path:
+    """Returns the path to the private signing key from config, or the default location."""
+    configured = load_config().get("private_key_path")
+    if configured:
+        return Path(configured).resolve()
+    # Fallback: look inside trusted_keys (legacy behavior)
+    return get_trusted_keys_dir() / "hpm_private.pem"
+
 def get_packages_dir() -> Path:
     return Path(load_config().get("packages_path", DEFAULT_CONFIG["packages_path"])).resolve()
+
+def get_src_dir() -> Path:
+    """Returns the directory where *_src source folders live."""
+    return Path(load_config().get("src_path", DEFAULT_CONFIG["src_path"])).resolve()

@@ -3,7 +3,7 @@ import hashlib
 import base64
 from pathlib import Path
 from modules.logging_sys import log_info, log_error, log_warn, log_debug
-from modules.settings import get_trusted_keys_dir
+from modules.settings import get_trusted_keys_dir, get_private_key_path
 
 try:
     from cryptography.hazmat.primitives.asymmetric import ed25519
@@ -27,7 +27,8 @@ def generate_key_pair() -> bool:
 
     trusted_dir = get_trusted_keys_dir()
     os.makedirs(trusted_dir, exist_ok=True)
-    priv_path = trusted_dir / "hpm_private.pem"
+
+    priv_path = get_private_key_path()
     pub_path = trusted_dir / "hpm_public.pem"
 
     if priv_path.exists():
@@ -40,6 +41,7 @@ def generate_key_pair() -> bool:
     private_key = ed25519.Ed25519PrivateKey.generate()
     public_key = private_key.public_key()
 
+    priv_path.parent.mkdir(parents=True, exist_ok=True)
     priv_bytes = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
@@ -65,20 +67,9 @@ def sign_payload(payload_bytes: bytes) -> str:
         log_error("Cryptography non disponibile. Firma impossibile.")
         return None
 
-    trusted_dir = get_trusted_keys_dir()
-    priv_key_path = None
-    
-    # Cerca chiave
-    if (trusted_dir / "hpm_private.pem").exists():
-        priv_key_path = trusted_dir / "hpm_private.pem"
-    else:
-        for f in trusted_dir.glob("*.pem"):
-            if b"PRIVATE KEY" in f.read_bytes():
-                priv_key_path = f
-                break
-
-    if not priv_key_path:
-        log_error(f"Nessuna chiave privata trovata in {trusted_dir}")
+    priv_key_path = get_private_key_path()
+    if not priv_key_path.exists():
+        log_error(f"Chiave privata non trovata in: {priv_key_path}")
         return None
 
     log_debug(f"Usando la chiave privata: {priv_key_path}")

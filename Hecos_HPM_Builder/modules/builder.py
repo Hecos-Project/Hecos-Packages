@@ -3,7 +3,7 @@ import json
 import zipfile
 from pathlib import Path
 from modules.logging_sys import log_info, log_error, log_warn, log_debug
-from modules.settings import get_packages_dir
+from modules.settings import get_packages_dir, get_src_dir
 from modules.crypto import sha256_file, sign_payload, verify_signature
 
 try:
@@ -149,11 +149,12 @@ def _build_single_package(target_dir, packages_dir):
     return True
 
 def build_package():
+    src_dir = get_src_dir()
     packages_dir = get_packages_dir()
-    src_dirs = [d for d in packages_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
+    src_dirs = [d for d in src_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
     
     if not src_dirs:
-        log_warn(f"Nessuna cartella '*_src' trovata in {packages_dir}")
+        log_warn(f"Nessuna cartella '*_src' trovata in {src_dir}")
         return
         
     print("Pacchetti disponibili:")
@@ -171,11 +172,12 @@ def build_package():
     _build_single_package(target_dir, packages_dir)
 
 def build_all_packages():
+    src_dir = get_src_dir()
     packages_dir = get_packages_dir()
-    src_dirs = [d for d in packages_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
+    src_dirs = [d for d in src_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
     
     if not src_dirs:
-        log_warn(f"Nessuna cartella '*_src' trovata in {packages_dir}")
+        log_warn(f"Nessuna cartella '*_src' trovata in {src_dir}")
         return
 
     log_info(f"Trovati {len(src_dirs)} pacchetti da compilare.")
