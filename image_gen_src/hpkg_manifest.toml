@@ -5,9 +5,7 @@ author = "Hecos"
 description = "AI Image Generation — Generates images from text prompts using multiple providers (Pollinations, Gemini, OpenAI DALL-E, Stability AI, HuggingFace). Fully autonomous package with its own TOML configuration."
 icon = "🎨"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/.github/main/profile/Urania_9800_Logo.png"
-screenshots = [
-    "https://raw.githubusercontent.com/Hecos-Project/.github/main/profile/003_HecosChat_001.png"
-]
+screenshots = []
 category = "PLUGINS"
 plugin_tag = "IMAGE_GEN"
 is_class_based = true
