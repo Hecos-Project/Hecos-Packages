@@ -340,6 +340,29 @@ https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/packages/<pk
 > [!IMPORTANT]
 > **Never use `releases/latest/download/` URLs** in the store catalog. Since all packages live in a single monorepo, using `latest` release would break all other package links the moment a new release is created for any single package. Always use raw GitHub URLs pointing to the `packages/` folder.
 
+### 🖼️ Setting the Package Preview Image (Screenshot)
+
+The store catalog displays preview images for your packages. There are two ways to set them:
+
+**Method A: Automatic `preview.png` (Recommended)**
+1. Place an image named exactly `preview.png` inside your package source folder (e.g., `image_gen_src/preview.png`).
+2. Ensure the `screenshots` array is empty (`screenshots = []`) or completely omitted in your `hpkg_manifest.toml`.
+3. **Build the package** (Option 3 or 4 in HPM Builder). This step is mandatory as it bundles the image into the `.hpkg`.
+4. **Build the Catalog** (Option 9 in HPM Builder). The generator will automatically detect the bundled image and map the correct raw GitHub URL in the catalog.
+5. If no image is provided, a default fallback image will be used.
+
+> [!WARNING]
+> If you add or update `preview.png` in the source folder, you **MUST** rebuild the package (Option 3/4) before rebuilding the catalog (Option 9). The catalog generator reads from the compiled `.hpkg` ZIP, not the source folder!
+
+**Method B: Manual URL**
+If you want to host the image elsewhere or use multiple screenshots, specify them manually in `hpkg_manifest.toml`. This will override the automatic `preview.png` logic:
+```toml
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/.../image1.png",
+    "https://raw.githubusercontent.com/Hecos-Project/.../image2.png"
+]
+```
+
 ### Updating the Store Catalog (Automated)
 
 The store `index.json` is maintained automatically using the **Hecos HPM Builder**. After compiling a package, use menu option **`9. [CAT] Build Store Catalog`**:
