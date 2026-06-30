@@ -75,6 +75,22 @@ def generate_store_catalog():
             
         pkg_id = manifest_data.get("id") or filename.split("-")[0]
             
+        # Preview image logic
+        screenshots = manifest_data.get("screenshots", [])
+        if not screenshots:
+            # Check if preview.png is bundled in the package
+            has_preview = False
+            try:
+                with zipfile.ZipFile(filepath, "r") as zf:
+                    has_preview = "preview.png" in [z.lower() for z in zf.namelist()]
+            except Exception:
+                pass
+            
+            if has_preview:
+                screenshots = [f"https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/{pkg_id}_src/preview.png"]
+            else:
+                screenshots = ["https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png"]
+
         pkg_entry = {
             "id": pkg_id,
             "name": manifest_data.get("name", "Unknown Package"),
@@ -87,7 +103,7 @@ def generate_store_catalog():
             "download_url": f"https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/packages/{filename}",
             "size_bytes": size,
             "sha256": file_hash,
-            "screenshots": manifest_data.get("screenshots", []),
+            "screenshots": screenshots,
             "changelog": manifest_data.get("changelog", "Aggiornamento automatico generato dallo Store Catalog Builder."),
             "homepage": manifest_data.get("homepage", f"https://hecos-project.github.io/store/#{pkg_id}"),
             "fa_icon": manifest_data.get("fa_icon", "fa-box"),
