@@ -74,21 +74,49 @@ def generate_store_catalog():
             continue
             
         pkg_id = manifest_data.get("id") or filename.split("-")[0]
-            
-        # Preview image logic
+
+        # ── Preview image logic ───────────────────────────────────────────────
+        # Priority:
+        #   1. Explicit 'screenshots' list in the manifest TOML
+        #   2. Auto-discovered preview_1, preview_2, … (png, jpg, jpeg, gif, webp) inside the package
+        #   3. Legacy single preview.png fallback
+        #   4. Default Hecos placeholder image
+        PREVIEW_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp")
+        BASE_RAW = f"https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/{pkg_id}_src"
+
         screenshots = manifest_data.get("screenshots", [])
         if not screenshots:
-            # Check if preview.png is bundled in the package
-            has_preview = False
             try:
                 with zipfile.ZipFile(filepath, "r") as zf:
-                    has_preview = "preview.png" in [z.lower() for z in zf.namelist()]
+                    names_lower = {n.lower(): n for n in zf.namelist()}
+
+                    # Collect all preview_N.* files sorted numerically
+                    numbered = {}
+                    for lower, orig in names_lower.items():
+                        basename = lower.split("/")[-1]  # strip any path prefix
+                        if basename.startswith("preview_"):
+                            stem, _, ext = basename.partition(".")
+                            ext = "." + ext
+                            if ext in PREVIEW_EXTS:
+                                try:
+                                    idx = int(stem.replace("preview_", ""))
+                                    numbered[idx] = orig.split("/")[-1]
+                                except ValueError:
+                                    pass
+
+                    if numbered:
+                        # Build URLs for numbered previews, sorted by index
+                        screenshots = [
+                            f"{BASE_RAW}/{fname}"
+                            for _, fname in sorted(numbered.items())
+                        ]
+                    elif "preview.png" in names_lower:
+                        # Legacy single preview.png
+                        screenshots = [f"{BASE_RAW}/preview.png"]
+                    else:
+                        # Final fallback
+                        screenshots = ["https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png"]
             except Exception:
-                pass
-            
-            if has_preview:
-                screenshots = [f"https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/{pkg_id}_src/preview.png"]
-            else:
                 screenshots = ["https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png"]
 
         pkg_entry = {

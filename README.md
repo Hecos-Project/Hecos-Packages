@@ -348,24 +348,42 @@ https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/packages/<pk
 
 ### 🖼️ Setting the Package Preview Image (Screenshot)
 
-The store catalog displays preview images for your packages. There are two ways to set them:
+The store catalog displays preview images for your packages. There are three ways to set them:
 
-**Method A: Automatic `preview.png` (Recommended)**
-1. Place an image named exactly `preview.png` inside your package source folder (e.g., `image_gen_src/preview.png`).
-2. Ensure the `screenshots` array is empty (`screenshots = []`) or completely omitted in your `hpkg_manifest.toml`.
-3. **Build the package** (Option 3 or 4 in HPM Builder). This step is mandatory as it bundles the image into the `.hpkg`.
-4. **Build the Catalog** (Option 9 in HPM Builder). The generator will automatically detect the bundled image and map the correct raw GitHub URL in the catalog.
-5. If no image is provided, a default fallback image will be used.
+**Method A: Multiple numbered previews — `preview_1`, `preview_2`, … (Recommended)**
+
+Place images inside your source folder using this naming convention:
+```
+my_plugin_src/
+    preview_1.png    ← shown first
+    preview_2.png
+    preview_3.gif    ← animated GIFs are supported!
+    ...
+```
+Supported formats: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`
+
+1. Name your images `preview_1.<ext>`, `preview_2.<ext>`, … (starting at 1).
+2. Leave the `screenshots` array empty or omit it from `hpkg_manifest.toml`.
+3. **Build the package** (Option 3 or 4). This bundles all images into the `.hpkg`.
+4. **Build the Catalog** (Option 9). The generator auto-discovers all numbered previews, sorted by index.
+
+The Store will show them in a carousel with arrows, thumbnails, and a "1/N" counter badge.
+Animated GIFs play natively — a **GIF** badge is shown on the main image and on the thumbnail.
+
+**Method B: Legacy single `preview.png` (backwards-compatible)**
+1. Place a single `preview.png` inside your source folder.
+2. Leave `screenshots` empty/omitted.
+3. Build package → Build catalog. The single image will be used.
 
 > [!WARNING]
-> If you add or update `preview.png` in the source folder, you **MUST** rebuild the package (Option 3/4) before rebuilding the catalog (Option 9). The catalog generator reads from the compiled `.hpkg` ZIP, not the source folder!
+> If you add or update preview images in the source folder, you **MUST** rebuild the package (Option 3/4) before rebuilding the catalog (Option 9). The catalog generator reads from the compiled `.hpkg` ZIP, not the source folder directly!
 
-**Method B: Manual URL**
-If you want to host the image elsewhere or use multiple screenshots, specify them manually in `hpkg_manifest.toml`. This will override the automatic `preview.png` logic:
+**Method C: Manual URL override**
+If you want to host images elsewhere or specify them exactly, set them in `hpkg_manifest.toml`. This overrides all auto-discovery:
 ```toml
 screenshots = [
-    "https://raw.githubusercontent.com/Hecos-Project/.../image1.png",
-    "https://raw.githubusercontent.com/Hecos-Project/.../image2.png"
+    "https://raw.githubusercontent.com/Hecos-Project/.../preview_1.png",
+    "https://raw.githubusercontent.com/Hecos-Project/.../demo.gif"
 ]
 ```
 
