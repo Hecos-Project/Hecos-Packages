@@ -1,7 +1,7 @@
 id = "map"
 name = "Simple Maps"
-version = "1.0.0"
-author = "Hecos Team"
+version = "1.0.1"
+author = "Antonio Meloni"
 description = "Simple Map Module based on Leaflet and Nominatim."
 type = "plugin"
 target_dir = "plugins"
@@ -47,7 +47,9 @@ description = "Converts a city name or address string into geographic coordinate
 
 [tool_schema.function.parameters]
 type = "object"
-required = ["query"]
+required = [
+    "query",
+]
 
 [tool_schema.function.parameters.properties.query]
 type = "string"
