@@ -1,8 +1,8 @@
 id = "map"
-name = "GPS Map"
+name = "Simple Maps"
 version = "1.0.0"
-author = "Antonio Meloni"
-description = "Geocoding e geolocalizzazione tramite OpenStreetMap (Nominatim). Fornisce posizione home, coordinate e strumenti di mappa."
+author = "Hecos Team"
+description = "Simple Map Module based on Leaflet and Nominatim."
 type = "plugin"
 target_dir = "plugins"
 plugin_dir = "."
@@ -18,6 +18,9 @@ pip_requirements = [
 tag = "MAP"
 lazy_load = true
 is_class_based = true
+widgets = [
+    { id = "map_widget", extension_path = "map_widget/" },
+]
 
 [commands]
 get_home_location = "Ottieni le coordinate lat/lon della posizione home dell'utente"
@@ -49,3 +52,6 @@ required = ["query"]
 [tool_schema.function.parameters.properties.query]
 type = "string"
 description = "Address, city name, or place to geocode (e.g. 'Rome, Italy', 'Via Roma 1, Milano')"
+
+[config_defaults]
+enabled = true

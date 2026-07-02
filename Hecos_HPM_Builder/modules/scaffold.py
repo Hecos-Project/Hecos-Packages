@@ -1,9 +1,9 @@
 import os
 from modules.logging_sys import log_info, log_error, log_warn
-from modules.settings import get_packages_dir
+from modules.settings import get_src_dir
 
 def scaffold_package():
-    packages_dir = get_packages_dir()
+    packages_dir = get_src_dir()
     
     pkg_id = input("1. Inserisci il Package ID (es. my_plugin, no spazi): ").strip().lower()
     if not pkg_id: 

@@ -10,7 +10,7 @@ from pathlib import Path
 from colorama import Fore, Style
 
 from modules.logging_sys import log_info, log_error, log_warn
-from modules.settings import get_packages_dir
+from modules.settings import get_packages_dir, get_src_dir
 
 try:
     import tomllib
@@ -232,11 +232,11 @@ def edit_manifest():
     Interactive metadata editor for hpkg_manifest.toml.
     Lets the user pick a package, then edit version, name, author, description, license.
     """
-    packages_dir = get_packages_dir()
-    src_dirs = sorted([d for d in packages_dir.iterdir() if d.is_dir() and d.name.endswith("_src")])
+    src_dir = get_src_dir()
+    src_dirs = sorted([d for d in src_dir.iterdir() if d.is_dir() and d.name.endswith("_src")])
 
     if not src_dirs:
-        log_warn(f"Nessuna cartella '*_src' trovata in {packages_dir}")
+        log_warn(f"Nessuna cartella '*_src' trovata in {src_dir}")
         return
 
     print(f"{Fore.CYAN}Pacchetti disponibili:{Style.RESET_ALL}")
