@@ -1,6 +1,6 @@
 {
     "hecos_path": "C:/Hecos/hecos",
-    "packages_path": "C:/Hecos-Packages/packages",
+    "packages_path": "C:/Hecos-Packages/",
     "src_path": "C:/Hecos-Packages",
     "private_key_path": "C:/hpm_private.pem"
 }

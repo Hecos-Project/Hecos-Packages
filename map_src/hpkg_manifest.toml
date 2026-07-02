@@ -1,0 +1,51 @@
+id = "map"
+name = "GPS Map"
+version = "1.0.0"
+author = "Antonio Meloni"
+description = "Geocoding e geolocalizzazione tramite OpenStreetMap (Nominatim). Fornisce posizione home, coordinate e strumenti di mappa."
+type = "plugin"
+target_dir = "plugins"
+plugin_dir = "."
+hecos_min_version = "0.34.0"
+readme = "README.md"
+readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/map_src/README.md"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+dependencies = []
+optional_dependencies = []
+pip_requirements = [
+    "requests",
+]
+tag = "MAP"
+lazy_load = true
+is_class_based = true
+
+[commands]
+get_home_location = "Ottieni le coordinate lat/lon della posizione home dell'utente"
+geocode = "Geocodifica un indirizzo o città in coordinate lat/lon"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MAP__get_home_location"
+description = "Returns the geographic coordinates (lat/lon) of the user's home address. Use this when the user asks where they live, their home location, or to show their home on a map."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.username]
+type = "string"
+default = "admin"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MAP__geocode"
+description = "Converts a city name or address string into geographic coordinates (lat/lon). Use when you need to locate a place mentioned by the user."
+
+[tool_schema.function.parameters]
+type = "object"
+required = ["query"]
+
+[tool_schema.function.parameters.properties.query]
+type = "string"
+description = "Address, city name, or place to geocode (e.g. 'Rome, Italy', 'Via Roma 1, Milano')"

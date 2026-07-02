@@ -2,7 +2,16 @@ import os
 import json
 from pathlib import Path
 
-CONFIG_FILE = Path(__file__).parent.parent / "config.json"
+try:
+    import tomllib  # Python 3.11+
+except ImportError:
+    try:
+        import tomli as tomllib  # pip install tomli
+    except ImportError:
+        tomllib = None
+
+CONFIG_TOML = Path(__file__).parent.parent / "config.toml"
+CONFIG_FILE = Path(__file__).parent.parent / "config.json"  # legacy fallback
 
 DEFAULT_CONFIG = {
     "hecos_path": "C:/Hecos/hecos",
@@ -13,10 +22,41 @@ DEFAULT_CONFIG = {
 
 _config_cache = None
 
+def _parse_toml(path: Path) -> dict:
+    """Parse a TOML file, returning only string values (ignoring comments/sections)."""
+    if tomllib is not None:
+        with open(path, "rb") as f:
+            return tomllib.load(f)
+    # Manual fallback for environments without tomllib/tomli
+    result = {}
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line and not line.startswith("["):
+                key, _, val = line.partition("=")
+                key = key.strip()
+                val = val.strip().strip('"')
+                result[key] = val
+    return result
+
 def load_config() -> dict:
     global _config_cache
     if _config_cache is not None:
         return _config_cache
+
+    # Prefer TOML, fall back to JSON (legacy)
+    if CONFIG_TOML.exists():
+        try:
+            _config_cache = _parse_toml(CONFIG_TOML)
+            # Merge defaults for any missing keys
+            for k, v in DEFAULT_CONFIG.items():
+                if k not in _config_cache:
+                    _config_cache[k] = v
+            return _config_cache
+        except Exception as e:
+            print(f"[ERROR] Impossibile leggere config.toml: {e}")
 
     if not CONFIG_FILE.exists():
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
@@ -26,21 +66,21 @@ def load_config() -> dict:
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 _config_cache = json.load(f)
-                
+
             # Merge defaults if missing keys
             save_needed = False
             for k, v in DEFAULT_CONFIG.items():
                 if k not in _config_cache:
                     _config_cache[k] = v
                     save_needed = True
-            
+
             if save_needed:
                 save_config(_config_cache)
-                
+
         except Exception as e:
             print(f"[ERROR] Impossibile leggere config.json: {e}")
             _config_cache = DEFAULT_CONFIG.copy()
-            
+
     return _config_cache
 
 def save_config(new_config: dict):
@@ -48,6 +88,7 @@ def save_config(new_config: dict):
     _config_cache = new_config
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(new_config, f, indent=4)
+
 
 def get_hecos_root() -> Path:
     return Path(load_config().get("hecos_path", DEFAULT_CONFIG["hecos_path"])).resolve()

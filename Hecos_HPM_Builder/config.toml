@@ -1,0 +1,44 @@
+# =============================================================================
+#  Hecos HPM Builder - File di Configurazione
+#  Modifica questo file per adattare il builder al tuo ambiente locale.
+# =============================================================================
+
+# --- HECOS CORE ---------------------------------------------------------------
+# Cartella principale del core di Hecos (NON la root del progetto, ma la
+# sottocartella hecos/ che contiene app.py, data/, plugins/, ecc.).
+# Usato per trovare i trusted_keys (data/trusted_keys/) e per installare
+# i pacchetti nelle cartelle corrette del server.
+#
+#   OK :  C:/Hecos/hecos
+#   KO :  C:/Hecos          (troppo su di livello, non funziona)
+hecos_path = "C:/Hecos/hecos"
+
+
+# --- PACCHETTI ----------------------------------------------------------------
+# Cartella di OUTPUT dove il builder salva i file .hpkg compilati.
+# Destinazione finale dei comandi "Validate + Build" e "Build All".
+# Deve sempre puntare alla sottocartella packages/ di Hecos-Packages,
+# NON alla root di Hecos-Packages.
+#
+#   OK :  C:/Hecos-Packages/packages
+#   KO :  C:/Hecos-Packages     (gli .hpkg finiscono nella root, confusione!)
+packages_path = "C:/Hecos-Packages/packages"
+
+# Cartella di INPUT dove si trovano le cartelle sorgente *_src dei pacchetti.
+# Il builder cerca qui le sottocartelle *_src (es. lists_src/, reminder_src/)
+# per i comandi "Build All", "Edit Manifest" e "Scaffold New Package".
+#
+#   OK :  C:/Hecos-Packages
+#   KO :  C:/Hecos-Packages/packages   (contiene .hpkg, non le src!)
+src_path = "C:/Hecos-Packages"
+
+
+# --- FIRMA CRITTOGRAFICA ------------------------------------------------------
+# Percorso assoluto alla chiave privata Ed25519 usata per firmare i pacchetti.
+# IMPORTANTE: questa chiave NON va mai committata su Git.
+# Se il file non esiste, il builder usa il fallback:
+#     hecos_path/data/trusted_keys/hpm_private.pem
+#
+#   SICURO    :  C:/hpm_private.pem             (fuori dalla cartella di progetto)
+#   RISCHIOSO :  C:/Hecos-Packages/hpm_private.pem  (potrebbe finire su Git!)
+private_key_path = "C:/hpm_private.pem"

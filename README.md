@@ -311,6 +311,12 @@ During the development and extraction of built-in modules into `.hpkg` packages,
     - When a package is disabled via the Package Manager, all its widgets are hidden by setting `enabled`, `visible`, and `room_visible` to `False` in the backend state.
     - When reactivating the package, the backend must restore `room_visible = True` in addition to `visible = True`. If you skip `room_visible`, the widget will be treated as active but confined to the "Sidebar", meaning it will NOT appear in the central Control Room layout by default, leading to user confusion ("the widget is on but I can't see it").
 
+11. **UI Panel Visibility & Toggles (The Golden Rule)**
+    - **The Golden Rule:** Packages and modules MUST NOT have an "Enable/Disable" toggle switch inside their own configuration panel. Enabling and disabling modules is handled EXCLUSIVELY from the Package Manager (or the Built-in lists).
+    - **Tab Visibility:** When a module is disabled, its configuration tab/panel MUST completely disappear from the Central Hub. It should never be visible, not even for a split second.
+    - **The "Flicker" Bug:** We previously encountered a bug where disabled modules (like `browser_automation`) would appear for 2-3 seconds upon entering the Hub and then vanish. This was caused by the UI rendering before the configuration was fully loaded into memory. We fixed this by ensuring `window.cfg` is pre-injected via Jinja and preserved in `config_core.js`, allowing the UI to instantly drop disabled panels before the first frame is drawn.
+    - **The "Wrong Category" Disappearance:** We saw an issue with the newly packaged `lists` module where its tab was visible upon entry, but then vanished a few seconds later. This happened because the static UI fallback (`config_manifest.js`) categorized it under `SISTEMA`, while the dynamic HPM manifest (`hpkg_manifest.toml`) categorized it under `APPLICAZIONI` (a category without a filter button). When the dynamic config loaded, the UI moved the tab from `SISTEMA` to `APPLICAZIONI`, causing it to "disappear" from the user's view. **Lesson:** Always ensure your `category` in `hpkg_manifest.toml` exactly matches one of the valid Hub categories (`INTELLIGENZA`, `MULTIMEDIA`, `CONNETTIVITÀ`, `RISORSE`, `SISTEMA`).
+
 ---
 
 ## 🚀 7. Store Distribution Workflow
