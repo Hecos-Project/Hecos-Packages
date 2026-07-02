@@ -6,15 +6,16 @@
 
 # ── Source folders: LOCAL ONLY — never push to GitHub ─────────────────────
 # These contain raw plugin source code compiled locally.
-# Distributed via the official Hecos Store as .hpkg files only.
-calendar_src/
-image_gen_src/
-lists_src/
-map_src/
-quick_links_src/
-reminder_src/
-voice_visualizer_src/
-weather_pro_src/
+# We ignore the contents, BUT allow metadata and preview files for the Store.
+*_src/*
+
+# Eccezioni: i file che servono allo Store vengono SEMPRE tracciati!
+!*_src/preview*.png
+!*_src/preview*.jpg
+!*_src/preview*.jpeg
+!*_src/preview*.gif
+!*_src/README.md
+!*_src/hpkg_manifest.toml
 
 # ── Private signing key (CRITICAL — never push) ───────────────────────────
 hpm_private.pem
