@@ -1,0 +1,39 @@
+# =============================================================================
+#  Hecos-Packages — .gitignore
+#  Source folders (*_src) stay LOCAL ONLY.
+#  Everything else (builder, compiled packages, docs, assets) is tracked.
+# =============================================================================
+
+# ── Source folders: LOCAL ONLY — never push to GitHub ─────────────────────
+# These contain raw plugin source code compiled locally.
+# Distributed via the official Hecos Store as .hpkg files only.
+calendar_src/
+image_gen_src/
+lists_src/
+map_src/
+quick_links_src/
+reminder_src/
+voice_visualizer_src/
+weather_pro_src/
+
+# ── Private signing key (CRITICAL — never push) ───────────────────────────
+hpm_private.pem
+*.pem
+
+# ── Python cache ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.mypy_cache/
+.ruff_cache/
+
+# ── Environments ──────────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── OS / Editor junk ──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
