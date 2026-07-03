@@ -24,7 +24,7 @@ from modules.logging_sys import log_info, log_error
 from modules.crypto import generate_key_pair
 from modules.scaffold import scaffold_package
 from modules.builder import build_package, inspect_package, unpack_package
-from modules.settings import load_config, CONFIG_FILE
+from modules.settings import load_config, CONFIG_TOML
 from modules.edit_manifest import edit_manifest
 
 def clear_screen():
@@ -57,7 +57,7 @@ def main_menu():
         print(f"9. [CAT]  Build Store Catalog {Fore.LIGHTBLACK_EX}(Genera index.json per lo Store online){Style.RESET_ALL}")
         print(f"0. [EXIT] Chiudi\n")
         
-        print(f"{Fore.LIGHTBLACK_EX}Config File: {CONFIG_FILE}{Style.RESET_ALL}")
+        print(f"{Fore.LIGHTBLACK_EX}Config File: {CONFIG_TOML}{Style.RESET_ALL}")
         choice = input(f"\n{Fore.YELLOW}Seleziona un'opzione:{Style.RESET_ALL} ").strip()
         
         print()

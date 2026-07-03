@@ -2,6 +2,7 @@ id = "reminder"
 name = "Reminder"
 version = "1.0.2"
 author = "Antonio Meloni"
+license = "GPL-3.0"
 description = "Schedule time-based reminders with TTS alerts and WebUI notifications. Supports natural language and recurring CRON expressions."
 type = "plugin"
 target_dir = "plugins"
@@ -139,3 +140,13 @@ config_api_post = "/hecos/api/plugins/reminder/config"
 
 [config_defaults]
 enabled = true
+
+[capabilities]
+llm_tools        = ["set_reminder", "list_reminders", "cancel_reminder", "snooze_reminder"]
+slash_commands   = ["/reminder", "/ricorda", "/promemoria", "/reminders"]
+has_widget       = true
+has_config_panel = true
+has_api_routes   = true
+has_system_calls = false
+syscall_notes    = ""
+notes            = "Fires TTS voice alerts and WebUI browser notifications. Supports natural language times and CRON-style recurrence. Uses 'schedule' library for background scheduling."

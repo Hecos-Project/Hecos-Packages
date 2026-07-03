@@ -1,7 +1,8 @@
 id = "image_gen"
 name = "Image Generation"
 version = "1.0.8"
-author = "Hecos"
+author = "Antonio Meloni"
+license = "GPL-3.0"
 description = "AI Image Generation — Generates images from text prompts using multiple providers (Pollinations, Gemini, OpenAI DALL-E, Stability AI, HuggingFace). Fully autonomous package with its own TOML configuration."
 icon = "🎨"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/.github/main/profile/Urania_9800_Logo.png"
@@ -54,3 +55,13 @@ css_file = "web/static/css/image_gen.css"
 api_routes_file = "web/routes.py"
 config_api_get = "/hecos/api/plugins/image_gen/config"
 config_api_post = "/hecos/api/plugins/image_gen/config"
+
+[capabilities]
+llm_tools        = ["generate_image"]
+slash_commands   = ["/img", "/image", "/photo", "/foto"]
+has_widget       = false
+has_config_panel = true
+has_api_routes   = true
+has_system_calls = false
+syscall_notes    = ""
+notes            = "Supports multiple AI providers: Pollinations (free, default), Gemini, OpenAI DALL-E, Stability AI, HuggingFace. Requires network access. Provider and model are configurable."

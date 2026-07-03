@@ -42,3 +42,10 @@ src_path = "C:/Hecos-Packages"
 #   SICURO    :  C:/hpm_private.pem             (fuori dalla cartella di progetto)
 #   RISCHIOSO :  C:/Hecos-Packages/hpm_private.pem  (potrebbe finire su Git!)
 private_key_path = "C:/hpm_private.pem"
+
+[defaults]
+author = "Antonio Meloni"
+license = "GPL-V3"
+description = "Hecos Package"
+version = "1.0.0"
+hecos_min_version = "0.35.0"

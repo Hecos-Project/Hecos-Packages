@@ -2,6 +2,7 @@ id = "map"
 name = "Simple Maps"
 version = "1.0.1"
 author = "Antonio Meloni"
+license = "GPL-3.0"
 description = "Simple Map Module based on Leaflet and Nominatim."
 type = "plugin"
 target_dir = "plugins"
@@ -57,3 +58,13 @@ description = "Address, city name, or place to geocode (e.g. 'Rome, Italy', 'Via
 
 [config_defaults]
 enabled = true
+
+[capabilities]
+llm_tools        = ["get_home_location", "geocode"]
+slash_commands   = []
+has_widget       = true
+has_config_panel = false
+has_api_routes   = true
+has_system_calls = false
+syscall_notes    = ""
+notes            = "Uses Leaflet.js for map rendering and OpenStreetMap Nominatim for free geocoding. No API key required. Home location is read from user profile config."

@@ -4,7 +4,8 @@ version = "1.0.1"
 readme = "README.md"
 hecos_min_version = "0.34.0"
 type = "plugin"
-author = "Hecos Team"
+author = "Antonio Meloni"
+license = "GPL-3.0"
 description = "Hybrid weather module: AI plugin (current weather + 7-day forecast via Open-Meteo) + sidebar/Control Room widget with live data and daily forecast cards. Fully autonomous package with its own TOML configuration."
 target_dir = "plugins"
 plugin_dir = "plugin/weather_pro/"
@@ -78,3 +79,13 @@ config_api_post  = "/hecos/api/plugins/weather_pro/config"
 [config_defaults]
 enabled = true
 # All other settings (default_city, units) live in weather_pro_config/weather_pro.toml
+
+[capabilities]
+llm_tools        = ["get_current_weather", "get_weather_forecast"]
+slash_commands   = ["/weather", "/forecast"]
+has_widget       = true
+has_config_panel = true
+has_api_routes   = true
+has_system_calls = false
+syscall_notes    = ""
+notes            = "Hybrid plugin+widget. Uses Open-Meteo API (free, no key needed). Shows current conditions and 7-day forecast. Widget available in sidebar and Control Room."

@@ -2,6 +2,7 @@ id = "lists"
 name = "Lists Manager"
 version = "2.0.0"
 author = "Antonio Meloni"
+license = "GPL-3.0"
 description = "Universal list manager plugin. Supports shopping lists, to-do lists, blacklists, and any other list type with items, priorities, and labels."
 type = "plugin"
 target_dir = "plugins"
@@ -251,3 +252,13 @@ config_api_post = "/hecos/api/plugins/lists/config"
 
 [config_defaults]
 export_folder = "%USERPROFILE%\\Desktop"
+
+[capabilities]
+llm_tools        = ["create_list", "list_lists", "show_list", "add_to_list", "check_item", "uncheck_item", "remove_from_list", "clear_done", "delete_list", "archive_list"]
+slash_commands   = ["/list", "/lists", "/liste", "/lista", "/list add", "/list done"]
+has_widget       = true
+has_config_panel = true
+has_api_routes   = true
+has_system_calls = false
+syscall_notes    = ""
+notes            = "Universal list manager: shopping, to-do, blacklists, any type. Supports item priorities, labels, and archiving. Data stored in local SQLite DB. Export to desktop supported."

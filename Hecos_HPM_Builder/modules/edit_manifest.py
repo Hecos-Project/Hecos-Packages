@@ -195,7 +195,7 @@ _EDITABLE_FIELDS = [
 ]
 
 
-def _prompt_field(label: str, current, use_version_picker: bool):
+def _prompt_field(label: str, current, use_version_picker: bool, default_val: str):
     """
     Prompt the user to change a single field.
     Returns the new value (or the old one if left blank).
@@ -204,11 +204,20 @@ def _prompt_field(label: str, current, use_version_picker: bool):
         return pick_version(str(current))
     else:
         display = str(current) if current else "(vuoto)"
-        new_val = input(
-            f"  {Fore.CYAN}{label}{Style.RESET_ALL} "
-            f"{Fore.LIGHTBLACK_EX}(attuale: {display} | Invio per mantenere){Style.RESET_ALL}: "
-        ).strip()
-        return new_val if new_val else current
+        print(f"\n  {Fore.CYAN}{label}{Style.RESET_ALL}")
+        print(f"  {Fore.LIGHTBLACK_EX}1. Mantieni attuale:{Style.RESET_ALL} {display}")
+        print(f"  {Fore.LIGHTBLACK_EX}2. Usa default:{Style.RESET_ALL} {default_val}")
+        print(f"  {Fore.LIGHTBLACK_EX}3. Inserisci nuovo valore{Style.RESET_ALL}")
+        
+        while True:
+            choice = input(f"  Scelta (1/2/3) [1]: ").strip() or "1"
+            if choice == "1":
+                return current
+            elif choice == "2":
+                return default_val
+            elif choice == "3":
+                return input(f"  Nuovo {label}: ").strip()
+            print("  Scelta non valida.")
 
 
 def _write_manifest(path: Path, manifest: dict) -> bool:
@@ -279,10 +288,15 @@ def edit_manifest():
 
     print(f"  {Fore.LIGHTBLACK_EX}Lascia vuoto per mantenere il valore attuale.{Style.RESET_ALL}\n")
 
+    from modules.settings import load_config
+    cfg = load_config()
+    defaults = cfg.get("defaults", {})
+
     changed = False
     for field_key, label, use_picker in _EDITABLE_FIELDS:
         current = manifest.get(field_key, "")
-        new_val = _prompt_field(label, current, use_picker)
+        default_val = defaults.get(field_key, "")
+        new_val = _prompt_field(label, current, use_picker, default_val)
         if str(new_val) != str(current):
             manifest[field_key] = new_val
             changed = True

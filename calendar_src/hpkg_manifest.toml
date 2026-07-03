@@ -13,7 +13,7 @@ tag = "CALENDAR"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
 readme = "README.md"
 readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/calendar_src/README.md"
-license = "MIT"
+license = "GPL-3.0"
 pip_requirements = [
     "holidays",
 ]
@@ -128,3 +128,13 @@ example = "/calendar"
 icon = "📅"
 method = "list_events"
 requires_args = false
+
+[capabilities]
+llm_tools        = ["add_event", "list_events", "delete_event", "get_date_info"]
+slash_commands   = ["/calendar", "/calendario", "/appuntamenti"]
+has_widget       = true
+has_config_panel = true
+has_api_routes   = true
+has_system_calls = false
+syscall_notes    = ""
+notes            = "Stores events in local SQLite DB. Includes shared datetime-picker UI component for other modules. Supports public holidays via 'holidays' library."
