@@ -7,7 +7,7 @@ type = "widget"
 author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "Retro-80s voice animation. Shows KITT-style scanner or a pixelated talking mouth when Hecos speaks."
-target_dir = "plugins"
+target_dir = "hpm"
 widgets = [
     { id = "voice_visualizer", extension_path = "web_ui/extensions/voice_visualizer" },
 ]
