@@ -55,6 +55,9 @@ def main_menu():
         print(f"7. [UNP]  Unpack All Packages {Fore.LIGHTBLACK_EX}(Decomprime tutti i .hpkg in cartelle *_src){Style.RESET_ALL}")
         print(f"8. [EDT]  Edit Manifest {Fore.LIGHTBLACK_EX}(Modifica versione, autore, nome...){Style.RESET_ALL}")
         print(f"9. [CAT]  Build Store Catalog {Fore.LIGHTBLACK_EX}(Genera index.json per lo Store online){Style.RESET_ALL}")
+        print(f"C. [CAP]  Auto-Generate Capabilities {Fore.LIGHTBLACK_EX}(Tutti i pacchetti){Style.RESET_ALL}")
+        print(f"S. [CAP1] Single Package Capabilities {Fore.LIGHTBLACK_EX}(Rigenera cap. di un solo pacchetto){Style.RESET_ALL}")
+        print(f"I. [INFO] Package Info Sheet {Fore.LIGHTBLACK_EX}(Scheda completa: nome, versione, capacità, tools...){Style.RESET_ALL}")
         print(f"0. [EXIT] Chiudi\n")
         
         print(f"{Fore.LIGHTBLACK_EX}Config File: {CONFIG_TOML}{Style.RESET_ALL}")
@@ -99,6 +102,21 @@ def main_menu():
             print_header("Build Store Catalog")
             from modules.store_generator import generate_store_catalog
             generate_store_catalog()
+            input(f"\n{Fore.LIGHTBLACK_EX}Premi Invio per tornare al menu...{Style.RESET_ALL}")
+        elif choice.upper() == 'C':
+            print_header("Auto-Generate Capabilities — Tutti i pacchetti")
+            from modules.capabilities_gen import generate_all_capabilities
+            generate_all_capabilities()
+            input(f"\n{Fore.LIGHTBLACK_EX}Premi Invio per tornare al menu...{Style.RESET_ALL}")
+        elif choice.upper() == 'S':
+            print_header("Single Package Capabilities")
+            from modules.capabilities_gen import generate_single_capabilities
+            generate_single_capabilities()
+            input(f"\n{Fore.LIGHTBLACK_EX}Premi Invio per tornare al menu...{Style.RESET_ALL}")
+        elif choice.upper() == 'I':
+            print_header("Package Info Sheet")
+            from modules.capabilities_gen import show_package_sheet
+            show_package_sheet()
             input(f"\n{Fore.LIGHTBLACK_EX}Premi Invio per tornare al menu...{Style.RESET_ALL}")
         elif choice == '0':
             break

@@ -11,9 +11,13 @@ target_dir = "plugins"
 widgets = [
     { id = "voice_visualizer", extension_path = "web_ui/extensions/voice_visualizer" },
 ]
-signature = "pzn0qKtI/aKBfvm121/mi4XYL8smoy25FJj0anUZRe38wNncsGKP9WXyUxZqLHAgWiw7PZp72Apc/wbF+eM0Dg=="
+signature = "sXd72jGYutnD45jvappSf2/DzVxmrDhHOUt6D4zHE7SaJhcSsWImo4SaLwM7B7v+6BjcR1VcRVICMEEa+PVFDA=="
 
 [file_hashes]
+"preview_1.png" = "ff846dcaa4d1e364620c4ebd459c2c738c90c2c53cc0afd5b2e415e0f5e29430"
+"preview_2.png" = "bd9dd9ff75333dade14d2070220a9fb94d5336f232acb0eedcde22fa4b5bb98b"
+"preview_3.png" = "55e217cda8b23c303046129adcace5f953832ac51a079111696cf12abd7ab160"
+"README.md" = "793f2f845f18c0702ea367792cb1e837a2fdbcb3abcd3a356790528a37785280"
 "web_ui/extensions/voice_visualizer/main.py" = "38bfa14f2539021778f667a5fc87a5c9f9cbc2b8acff097cf430f261d7d83e97"
 "web_ui/extensions/voice_visualizer/manifest.json" = "66e0758c6e4196f75560c1313f2d0865edda1cb788f81c5dcdb2ddbbd1f14f12"
 "web_ui/extensions/voice_visualizer/__init__.py" = "9bd05c970481b8a325d969b13b1cd26a970a5e07a6fdc49c410e36e933146cbf"
@@ -22,11 +26,11 @@ signature = "pzn0qKtI/aKBfvm121/mi4XYL8smoy25FJj0anUZRe38wNncsGKP9WXyUxZqLHAgWiw
 "web_ui/extensions/voice_visualizer/templates/voice_visualizer_widget.html" = "663d5c5940fd37ce1c4761a9e77ab7d3dacd70f77626e601efae34b8c55134ee"
 
 [capabilities]
-llm_tools        = []
-slash_commands   = []
-has_widget       = true
+llm_tools = []
+slash_commands = []
+has_widget = true
 has_config_panel = false
-has_api_routes   = false
+has_api_routes = false
 has_system_calls = true
-syscall_notes    = "Uses Web Audio API (browser microphone) to animate in sync with Hecos TTS output."
-notes            = "Pure visual widget. No LLM tools and no direct commands. Automatically activates when Hecos speaks. Offers multiple animation modes: KITT scanner, EQ bars, sine wave, pulsing orb, pixelated mouth."
+syscall_notes = "Uses Web Audio API (browser microphone) to animate in sync with Hecos TTS output."
+notes = "Pure visual widget. No LLM tools and no direct commands. Automatically activates when Hecos speaks. Offers multiple animation modes: KITT scanner, EQ bars, sine wave, pulsing orb, pixelated mouth."

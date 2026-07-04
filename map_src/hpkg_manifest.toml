@@ -22,6 +22,7 @@ is_class_based = true
 widgets = [
     { id = "map_widget", extension_path = "map_widget/" },
 ]
+signature = "bmbGZPPIiNBkBHmmuRDTV9OxJQzjRy5sEZ5vqsjVDCvtL7f/M6b+STPifCyoMMuWw6KKeJ4KkFZx42q3/ehzCQ=="
 
 [commands]
 get_home_location = "Ottieni le coordinate lat/lon della posizione home dell'utente"
@@ -60,11 +61,26 @@ description = "Address, city name, or place to geocode (e.g. 'Rome, Italy', 'Via
 enabled = true
 
 [capabilities]
-llm_tools        = ["get_home_location", "geocode"]
-slash_commands   = []
-has_widget       = true
+llm_tools = [
+    "",
+    "",
+]
+slash_commands = []
+has_widget = true
 has_config_panel = false
-has_api_routes   = true
+has_api_routes = false
 has_system_calls = false
-syscall_notes    = ""
-notes            = "Uses Leaflet.js for map rendering and OpenStreetMap Nominatim for free geocoding. No API key required. Home location is read from user profile config."
+syscall_notes = ""
+notes = "Uses Leaflet.js for map rendering and OpenStreetMap Nominatim for free geocoding. No API key required. Home location is read from user profile config."
+
+[file_hashes]
+"main.py" = "531581cfcf84ad6aaa1c9f446c2dff880dd06479fa189f70a84e2a089c2fd12e"
+"preview.png" = "2852089317c2a46e1ad673efb52f98a83ae0c0f40362fbe956f8b09c4415a350"
+"README.md" = "b90a3d8227ef0d3f691c51ff6e8dcf0e9875e4afbf9e72691d03b4240975567e"
+"__init__.py" = "97c09d77fc4be9376eb6389cc4df25e2e500c2a961575f5a9f78424a4a16e584"
+"map_widget/main.py" = "d70ef85ef809d3ca4e6ca5ff37dbe29590d66d9f8625e9176033e9a31e464561"
+"map_widget/manifest.json" = "2ab6975307d8dddbf6f4d531f9d3e835c304bba9d449e9b6c8fce519b3ffdc52"
+"map_widget/__init__.py" = "c81f1f000e789adb6d962ab5d43c5dc5e7db66d1788f21c27047570ccfd2fe7a"
+"map_widget/static/css/map_widget.css" = "20782d14a1240eb83f9b632217e11f378da17c218f8ffeb43289e98b228300f3"
+"map_widget/static/js/map_widget.js" = "31962f1ee11c73a30e293040c3cc5a26e96b893b9f269eb6e68a0bfbec14019b"
+"map_widget/templates/map_widget_widget.html" = "cc87995c62a96f756b0967e80615d7639d330d4957ab071bb84d81a983e6f6f9"

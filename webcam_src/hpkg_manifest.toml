@@ -12,8 +12,13 @@ type = "plugin"
 plugin_dir = "."
 lazy_load = true
 readme = "README.md"
-pip_requirements = ["opencv-python", "pillow", "pyautogui"]
+pip_requirements = [
+    "opencv-python",
+    "pillow",
+    "pyautogui",
+]
 python_requires = ">=3.11"
+signature = "w5TiJ0mTp/RuFJb1h8fknNAHOLzVFBwuXOm7bVUZoFkfGvf9MZLAazVnBWPfcm/8TfHi2Non3YiJturZts8DCw=="
 
 [routing]
 instructions = "WEBCAM ROUTING RULE: When the user says 'phone', 'smartphone', 'mobile', 'il telefono', 'browser', or any remote device, you MUST call WEBCAM take_snapshot with target='client'. NEVER use target='server' when the user is asking from a phone."
@@ -24,12 +29,17 @@ description = "Takes a photo. CRITICAL: Use target='server' for PC webcam, targe
 
 [tool_schema.parameters]
 type = "object"
-required = ["target"]
+required = [
+    "target",
+]
 
 [tool_schema.parameters.properties.target]
 type = "string"
 description = "REQUIRED ROUTING. Use 'client' if user says phone/smartphone/browser. Use 'server' for local PC webcam. NEVER use this to 'generate' photos of cats/characters."
-enum = ["server", "client"]
+enum = [
+    "server",
+    "client",
+]
 
 [[tool_schema]]
 name = "WEBCAM__desktop_screenshot"
@@ -43,11 +53,21 @@ type = "integer"
 description = "Monitor to capture: 1 = primary screen (default), 0 = all monitors combined."
 
 [capabilities]
-llm_tools        = ["take_snapshot", "desktop_screenshot"]
-slash_commands   = []
-has_widget       = false
-has_config_panel = true
-has_api_routes   = true
+llm_tools = [
+    "WEBCAM__take_snapshot",
+    "WEBCAM__desktop_screenshot",
+]
+slash_commands = []
+has_widget = false
+has_config_panel = false
+has_api_routes = false
 has_system_calls = true
-syscall_notes    = "Uses OpenCV (cv2) to access local camera hardware. Uses pyautogui for desktop screenshots."
-notes            = "Backend snapshot plugin (distinct from Webcam Feed widget). Saves JPG/PNG to hecos/media/snapshots. Can trigger browser-side capture on client devices via [CAMERA_SNAPSHOT_REQUEST] signal. Also captures full desktop screenshots."
+syscall_notes = "Uses OpenCV (cv2) to access local camera hardware. Uses pyautogui for desktop screenshots."
+notes = "Backend snapshot plugin (distinct from Webcam Feed widget). Saves JPG/PNG to hecos/media/snapshots. Can trigger browser-side capture on client devices via [CAMERA_SNAPSHOT_REQUEST] signal. Also captures full desktop screenshots."
+
+[file_hashes]
+"config_manager.py" = "096cd8960aa58659b4917286a95ff49478e9a11c742c41fbe83c8ca426e8d08e"
+"main.py" = "d706719e71b8a052fdfe1b1d2ad7d6a00d58c895ebb2c83af6b4a03598a68ef5"
+"README.md" = "b15be93c79b0816b793db8de2a5db846e00c54bce246e0c916912963ad073146"
+"__init__.py" = "531f46de623775ac2f50ae28313ded3f9398457196afa8d02061d4c8b5f756b9"
+"webcam_config/defaults.toml" = "b38d5b61b048199f2821c35cafef99ac416aa175c6a502aa5067465b1b0f4dcf"

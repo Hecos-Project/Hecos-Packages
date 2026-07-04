@@ -20,6 +20,7 @@ is_class_based = true
 widgets = [
     { id = "lists_widget", extension_path = "lists_widget/" },
 ]
+signature = "ustDz3+wSJFjLk5H6NUqvAzJlGmHHM8zQnvUlmaYCVVAH6Q+Fmj8nNglNT3nDGCG5arZhQx1mCRqRcogApQbAg=="
 
 [commands]
 create_list = "Crea una nuova lista vuota."
@@ -254,11 +255,41 @@ config_api_post = "/hecos/api/plugins/lists/config"
 export_folder = "%USERPROFILE%\\Desktop"
 
 [capabilities]
-llm_tools        = ["create_list", "list_lists", "show_list", "add_to_list", "check_item", "uncheck_item", "remove_from_list", "clear_done", "delete_list", "archive_list"]
-slash_commands   = ["/list", "/lists", "/liste", "/lista", "/list add", "/list done"]
-has_widget       = true
+llm_tools = [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+]
+slash_commands = [
+    "/list",
+    "/lists",
+    "/liste",
+    "/lista",
+    "/list add",
+    "/lista aggiungi",
+    "/list done",
+    "/lista spunta",
+]
+has_widget = true
 has_config_panel = true
-has_api_routes   = true
+has_api_routes = false
 has_system_calls = false
-syscall_notes    = ""
-notes            = "Universal list manager: shopping, to-do, blacklists, any type. Supports item priorities, labels, and archiving. Data stored in local SQLite DB. Export to desktop supported."
+syscall_notes = ""
+notes = "Universal list manager: shopping, to-do, blacklists, any type. Supports item priorities, labels, and archiving. Data stored in local SQLite DB. Export to desktop supported."
+
+[file_hashes]
+"api.py" = "367f52f587dbfeedfbb4b9447181d75a94cfec75590dbcef7a3e94cd9f7f1207"
+"main.py" = "4dfdc59ec99f720a00015772345ad0dacfdb5ff293420f75c39a22196510b501"
+"preview.png" = "2944f17517a4f92344db59ff4962e4a8e970130d424203a9169bfe0c5b495606"
+"README.md" = "d8e8ffbcaadd91d37970cc4f8a1625198d44d456f8ff7799187a6af47eda438d"
+"store.py" = "3087898e8ced3c1f3c8870e742be3d5ad4b524e0bdd2dbc0d0ad3d5fa855fe91"
+"__init__.py" = "4a9287339ec05fa025eb687ec2b67d6638b0cca86d94c1f71a8f7ecad27d08f1"
+"lists_widget/main.py" = "9091dbf9bf6b2a9accc179bcb3f3668c40fb380e1a2052ba42dc98fe8532f4a8"
+"lists_widget/manifest.json" = "bdfe38b880b90f209e2708086f187944ee24281d16c976bdf35047c84c44f2b7"
+"lists_widget/templates/lists_widget_widget.html" = "a33150366785e94adf175449b0c41ee3339a42c641e1877b406c7a6b4bbb2ecf"
+"templates/config/config_lists.html" = "278fd68e5ef51ef31094a1c7b92fa6cad76cf1ae7679a4b8c02c0c48c9c05acf"

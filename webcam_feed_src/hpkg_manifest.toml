@@ -19,11 +19,11 @@ widgets = [
 ]
 
 [capabilities]
-llm_tools        = []
-slash_commands   = []
-has_widget       = true
+llm_tools = []
+slash_commands = []
+has_widget = true
 has_config_panel = false
-has_api_routes   = true
+has_api_routes = false
 has_system_calls = true
-syscall_notes    = "Uses browser WebRTC API (navigator.mediaDevices.getUserMedia) to access device camera. Permission prompt shown on first use."
-notes            = "Pure frontend widget. No backend processing. Streams from the device running the browser (PC, phone, tablet). Supports auto-start and camera device selection."
+syscall_notes = "Uses browser WebRTC API (navigator.mediaDevices.getUserMedia) to access device camera. Permission prompt shown on first use."
+notes = "Pure frontend widget. No backend processing. Streams from the device running the browser (PC, phone, tablet). Supports auto-start and camera device selection."

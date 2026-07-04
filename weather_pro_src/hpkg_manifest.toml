@@ -13,10 +13,10 @@ tag = "WEATHER_PRO"
 lazy_load = true
 is_class_based = true
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
-
 widgets = [
     { id = "weather_pro_widget", extension_path = "web_ui/extensions/weather_pro_widget/" },
 ]
+signature = "UVMRHfp2XiZw3WnkQ938assDzJRJEPZG5RHdAToSchpZZj2tRrPUtc9PAnlYQi/bnZJBgPj6yhwICnDTwKiTAA=="
 
 [commands]
 get_current_weather = "Get current weather for a city or user's location."
@@ -67,25 +67,40 @@ method = "get_weather_forecast"
 city = "str?"
 
 [config_panel]
-tab_id        = "weather_pro"
-tab_label     = "Weather Pro"
-tab_icon      = "fa-cloud-sun"
-category      = "CONNETTIVITÀ"
+tab_id = "weather_pro"
+tab_label = "Weather Pro"
+tab_icon = "fa-cloud-sun"
+category = "CONNETTIVITÀ"
 template_file = "web/templates/config_weather_pro.html"
-api_routes_file  = "web/routes.py"
-config_api_get   = "/hecos/api/plugins/weather_pro/config"
-config_api_post  = "/hecos/api/plugins/weather_pro/config"
+api_routes_file = "web/routes.py"
+config_api_get = "/hecos/api/plugins/weather_pro/config"
+config_api_post = "/hecos/api/plugins/weather_pro/config"
 
 [config_defaults]
 enabled = true
-# All other settings (default_city, units) live in weather_pro_config/weather_pro.toml
 
 [capabilities]
-llm_tools        = ["get_current_weather", "get_weather_forecast"]
-slash_commands   = ["/weather", "/forecast"]
-has_widget       = true
+llm_tools = [
+    "",
+    "",
+]
+slash_commands = []
+has_widget = true
 has_config_panel = true
-has_api_routes   = true
+has_api_routes = false
 has_system_calls = false
-syscall_notes    = ""
-notes            = "Hybrid plugin+widget. Uses Open-Meteo API (free, no key needed). Shows current conditions and 7-day forecast. Widget available in sidebar and Control Room."
+syscall_notes = ""
+notes = "Hybrid plugin+widget. Uses Open-Meteo API (free, no key needed). Shows current conditions and 7-day forecast. Widget available in sidebar and Control Room."
+
+[file_hashes]
+"README.md" = "6ec91b079738fc3d856389a9f43eab61d3040f421bda52a6f526e0d4a4175772"
+"plugin/weather_pro/main.py" = "ad288a55642573df5c1f8451768514e24cb4bcb29266508317f4d06b46d6d849"
+"plugin/weather_pro/__init__.py" = "4dd55398570887f54d2f48ee4f60b0582332353000527ed1b856e923e787ae49"
+"weather_pro_config/config_manager.py" = "aad2e6fdbd67189966a4e24429c92c3afaf7ef6434bdc9d5503b948b38f2c4e8"
+"weather_pro_config/defaults.toml" = "adb5e133106000c73da683ae1d027d461e5fea1fb5534d008741c389a3dcd35d"
+"weather_pro_config/__init__.py" = "fa5403f3adb671503583bac1572a0abf9e41e64a659eb24b7d7387b767e8f50d"
+"web/routes.py" = "ef7f362dce9df50c044056156c76f1c655bdedbaf0f7f25a9cac97c64c218711"
+"web/templates/config_weather_pro.html" = "5a31037785584737c92c838f60be9079189da1bdbe9cb915ce32b09de853454f"
+"web_ui/extensions/weather_pro_widget/main.py" = "a0e144be4d89dadf610feb55a8ccd1a8cf56ac3cddc2ba72225da0c28e12a475"
+"web_ui/extensions/weather_pro_widget/manifest.json" = "3d8a403f2493db9dd2a00cbfb4b38336739f930923291e1c8d8bc6990fc2a296"
+"web_ui/extensions/weather_pro_widget/templates/weather_pro_widget_widget.html" = "8c57e2b3ea72afa87bc7e5824d5cb377869d7365256eb274dfb2bed4b3feea42"

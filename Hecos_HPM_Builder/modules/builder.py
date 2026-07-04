@@ -11,31 +11,10 @@ try:
 except ImportError:
     import tomli as tomllib
 
-def _json_to_toml(d: dict) -> str:
-    lines = []
-    def _val(v):
-        if isinstance(v, bool): return "true" if v else "false"
-        if isinstance(v, (int, float)): return str(v)
-        if isinstance(v, str): return '"' + v.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
-        if isinstance(v, list):
-            if not v: return "[]"
-            if all(isinstance(i, str) for i in v): return "[" + ", ".join(_val(i) for i in v) + "]"
-            items = ["{" + ", ".join(f'{k} = {_val(iv)}' for k, iv in i.items()) + "}" for i in v]
-            return "[\n  " + ",\n  ".join(items) + "\n]"
-        return str(v)
+import tomli_w
 
-    def _write_section(data: dict, prefix: str = ""):
-        scalars = {k: v for k, v in data.items() if not isinstance(v, dict)}
-        tables  = {k: v for k, v in data.items() if isinstance(v, dict)}
-        for k, v in scalars.items():
-            lines.append(f"{k} = {_val(v)}")
-        for k, v in tables.items():
-            header = f"[{prefix + k}]" if prefix else f"[{k}]"
-            lines.append("")
-            lines.append(header)
-            _write_section(v, prefix=f"{prefix}{k}.")
-    _write_section(d)
-    return "\n".join(lines) + "\n"
+def _json_to_toml(d: dict) -> str:
+    return tomli_w.dumps(d)
 
 def build_package():
     packages_dir = get_packages_dir()
@@ -62,6 +41,10 @@ def _build_single_package(target_dir, packages_dir):
     if not manifest_path.exists():
         log_error(f"{manifest_path.name} non trovato in {target_dir}")
         return False
+
+    # Auto-generate capabilities
+    from modules.capabilities_gen import auto_generate_capabilities
+    auto_generate_capabilities(target_dir)
 
     # Parsing manifest
     try:

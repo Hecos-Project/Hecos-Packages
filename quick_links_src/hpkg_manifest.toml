@@ -7,17 +7,16 @@ type = "widget"
 author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "A user-managed sidebar widget to store and quickly access your favorite links."
-
-[[widgets]]
-id = "quick_links"
-extension_path = "web_ui/extensions/quick_links"
+widgets = [
+    { id = "quick_links", extension_path = "web_ui/extensions/quick_links" },
+]
 
 [capabilities]
-llm_tools        = []
-slash_commands   = []
-has_widget       = true
+llm_tools = []
+slash_commands = []
+has_widget = true
 has_config_panel = false
-has_api_routes   = true
+has_api_routes = false
 has_system_calls = false
-syscall_notes    = ""
-notes            = "Pure frontend widget. User manages bookmarks/links directly in the sidebar. Data persisted via the widget's own API routes. No LLM interaction."
+syscall_notes = ""
+notes = "Pure frontend widget. User manages bookmarks/links directly in the sidebar. Data persisted via the widget's own API routes. No LLM interaction."

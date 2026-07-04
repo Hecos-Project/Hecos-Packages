@@ -22,6 +22,7 @@ is_class_based = true
 widgets = [
     { id = "reminder", extension_path = "reminder/" },
 ]
+signature = "Uy6Lw1MjIpk4SPv3nyoZ0a25JLMoKbvlA8WIPd1yQ2jR7vuHU5dQ53tSSwtiYXd/IpGUVljPnl+QzQaDzo9rDQ=="
 
 [commands]
 set_reminder = "Creates a reminder. Fires TTS + WebUI alert at the specified time."
@@ -142,11 +143,41 @@ config_api_post = "/hecos/api/plugins/reminder/config"
 enabled = true
 
 [capabilities]
-llm_tools        = ["set_reminder", "list_reminders", "cancel_reminder", "snooze_reminder"]
-slash_commands   = ["/reminder", "/ricorda", "/promemoria", "/reminders"]
-has_widget       = true
+llm_tools = [
+    "",
+    "",
+    "",
+    "",
+]
+slash_commands = [
+    "/reminder",
+    "/ricorda",
+    "/promemoria",
+    "/reminders",
+    "/promemoria list",
+]
+has_widget = true
 has_config_panel = true
-has_api_routes   = true
+has_api_routes = false
 has_system_calls = false
-syscall_notes    = ""
-notes            = "Fires TTS voice alerts and WebUI browser notifications. Supports natural language times and CRON-style recurrence. Uses 'schedule' library for background scheduling."
+syscall_notes = ""
+notes = "Fires TTS voice alerts and WebUI browser notifications. Supports natural language times and CRON-style recurrence. Uses 'schedule' library for background scheduling."
+
+[file_hashes]
+"main.py" = "d0fdc9e1b1f24a6cf85d9e6108c8c5d3face668646905c7d48751fd0145edc83"
+"notifier.py" = "6d832fe21db8b6285265e3e0dcf6662b978d6e35ad4a991f91ab01c25b12e538"
+"parser.py" = "0462f0182d1cdeb0d3e43863742efa4846cc63f3671e60267cb8956970095fb2"
+"preview.png" = "0ba1f2baf424dfacd966ecaeaba1bed722427ec931ec0ab7bda5830f6b5e0568"
+"README.md" = "e4c68ddfbd9cb31e080ce9d38feaf7f5b33f301a9d1350db779da1118cecf1a5"
+"scheduler.py" = "1069880ec0337f95175393cb7df8d28c2b6c97b258ce0475c8fc66f27a5a2b95"
+"store.py" = "e8b2a2c0d83efbaf499550cf0b53b59584a97b725398bb3b3033d9fdae765f0a"
+"__init__.py" = "2644546d768e5b75ae3a7166c3b9abf87bff64190cc4eb9ddc7229aea831ab93"
+"reminder/main.py" = "f66c5fb3b8fa0d4284218b60b5edd4832140d89e56ca61c9ba25cdadee9f445c"
+"reminder/manifest.json" = "39653a0743f857b2a733824a0b45f39cef661cc23ad81adeb39d11ae06079675"
+"reminder/__init__.py" = "c808cedf3a3c00163514b02346d492fcc649f9950e9ebff1dfa2f01021acae51"
+"reminder/templates/reminder_widget.html" = "5bb2bc3fe93ceb59edd45be9c8650827e31d64866db8df0fc8b13994ff06bf5a"
+"reminder_config/config_manager.py" = "571679cb9d81c612c0dfb973975c4ce03b3e056dd085288d54c4d94907c2e5a6"
+"reminder_config/defaults.toml" = "8964095083c1ae2ab6ca98b581a299291d41f65a34609f05e0845c5b00ef6298"
+"reminder_config/__init__.py" = "2f59ef07028edb835724001e18dc4ae44a7b5ed75b1cd24ba0ca6876c4b3e5bc"
+"templates/config/config_reminder.html" = "1dc869ed2540abab694ca9cc8939a6a91e7a0998cb727a74fcd3feae8320658f"
+"web/routes.py" = "a1d73b719043af2ac8a301298aa938a1a8d33c0e298dfa66e98c568fa1c84720"
