@@ -119,6 +119,18 @@ def generate_store_catalog():
             except Exception:
                 screenshots = ["https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png"]
 
+        # ── Capabilities block ────────────────────────────────────────────────
+        cap = manifest_data.get("capabilities", {})
+        capabilities = {
+            "llm_tools":       cap.get("llm_tools", []),
+            "slash_commands":  cap.get("slash_commands", []),
+            "has_widget":      cap.get("has_widget", False),
+            "has_config_panel": cap.get("has_config_panel", False),
+            "has_api_routes":  cap.get("has_api_routes", False),
+            "has_system_calls": cap.get("has_system_calls", False),
+            "notes":           cap.get("notes", ""),
+        }
+
         pkg_entry = {
             "id": pkg_id,
             "name": manifest_data.get("name", "Unknown Package"),
@@ -135,10 +147,12 @@ def generate_store_catalog():
             "changelog": manifest_data.get("changelog", "Aggiornamento automatico generato dallo Store Catalog Builder."),
             "homepage": manifest_data.get("homepage", f"https://hecos-project.github.io/store/#{pkg_id}"),
             "fa_icon": manifest_data.get("fa_icon", "fa-box"),
-            "featured": manifest_data.get("featured", False)
+            "featured": manifest_data.get("featured", False),
+            "capabilities": capabilities,
         }
         
         catalog["packages"].append(pkg_entry)
+
         print(f" {Fore.GREEN}[OK] Aggiunto: {pkg_entry['name']} v{pkg_entry['version']}{Style.RESET_ALL}")
         
     try:
