@@ -3,6 +3,9 @@ name = "Calendar"
 version = "1.0.3"
 hecos_min_version = "0.34.0"
 type = "plugin"
+dependencies = [
+    "reminder",
+]
 author = "Antonio Meloni"
 description = "Core calendar module for Hecos. Stores, displays, and manages time-based events. Provides a shared datetime picker UI component, LLM tools, and REST API for other modules."
 target_dir = "hpm"

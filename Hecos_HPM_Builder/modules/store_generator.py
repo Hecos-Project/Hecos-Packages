@@ -149,6 +149,8 @@ def generate_store_catalog():
             "fa_icon": manifest_data.get("fa_icon", "fa-box"),
             "featured": manifest_data.get("featured", False),
             "capabilities": capabilities,
+            "dependencies": manifest_data.get("dependencies", []),
+            "pip_requirements": manifest_data.get("pip_requirements", []),
         }
         
         catalog["packages"].append(pkg_entry)

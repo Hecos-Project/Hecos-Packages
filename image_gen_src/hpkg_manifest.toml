@@ -16,6 +16,12 @@ lazy_load = true
 readme = "README.md"
 readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/image_gen_src/README.md"
 dependencies = []
+pip_requirements = [
+    "requests",
+    "httpx",
+    "openai",
+    "googletrans==4.0.0-rc1",
+]
 python_requires = ">=3.11"
 signature = "nyokjzzh85DDbfN+Lp7fNCfJuPXwOVaXFKZAYEs09FvetbYgZHUo12I0REta0piI8WytLaAqAtdfG8u0gaoXDg=="
 
