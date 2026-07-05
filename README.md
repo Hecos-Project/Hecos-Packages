@@ -317,6 +317,14 @@ During the development and extraction of built-in modules into `.hpkg` packages,
     - **The "Flicker" Bug:** We previously encountered a bug where disabled modules (like `browser_automation`) would appear for 2-3 seconds upon entering the Hub and then vanish. This was caused by the UI rendering before the configuration was fully loaded into memory. We fixed this by ensuring `window.cfg` is pre-injected via Jinja and preserved in `config_core.js`, allowing the UI to instantly drop disabled panels before the first frame is drawn.
     - **The "Wrong Category" Disappearance:** We saw an issue with the newly packaged `lists` module where its tab was visible upon entry, but then vanished a few seconds later. This happened because the static UI fallback (`config_manifest.js`) categorized it under `SISTEMA`, while the dynamic HPM manifest (`hpkg_manifest.toml`) categorized it under `APPLICAZIONI` (a category without a filter button). When the dynamic config loaded, the UI moved the tab from `SISTEMA` to `APPLICAZIONI`, causing it to "disappear" from the user's view. **Lesson:** Always ensure your `category` in `hpkg_manifest.toml` exactly matches one of the valid Hub categories (`INTELLIGENZA`, `MULTIMEDIA`, `CONNETTIVITÀ`, `RISORSE`, `SISTEMA`).
 
+12. **Completely Removing Legacy Built-in Modules**
+    - When porting an old "built-in" Hecos module to a standalone `.hpkg`, deleting the plugin folder (`hecos/plugins/`) and the UI extensions (`hecos/modules/web_ui/extensions/`) is **not enough**.
+    - The Web UI relies on hardcoded static mappings and YAML configurations to list "Core System" modules. If these references remain, the module will continue to appear as a built-in "ghost" module in the Package Manager.
+    - **To fully eradicate a built-in module, you MUST clean up:**
+      1. `hecos/config/data/plugins.yaml`: Delete the module's entire YAML block (e.g. `MEDIA_PLAYER:`). If it remains, the backend considers it a system plugin.
+      2. `hecos/modules/web_ui/static/js/config_manifest.js`: Remove the module from the `modules` array, `tagMap` dictionary, and `LAZY_PANEL_IDS` set.
+      3. `hecos/modules/web_ui/server_flask.py`: Remove the hardcoded `try/except` import blocks attempting to load the old plugin routes.
+
 ---
 
 ## 🚀 7. Store Distribution Workflow

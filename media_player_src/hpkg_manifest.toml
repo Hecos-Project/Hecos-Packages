@@ -1,0 +1,365 @@
+id = "media_player"
+name = "Hecos Media Player"
+version = "1.1.0"
+author = "Hecos Project"
+license = "GPL-3.0"
+description = "Universal media player for Hecos. OS-level playback (VLC/mpv), gallery for Drive and Chat, AI-driven playlist management."
+type = "plugin"
+target_dir = "hpm"
+plugin_dir = "."
+hecos_min_version = "0.34.0"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+readme = "README.md"
+readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/media_player_src/README.md"
+dependencies = []
+optional_dependencies = []
+pip_requirements = []
+tag = "MEDIA_PLAYER"
+lazy_load = true
+is_class_based = true
+api_routes_file = "media_player/routes.py"
+widgets = [
+    { id = "media_player", extension_path = "media_player_widget/" },
+]
+
+[commands]
+play = "Play a media file or URL"
+pause = "Pause/resume playback"
+stop = "Stop playback"
+next_track = "Skip to next track"
+prev_track = "Go to previous track"
+set_volume = "Set volume (0–100)"
+get_status = "Get current playback status"
+create_playlist = "Create a named playlist"
+add_to_playlist = "Add a file to a playlist"
+remove_from_playlist = "Remove a track from a playlist"
+delete_playlist = "Delete a playlist"
+list_playlists = "List all saved playlists"
+get_playlist = "Show playlist contents"
+play_playlist = "Load and play a saved playlist"
+scan_folder = "Scan a folder for media files"
+
+[[slash_commands]]
+id = "play"
+aliases = [
+    "/play",
+]
+description = "Play a media file or URL"
+usage = "/play <path>"
+example = "/play C:\\music\\song.mp3"
+icon = "▶️"
+method = "play"
+requires_args = true
+
+[[slash_commands]]
+id = "stop"
+aliases = [
+    "/stop",
+]
+description = "Stop playback"
+usage = "/stop"
+example = "/stop"
+icon = "⏹️"
+method = "stop"
+requires_args = false
+
+[[slash_commands]]
+id = "pause"
+aliases = [
+    "/pause",
+]
+description = "Pause or resume playback"
+usage = "/pause"
+example = "/pause"
+icon = "⏸️"
+method = "pause"
+requires_args = false
+
+[[slash_commands]]
+id = "playlist"
+aliases = [
+    "/playlist",
+]
+description = "List all saved playlists"
+usage = "/playlist"
+example = "/playlist"
+icon = "📋"
+method = "list_playlists"
+requires_args = false
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__play"
+description = "Play a media file or URL. Optionally specify a playlist_name to load a full queue."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.path_or_url]
+type = "string"
+description = "Absolute file path or HTTP/HTTPS URL to play."
+
+[tool_schema.function.parameters.properties.playlist_name]
+type = "string"
+description = "(Optional) The name of a saved playlist to queue up."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__pause"
+description = "Pause or resume the current track."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__stop"
+description = "Stop playback completely."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__next_track"
+description = "Skip to the next track in the current queue."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__prev_track"
+description = "Go back to the previous track in the current queue."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__set_volume"
+description = "Set playback volume."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "level",
+]
+
+[tool_schema.function.parameters.properties.level]
+type = "integer"
+description = "Volume from 0 (mute) to 100 (max)."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__get_status"
+description = "Return the current playback status (track name, position, volume)."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__create_playlist"
+description = "Create a named playlist with a list of file paths."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "name",
+]
+
+[tool_schema.function.parameters.properties.name]
+type = "string"
+description = "Playlist name (e.g. 'Jazz Evening')."
+
+[tool_schema.function.parameters.properties.items]
+type = "string"
+description = "Comma-separated list of absolute file paths."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__add_to_playlist"
+description = "Add a file to an existing playlist (creates it if missing)."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "name",
+    "path",
+]
+
+[tool_schema.function.parameters.properties.name]
+type = "string"
+description = "Playlist name."
+
+[tool_schema.function.parameters.properties.path]
+type = "string"
+description = "Absolute file path to add."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__remove_from_playlist"
+description = "Remove a track from a playlist by its position (1-based)."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "name",
+    "index",
+]
+
+[tool_schema.function.parameters.properties.name]
+type = "string"
+description = "Playlist name."
+
+[tool_schema.function.parameters.properties.index]
+type = "integer"
+description = "1-based position of the track to remove."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__delete_playlist"
+description = "Delete a named playlist permanently."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "name",
+]
+
+[tool_schema.function.parameters.properties.name]
+type = "string"
+description = "Playlist name to delete."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__list_playlists"
+description = "List all saved playlists with their track count."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__get_playlist"
+description = "Show the contents of a saved playlist."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "name",
+]
+
+[tool_schema.function.parameters.properties.name]
+type = "string"
+description = "Playlist name."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__play_playlist"
+description = "Load and play a saved playlist."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "name",
+]
+
+[tool_schema.function.parameters.properties.name]
+type = "string"
+description = "Playlist name."
+
+[tool_schema.function.parameters.properties.shuffle]
+type = "boolean"
+description = "If True, play tracks in random order."
+
+[tool_schema.function.parameters.properties.index]
+type = "integer"
+description = "0-based index to start playback from."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__scan_folder"
+description = "Scan a folder for audio/video files and optionally save as a playlist."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "folder",
+]
+
+[tool_schema.function.parameters.properties.folder]
+type = "string"
+description = "Absolute path to the folder to scan."
+
+[tool_schema.function.parameters.properties.save_as]
+type = "string"
+description = "If provided, save the result as a named playlist."
+
+[tool_schema.function.parameters.properties.recursive]
+type = "boolean"
+description = "If True, scan subfolders too (default: True)."
+
+[tool_schema.function.parameters.properties.auto_play]
+type = "boolean"
+description = "If True, start playback immediately after scan (default: True)."
+
+[config_panel]
+tab_id = "media_player"
+tab_label = "Media Player"
+tab_icon = "fa-play-circle"
+category = "MULTIMEDIA"
+template_file = "web_ui/templates/config_media_player.html"
+api_routes_file = "media_player/routes.py"
+config_api_get = "/hecos/api/plugins/media_player/config"
+config_api_post = "/hecos/api/plugins/media_player/config"
+
+[config_defaults]
+enabled = true
+
+[capabilities]
+llm_tools = [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+]
+slash_commands = [
+    "/play",
+    "/stop",
+    "/pause",
+    "/playlist",
+]
+has_widget = true
+has_config_panel = true
+has_api_routes = true
+has_system_calls = true
+syscall_notes = "Launches VLC/mpv via OS subprocess for audio/video playback"
+notes = ""
