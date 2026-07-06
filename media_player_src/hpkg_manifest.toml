@@ -1,7 +1,7 @@
 id = "media_player"
 name = "Hecos Media Player"
 version = "1.1.0"
-author = "Hecos Project"
+author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "Universal media player for Hecos. OS-level playback (VLC/mpv), gallery for Drive and Chat, AI-driven playlist management."
 type = "plugin"
