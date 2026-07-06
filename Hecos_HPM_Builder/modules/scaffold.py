@@ -43,7 +43,7 @@ def scaffold_package():
     pkg_version = _prompt_field("Versione Iniziale", defaults.get("version", "1.0.0"))
     pkg_desc = _prompt_field("Descrizione", defaults.get("description", f"Descrizione del pacchetto {pkg_name}."))
     pkg_license = _prompt_field("Licenza", defaults.get("license", "MIT"))
-    pkg_hecos_min = _prompt_field("Versione Minima Hecos", defaults.get("hecos_min_version", "0.35.0"))
+    pkg_hecos_min = _prompt_field("Versione Minima Hecos", defaults.get("hecos_min_version", "0.39.0"))
     
     # Crea cartelle base
     os.makedirs(src_dir / "plugin" / pkg_id)
@@ -58,7 +58,7 @@ hecos_min_version = "{pkg_hecos_min}"
 type = "{pkg_type}"
 author = "{pkg_author}"
 description = "{pkg_desc}"
-target_dir = "plugins"
+target_dir = "hpm"
 
 readme = "README.md"
 changelog = "CHANGELOG.md"
@@ -85,6 +85,23 @@ js_file = "web_ui/static/js/{pkg_id}_panel.js"
 
     with open(src_dir / "plugin" / pkg_id / "__init__.py", "w", encoding="utf-8") as f:
         f.write("# Plugin Entry Point\n")
+        
+    main_py_content = f'''"""
+MODULE: {pkg_name}
+"""
+from hecos.core.logging import logger
+
+class {pkg_id.capitalize()}Tools:
+    def __init__(self):
+        self.tag = "{pkg_id.upper()}"
+
+    def status(self) -> str:
+        return "Loaded"
+
+tools = {pkg_id.capitalize()}Tools()
+'''
+    with open(src_dir / "plugin" / pkg_id / "main.py", "w", encoding="utf-8") as f:
+        f.write(main_py_content)
         
     with open(src_dir / "web_ui" / "templates" / f"config_{pkg_id}.html", "w", encoding="utf-8") as f:
         f.write(f"<!-- {pkg_name} Config Panel -->\n<div>\n    <h2>{pkg_name}</h2>\n</div>\n")
