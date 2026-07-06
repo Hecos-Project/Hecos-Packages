@@ -30,10 +30,16 @@ def auto_generate_capabilities(target_dir: Path) -> bool:
     # Estrai tool_schema
     llm_tools = []
     for schema in manifest.get("tool_schema", []):
-        name = schema.get("name", "")
+        name = schema.get("name")
+        if not name and "function" in schema:
+            name = schema["function"].get("name", "")
+        if not name:
+            continue
+        
         if pkg_tag and name.startswith(f"{pkg_tag}__"):
             name = name[len(f"{pkg_tag}__"):]
         llm_tools.append(name)
+
 
     # Estrai slash_commands
     slash_commands = []

@@ -19,7 +19,7 @@ lazy_load = true
 is_class_based = true
 api_routes_file = "media_player/routes.py"
 widgets = [
-    { id = "media_player", extension_path = "media_player_widget/" },
+    { id = "media_player_widget", extension_path = "media_player_widget/" },
 ]
 
 [commands]
@@ -320,6 +320,23 @@ description = "If True, scan subfolders too (default: True)."
 type = "boolean"
 description = "If True, start playback immediately after scan (default: True)."
 
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "MEDIA_PLAYER__play_by_index"
+description = "Jump directly to a track by position in the current queue (0-based)."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "index",
+]
+
+[tool_schema.function.parameters.properties.index]
+type = "integer"
+description = "Parameter index"
+
 [config_panel]
 tab_id = "media_player"
 tab_label = "Media Player"
@@ -335,21 +352,22 @@ enabled = true
 
 [capabilities]
 llm_tools = [
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
+    "play",
+    "pause",
+    "stop",
+    "next_track",
+    "prev_track",
+    "set_volume",
+    "get_status",
+    "create_playlist",
+    "add_to_playlist",
+    "remove_from_playlist",
+    "delete_playlist",
+    "list_playlists",
+    "get_playlist",
+    "play_playlist",
+    "scan_folder",
+    "play_by_index",
 ]
 slash_commands = [
     "/play",
