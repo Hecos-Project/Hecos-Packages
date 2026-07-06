@@ -62,8 +62,8 @@ enabled = true
 
 [capabilities]
 llm_tools = [
-    "",
-    "",
+    "get_home_location",
+    "geocode",
 ]
 slash_commands = []
 has_widget = true

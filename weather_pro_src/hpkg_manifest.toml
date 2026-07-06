@@ -81,8 +81,8 @@ enabled = true
 
 [capabilities]
 llm_tools = [
-    "",
-    "",
+    "get_current_weather",
+    "get_weather_forecast",
 ]
 slash_commands = []
 has_widget = true

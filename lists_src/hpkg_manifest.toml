@@ -1,9 +1,9 @@
 id = "lists"
 name = "Lists Manager"
-version = "2.0.0"
+version = "2.0.1"
 author = "Antonio Meloni"
 license = "GPL-3.0"
-description = "Universal list manager plugin. Supports shopping lists, to-do lists, blacklists, and any other list type with items, priorities, and labels."
+description = "Create and manage multiple lists (e.g. groceries, todos) with Hecos. Supports custom colors, archived lists, item states, and LLM autonomous management."
 type = "plugin"
 target_dir = "hpm"
 plugin_dir = "."
@@ -20,6 +20,12 @@ is_class_based = true
 widgets = [
     { id = "lists_widget", extension_path = "lists_widget/" },
 ]
+
+[backup]
+enabled = true
+backup_endpoint = "/api/lists/backup"
+restore_endpoint = "/api/lists/restore"
+icon = "📝"
 signature = "ustDz3+wSJFjLk5H6NUqvAzJlGmHHM8zQnvUlmaYCVVAH6Q+Fmj8nNglNT3nDGCG5arZhQx1mCRqRcogApQbAg=="
 
 [commands]
@@ -256,14 +262,14 @@ export_folder = "%USERPROFILE%\\Desktop"
 
 [capabilities]
 llm_tools = [
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
+    "create_list",
+    "list_lists",
+    "show_list",
+    "add_to_list",
+    "check_item",
+    "uncheck_item",
+    "remove_from_list",
+    "clear_done",
 ]
 slash_commands = [
     "/list",

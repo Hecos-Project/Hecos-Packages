@@ -1,6 +1,6 @@
 id = "calendar"
 name = "Calendar"
-version = "1.0.3"
+version = "1.0.4"
 hecos_min_version = "0.34.0"
 type = "plugin"
 dependencies = [
@@ -24,6 +24,12 @@ api_routes_file = "calendar/main.py"
 widgets = [
     { id = "calendar", extension_path = "calendar/" },
 ]
+
+[backup]
+enabled = true
+backup_endpoint = "/api/calendar/backup"
+restore_endpoint = "/api/calendar/restore"
+icon = "📅"
 signature = "Vw9DviFipIDQdE2dwOxIvBlV768t8eOWbBIhLsO4xi6nDyc26pBkh6NQyXCk7Kk424gsM60/H4JtdM1wW5N4Cg=="
 
 [config_defaults]

@@ -1,6 +1,6 @@
 id = "reminder"
 name = "Reminder"
-version = "1.0.2"
+version = "1.0.3"
 author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "Schedule time-based reminders with TTS alerts and WebUI notifications. Supports natural language and recurring CRON expressions."
@@ -22,6 +22,12 @@ is_class_based = true
 widgets = [
     { id = "reminder", extension_path = "reminder/" },
 ]
+
+[backup]
+enabled = true
+backup_endpoint = "/api/reminders/backup"
+restore_endpoint = "/api/reminders/restore"
+icon = "🕒"
 signature = "Uy6Lw1MjIpk4SPv3nyoZ0a25JLMoKbvlA8WIPd1yQ2jR7vuHU5dQ53tSSwtiYXd/IpGUVljPnl+QzQaDzo9rDQ=="
 
 [commands]
@@ -144,10 +150,10 @@ enabled = true
 
 [capabilities]
 llm_tools = [
-    "",
-    "",
-    "",
-    "",
+    "set_reminder",
+    "list_reminders",
+    "cancel_reminder",
+    "snooze_reminder",
 ]
 slash_commands = [
     "/reminder",
