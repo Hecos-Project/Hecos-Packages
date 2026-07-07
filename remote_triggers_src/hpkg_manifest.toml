@@ -1,0 +1,48 @@
+id = "remote_triggers"
+name = "Remote Triggers"
+version = "1.0.0"
+author = "Antonio Meloni"
+license = "GPL-3.0"
+description = "Experimental module to trigger Hecos Push-to-Talk from remote sources: smartwatch hardware button (F24), Bluetooth media keys, HTTP webhooks (Arduino, ESP32), and custom hotkeys."
+type = "plugin"
+target_dir = "hpm"
+plugin_dir = "."
+hecos_min_version = "0.40.0"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+readme = "README.md"
+readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/remote_triggers_src/README.md"
+dependencies = []
+optional_dependencies = []
+pip_requirements = [
+    "pynput",
+]
+tag = "REMOTE_TRIGGERS"
+lazy_load = false
+is_class_based = true
+api_routes_file = "web/routes.py"
+
+[commands]
+status = "Returns the current status of the Remote Triggers module and PTT bus."
+
+[config_panel]
+tab_id = "remote-triggers"
+tab_label = "Remote Triggers"
+tab_icon = "fa-mobile-alt"
+category = "CONNETTIVITÀ"
+template_file = "web/templates/config_remote_triggers.html"
+api_routes_file = "web/routes.py"
+config_api_get = "/hecos/api/plugins/remote_triggers/config"
+config_api_post = "/hecos/api/plugins/remote_triggers/config"
+
+[config_defaults]
+enabled = true
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = "Experimental module. Enables PTT activation via smartwatch hardware button (F24 HID), BT media keys, HTTP webhooks, or a custom hotkey. All PTT signals are forwarded to the core ptt_bus — the audio pipeline is not modified. Not fully functional — work in progress."
