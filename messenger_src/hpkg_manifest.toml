@@ -36,17 +36,6 @@ api_routes_file = "web/routes.py"
 config_api_get = "/hecos/api/plugins/messenger/config"
 config_api_post = "/hecos/api/plugins/messenger/config"
 
-[config_defaults]
-telegram_enabled = false
-telegram_bot_token = ""
-telegram_default_chat_id = ""
-whatsapp_enabled = false
-whatsapp_phone_country_code = "+39"
-whatsapp_send_as_single_block = true
-discord_enabled = false
-discord_webhook_url = ""
-discord_default_channel = ""
-
 [capabilities]
 llm_tools = [
     "send_message",

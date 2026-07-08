@@ -34,9 +34,6 @@ api_routes_file = "web/routes.py"
 config_api_get = "/hecos/api/plugins/remote_triggers/config"
 config_api_post = "/hecos/api/plugins/remote_triggers/config"
 
-[config_defaults]
-enabled = true
-
 [capabilities]
 llm_tools = []
 slash_commands = []

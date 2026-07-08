@@ -32,11 +32,6 @@ restore_endpoint = "/api/calendar/restore"
 icon = "📅"
 signature = "Vw9DviFipIDQdE2dwOxIvBlV768t8eOWbBIhLsO4xi6nDyc26pBkh6NQyXCk7Kk424gsM60/H4JtdM1wW5N4Cg=="
 
-[config_defaults]
-enabled = true
-defaults_file = "calendar_config/defaults.toml"
-template_file = "web_ui/templates/config_calendar.html"
-
 [config_panel]
 tab_id = "calendar"
 tab_label = "Calendar"

@@ -57,9 +57,6 @@ required = [
 type = "string"
 description = "Address, city name, or place to geocode (e.g. 'Rome, Italy', 'Via Roma 1, Milano')"
 
-[config_defaults]
-enabled = true
-
 [capabilities]
 llm_tools = [
     "get_home_location",

@@ -145,9 +145,6 @@ api_routes_file = "web/routes.py"
 config_api_get = "/hecos/api/plugins/reminder/config"
 config_api_post = "/hecos/api/plugins/reminder/config"
 
-[config_defaults]
-enabled = true
-
 [capabilities]
 llm_tools = [
     "set_reminder",

@@ -347,9 +347,6 @@ api_routes_file = "media_player/routes.py"
 config_api_get = "/hecos/api/plugins/media_player/config"
 config_api_post = "/hecos/api/plugins/media_player/config"
 
-[config_defaults]
-enabled = true
-
 [capabilities]
 llm_tools = [
     "play",

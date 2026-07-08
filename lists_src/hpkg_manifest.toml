@@ -257,9 +257,6 @@ api_routes_file = "api.py"
 config_api_get = "/hecos/api/plugins/lists/config"
 config_api_post = "/hecos/api/plugins/lists/config"
 
-[config_defaults]
-export_folder = "%USERPROFILE%\\Desktop"
-
 [capabilities]
 llm_tools = [
     "create_list",
