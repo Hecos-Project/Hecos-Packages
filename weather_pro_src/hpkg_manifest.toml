@@ -1,4 +1,5 @@
 id = "weather_pro"
+manifest_version = "1"
 name = "Weather Pro"
 version = "1.0.1"
 readme = "README.md"

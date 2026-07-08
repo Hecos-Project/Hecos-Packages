@@ -1,4 +1,5 @@
 id = "reminder"
+manifest_version = "1"
 name = "Reminder"
 version = "1.0.3"
 author = "Antonio Meloni"
@@ -13,7 +14,7 @@ readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/mai
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
 dependencies = []
 optional_dependencies = []
-pip_requirements = [
+pip_requirements = ["schedule==1.2.2"]
     "schedule",
 ]
 tag = "REMINDER"
@@ -38,6 +39,7 @@ snooze_reminder = "Postpones a reminder by N minutes from now."
 
 [[slash_commands]]
 id = "reminder"
+manifest_version = "1"
 aliases = [
     "/reminder",
     "/ricorda",
@@ -52,6 +54,7 @@ requires_args = true
 
 [[slash_commands]]
 id = "reminders"
+manifest_version = "1"
 aliases = [
     "/reminders",
     "/promemoria list",

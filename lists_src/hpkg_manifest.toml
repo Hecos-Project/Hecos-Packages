@@ -1,4 +1,5 @@
 id = "lists"
+manifest_version = "1"
 name = "Lists Manager"
 version = "2.0.1"
 author = "Antonio Meloni"
@@ -42,6 +43,7 @@ archive_list = "Archivia una lista (la nasconde dalla visuale principale)."
 
 [[slash_commands]]
 id = "lists"
+manifest_version = "1"
 aliases = [
     "/list",
     "/lists",
@@ -56,6 +58,7 @@ requires_args = false
 
 [[slash_commands]]
 id = "list_show"
+manifest_version = "1"
 aliases = [
     "/lista",
 ]
@@ -68,6 +71,7 @@ requires_args = true
 
 [[slash_commands]]
 id = "list_add"
+manifest_version = "1"
 aliases = [
     "/list add",
     "/lista aggiungi",
@@ -81,6 +85,7 @@ requires_args = true
 
 [[slash_commands]]
 id = "list_done"
+manifest_version = "1"
 aliases = [
     "/list done",
     "/lista spunta",

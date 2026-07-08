@@ -1,4 +1,5 @@
 id = "messenger"
+manifest_version = "1"
 name = "Messenger"
 version = "1.0.1"
 author = "Antonio Meloni"
@@ -56,6 +57,7 @@ notes = ""
 
 [[slash_commands]]
 id = "msg"
+manifest_version = "1"
 aliases = [
     "/msg",
     "/send",

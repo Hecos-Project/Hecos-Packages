@@ -1,4 +1,5 @@
 id = "remote_triggers"
+manifest_version = "1"
 name = "Remote Triggers"
 version = "1.0.0"
 author = "Antonio Meloni"
@@ -13,7 +14,7 @@ readme = "README.md"
 readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/remote_triggers_src/README.md"
 dependencies = []
 optional_dependencies = []
-pip_requirements = [
+pip_requirements = ["pynput==1.8.2"]
     "pynput",
 ]
 tag = "REMOTE_TRIGGERS"

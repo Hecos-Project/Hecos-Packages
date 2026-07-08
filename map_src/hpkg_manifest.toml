@@ -1,4 +1,5 @@
 id = "map"
+manifest_version = "1"
 name = "Simple Maps"
 version = "1.0.1"
 author = "Antonio Meloni"
@@ -13,7 +14,7 @@ readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/mai
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
 dependencies = []
 optional_dependencies = []
-pip_requirements = [
+pip_requirements = ["requests==2.34.2"]
     "requests",
 ]
 tag = "MAP"

@@ -1,4 +1,5 @@
 id = "calendar"
+manifest_version = "1"
 name = "Calendar"
 version = "1.0.4"
 hecos_min_version = "0.34.0"
@@ -17,7 +18,7 @@ icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/
 readme = "README.md"
 readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/calendar_src/README.md"
 license = "GPL-3.0"
-pip_requirements = [
+pip_requirements = ["holidays==0.98"]
     "holidays",
 ]
 api_routes_file = "calendar/main.py"
@@ -122,6 +123,7 @@ description = "Optional year to check holidays for. Defaults to current year."
 
 [[slash_commands]]
 id = "calendar"
+manifest_version = "1"
 aliases = [
     "/calendar",
     "/calendario",
