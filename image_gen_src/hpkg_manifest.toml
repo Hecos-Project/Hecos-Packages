@@ -17,12 +17,14 @@ lazy_load = true
 readme = "README.md"
 readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/image_gen_src/README.md"
 dependencies = []
-pip_requirements = ["requests==2.34.2", "httpx==0.28.1", "openai==2.41.0"]
-    "requests",
-    "httpx",
-    "openai",
+pip_requirements = [
+    "requests==2.34.2",
+    "httpx==0.28.1",
+    "openai==2.41.0",
+    "tomli_w",
 ]
 python_requires = ">=3.11"
+pip_isolation = "isolated"
 signature = "nyokjzzh85DDbfN+Lp7fNCfJuPXwOVaXFKZAYEs09FvetbYgZHUo12I0REta0piI8WytLaAqAtdfG8u0gaoXDg=="
 
 [routing]
@@ -82,7 +84,7 @@ slash_commands = [
 ]
 has_widget = false
 has_config_panel = true
-has_api_routes = false
+has_api_routes = true
 has_system_calls = false
 syscall_notes = ""
 notes = "Supports multiple AI providers: Pollinations (free, default), Gemini, OpenAI DALL-E, Stability AI, HuggingFace. Requires network access. Provider and model are configurable."

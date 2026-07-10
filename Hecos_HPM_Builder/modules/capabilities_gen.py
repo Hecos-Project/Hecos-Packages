@@ -54,7 +54,7 @@ def auto_generate_capabilities(target_dir: Path) -> bool:
     # Determina flag
     has_widget       = "widgets" in manifest and len(manifest["widgets"]) > 0
     has_config_panel = "config_panel" in manifest
-    has_api_routes   = "api_routes_file" in manifest
+    has_api_routes   = "api_routes_file" in manifest or ("config_panel" in manifest and "api_routes_file" in manifest["config_panel"])
 
     # Mantieni system calls e notes se già presenti
     existing_cap     = manifest.get("capabilities", {})

@@ -6,6 +6,7 @@ author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "Experimental module to trigger Hecos Push-to-Talk from remote sources: smartwatch hardware button (F24), Bluetooth media keys, HTTP webhooks (Arduino, ESP32), and custom hotkeys."
 type = "plugin"
+pip_isolation = "isolated"
 target_dir = "hpm"
 plugin_dir = "."
 hecos_min_version = "0.40.0"
@@ -14,8 +15,8 @@ readme = "README.md"
 readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/remote_triggers_src/README.md"
 dependencies = []
 optional_dependencies = []
-pip_requirements = ["pynput==1.8.2"]
-    "pynput",
+pip_requirements = [
+    "pynput==1.8.2",
 ]
 tag = "REMOTE_TRIGGERS"
 lazy_load = false

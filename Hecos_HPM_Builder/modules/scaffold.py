@@ -89,7 +89,7 @@ js_file = "web_ui/static/js/{pkg_id}_panel.js"
     main_py_content = f'''"""
 MODULE: {pkg_name}
 """
-from hecos.core.logging import logger
+from hecos_sdk import logger
 
 class {pkg_id.capitalize()}Tools:
     def __init__(self):
@@ -102,6 +102,7 @@ tools = {pkg_id.capitalize()}Tools()
 '''
     with open(src_dir / "plugin" / pkg_id / "main.py", "w", encoding="utf-8") as f:
         f.write(main_py_content)
+
         
     with open(src_dir / "web_ui" / "templates" / f"config_{pkg_id}.html", "w", encoding="utf-8") as f:
         f.write(f"<!-- {pkg_name} Config Panel -->\n<div>\n    <h2>{pkg_name}</h2>\n</div>\n")

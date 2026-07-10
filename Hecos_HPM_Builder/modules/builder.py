@@ -61,7 +61,7 @@ def _build_single_package(target_dir, packages_dir):
 
     if "config_panel" in manifest:
         cp = manifest["config_panel"]
-        for key in ["template_file", "js_file", "css_file"]:
+        for key in ["template_file", "js_file", "css_file", "api_routes_file"]:
             if key in cp and not (target_dir / cp[key]).exists():
                 errors.append(f"File {key} non trovato: {cp[key]}")
 
