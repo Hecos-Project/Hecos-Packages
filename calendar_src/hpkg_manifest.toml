@@ -3,8 +3,8 @@ manifest_version = "1"
 name = "Calendar"
 version = "1.0.4"
 hecos_min_version = "0.34.0"
-type = "plugin"
-pip_isolation = "isolated"
+type = "app"
+pip_isolation = "shared"
 dependencies = [
     "reminder",
 ]
@@ -53,7 +53,6 @@ description = "Adds a new event to the Hecos calendar. Use this when the user sa
 
 [tool_schema.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "title",
     "start",
@@ -61,32 +60,26 @@ required = [
 
 [tool_schema.parameters.properties.title]
 type = "string"
-pip_isolation = "isolated"
 description = "Title/label of the event (e.g. 'Doctor appointment', 'Team standup', 'Dentist')."
 
 [tool_schema.parameters.properties.start]
 type = "string"
-pip_isolation = "isolated"
 description = "Start date/time in natural language or ISO format ('tomorrow at 10:00', 'next Monday at 14:30', '2026-06-01 09:00')."
 
 [tool_schema.parameters.properties.end]
 type = "string"
-pip_isolation = "isolated"
 description = "Optional: End date/time. If omitted, the event defaults to 1 hour duration."
 
 [tool_schema.parameters.properties.all_day]
 type = "boolean"
-pip_isolation = "isolated"
 description = "If true, the event spans the full day with no specific time. Default: false."
 
 [tool_schema.parameters.properties.notes]
 type = "string"
-pip_isolation = "isolated"
 description = "Optional: Additional notes or description for the event."
 
 [tool_schema.parameters.properties.color]
 type = "string"
-pip_isolation = "isolated"
 description = "Optional: Color code for the event (e.g. '#3498db', 'red', 'green'). Defaults to the system accent color."
 
 [[tool_schema]]
@@ -95,11 +88,9 @@ description = "Returns a formatted list of upcoming calendar events. Use when th
 
 [tool_schema.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [tool_schema.parameters.properties.n]
 type = "integer"
-pip_isolation = "isolated"
 description = "Max number of events to return. Default: 10."
 
 [[tool_schema]]
@@ -108,14 +99,12 @@ description = "Deletes a calendar event. Use when the user says 'cancel that app
 
 [tool_schema.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "event_id",
 ]
 
 [tool_schema.parameters.properties.event_id]
 type = "string"
-pip_isolation = "isolated"
 description = "The ID (full UUID or first 8 chars) of the event to delete."
 
 [[tool_schema]]
@@ -124,16 +113,13 @@ description = "Returns robust temporal awareness containing the current date/tim
 
 [tool_schema.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [tool_schema.parameters.properties.country]
 type = "string"
-pip_isolation = "isolated"
 description = "The ISO country code (e.g., 'IT' for Italy, 'US' for USA). Default: 'IT'."
 
 [tool_schema.parameters.properties.year]
 type = "integer"
-pip_isolation = "isolated"
 description = "Optional year to check holidays for. Defaults to current year."
 
 [[slash_commands]]

@@ -6,7 +6,7 @@ author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "Simple Map Module based on Leaflet and Nominatim."
 type = "plugin"
-pip_isolation = "isolated"
+pip_isolation = "shared"
 target_dir = "hpm"
 plugin_dir = "."
 hecos_min_version = "0.34.0"
@@ -38,11 +38,9 @@ description = "Returns the geographic coordinates (lat/lon) of the user's home a
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [tool_schema.function.parameters.properties.username]
 type = "string"
-pip_isolation = "isolated"
 default = "admin"
 
 [[tool_schema]]
@@ -53,14 +51,12 @@ description = "Converts a city name or address string into geographic coordinate
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "query",
 ]
 
 [tool_schema.function.parameters.properties.query]
 type = "string"
-pip_isolation = "isolated"
 description = "Address, city name, or place to geocode (e.g. 'Rome, Italy', 'Via Roma 1, Milano')"
 
 [capabilities]

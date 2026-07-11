@@ -5,8 +5,8 @@ version = "1.0.3"
 author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "Schedule time-based reminders with TTS alerts and WebUI notifications. Supports natural language and recurring CRON expressions."
-type = "plugin"
-pip_isolation = "isolated"
+type = "app"
+pip_isolation = "shared"
 target_dir = "hpm"
 plugin_dir = "."
 hecos_min_version = "0.34.0"
@@ -75,7 +75,6 @@ description = "Creates a new reminder that fires a voice alert and WebUI notific
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "title",
     "when",
@@ -83,17 +82,14 @@ required = [
 
 [tool_schema.function.parameters.properties.title]
 type = "string"
-pip_isolation = "isolated"
 description = "What to remind the user about. Be concise and descriptive (e.g. 'Call the doctor', 'Check the oven', 'Daily standup')."
 
 [tool_schema.function.parameters.properties.when]
 type = "string"
-pip_isolation = "isolated"
 description = "When to fire the reminder. Accepts natural language: 'domani alle 15:00', 'tra 20 minuti', 'every Monday at 9:00', 'ogni giorno alle 8', 'next Friday at 18:30'."
 
 [tool_schema.function.parameters.properties.repeat]
 type = "string"
-pip_isolation = "isolated"
 description = "Optional: explicit CRON expression (5 fields: min hour day month day_of_week) for advanced recurring schedules. Leave empty and use 'when' for natural language recurrence."
 
 [[tool_schema]]
@@ -104,7 +100,6 @@ description = "Returns a formatted list of all active reminders (title, schedule
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [tool_schema.function.parameters.properties]
 
@@ -116,14 +111,12 @@ description = "Cancels an active reminder. The reminder_id can be the full UUID 
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "reminder_id",
 ]
 
 [tool_schema.function.parameters.properties.reminder_id]
 type = "string"
-pip_isolation = "isolated"
 description = "The full ID or first 8 characters of the reminder ID (as shown in list_reminders)."
 
 [[tool_schema]]
@@ -134,19 +127,16 @@ description = "Postpones a reminder by a specified number of minutes from the cu
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "reminder_id",
 ]
 
 [tool_schema.function.parameters.properties.reminder_id]
 type = "string"
-pip_isolation = "isolated"
 description = "The full ID or first 8 characters of the reminder to snooze."
 
 [tool_schema.function.parameters.properties.minutes]
 type = "integer"
-pip_isolation = "isolated"
 description = "How many minutes to postpone the reminder. Default: 15."
 
 [config_panel]
@@ -175,7 +165,7 @@ slash_commands = [
 ]
 has_widget = true
 has_config_panel = true
-has_api_routes = false
+has_api_routes = true
 has_system_calls = false
 syscall_notes = ""
 notes = "Fires TTS voice alerts and WebUI browser notifications. Supports natural language times and CRON-style recurrence. Uses 'schedule' library for background scheduling."

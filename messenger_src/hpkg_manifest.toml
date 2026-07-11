@@ -6,7 +6,7 @@ author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "Send and receive messages via Telegram, WhatsApp, and Discord.\n\n**Guida ai Comandi Rapidi:**\n- `/msg <piattaforma>:<destinatario> <testo>`: Invia un messaggio diretto scavalcando l'IA. Es: `/msg whatsapp:+393331234567 Ciao!`\n- `/send`: Alias esatto di `/msg`.\n"
 type = "plugin"
-pip_isolation = "isolated"
+pip_isolation = "shared"
 target_dir = "hpm"
 plugin_dir = "."
 hecos_min_version = "0.40.0"
@@ -72,7 +72,6 @@ requires_args = true
 
 [[tool_schema]]
 type = "function"
-pip_isolation = "isolated"
 
 [tool_schema.function]
 name = "MESSENGER__send_message"
@@ -80,7 +79,6 @@ description = "Sends a text message to a contact or group on a specified messagi
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "to",
     "text",
@@ -88,17 +86,14 @@ required = [
 
 [tool_schema.function.parameters.properties.to]
 type = "string"
-pip_isolation = "isolated"
 description = "The recipient, including platform prefix. Examples: 'telegram:@myuser', 'telegram:123456789', 'whatsapp:+393331234567', 'discord:#general'. If the user does not specify a platform and only one is configured, default to that one."
 
 [tool_schema.function.parameters.properties.text]
 type = "string"
-pip_isolation = "isolated"
 description = "The message body to send. Can be a single line or multi-line text. Preserve formatting if the user specifies it."
 
 [tool_schema.function.parameters.properties.platform]
 type = "string"
-pip_isolation = "isolated"
 description = "Optional: explicit platform override ('telegram', 'whatsapp', 'discord'). Use this if the 'to' field does not contain a prefix."
 enum = [
     "telegram",
@@ -108,12 +103,10 @@ enum = [
 
 [tool_schema.function.parameters.properties.is_app_open]
 type = "boolean"
-pip_isolation = "isolated"
 description = "Set to true if the user tells you WhatsApp or the target app is already open on their desktop. Significantly speeds up the sending procedure."
 
 [[tool_schema]]
 type = "function"
-pip_isolation = "isolated"
 
 [tool_schema.function]
 name = "MESSENGER__list_accounts"
@@ -121,13 +114,11 @@ description = "Returns the list of all configured messaging accounts with their 
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [tool_schema.function.parameters.properties]
 
 [[tool_schema]]
 type = "function"
-pip_isolation = "isolated"
 
 [tool_schema.function]
 name = "MESSENGER__check_connection"
@@ -135,11 +126,9 @@ description = "Tests the connection to one or all configured messaging providers
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [tool_schema.function.parameters.properties.platform]
 type = "string"
-pip_isolation = "isolated"
 description = "Optional: which platform to test ('telegram', 'whatsapp', 'discord'). If omitted, all configured providers are tested."
 enum = [
     "telegram",
@@ -149,7 +138,6 @@ enum = [
 
 [[tool_schema]]
 type = "function"
-pip_isolation = "isolated"
 
 [tool_schema.function]
 name = "MESSENGER__force_send"
@@ -157,6 +145,5 @@ description = "Presses 'Enter' on the host machine to force sending a message if
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [tool_schema.function.parameters.properties]

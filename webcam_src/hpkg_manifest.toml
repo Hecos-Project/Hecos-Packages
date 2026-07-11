@@ -10,7 +10,7 @@ category = "PLUGINS"
 plugin_tag = "WEBCAM"
 is_class_based = true
 type = "plugin"
-pip_isolation = "isolated"
+pip_isolation = "shared"
 plugin_dir = "."
 lazy_load = true
 readme = "README.md"
@@ -31,14 +31,12 @@ description = "Takes a photo. CRITICAL: Use target='server' for PC webcam, targe
 
 [tool_schema.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "target",
 ]
 
 [tool_schema.parameters.properties.target]
 type = "string"
-pip_isolation = "isolated"
 description = "REQUIRED ROUTING. Use 'client' if user says phone/smartphone/browser. Use 'server' for local PC webcam. NEVER use this to 'generate' photos of cats/characters."
 enum = [
     "server",
@@ -51,11 +49,9 @@ description = "Captures the entire desktop screen (or a specific monitor) and sa
 
 [tool_schema.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [tool_schema.parameters.properties.monitor]
 type = "integer"
-pip_isolation = "isolated"
 description = "Monitor to capture: 1 = primary screen (default), 0 = all monitors combined."
 
 [capabilities]

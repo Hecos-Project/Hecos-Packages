@@ -55,6 +55,7 @@ def main_menu():
         print(f"7. [UNP]  Unpack All Packages {Fore.LIGHTBLACK_EX}(Decomprime tutti i .hpkg in cartelle *_src){Style.RESET_ALL}")
         print(f"8. [EDT]  Edit Manifest {Fore.LIGHTBLACK_EX}(Modifica versione, autore, nome...){Style.RESET_ALL}")
         print(f"9. [CAT]  Build Store Catalog {Fore.LIGHTBLACK_EX}(Genera index.json per lo Store online){Style.RESET_ALL}")
+        print(f"D. [SYNC] Dev Sync {Fore.LIGHTBLACK_EX}(Sincronizza modifiche da *_src al sistema live){Style.RESET_ALL}")
         print(f"C. [CAP]  Auto-Generate Capabilities {Fore.LIGHTBLACK_EX}(Tutti i pacchetti){Style.RESET_ALL}")
         print(f"S. [CAP1] Single Package Capabilities {Fore.LIGHTBLACK_EX}(Rigenera cap. di un solo pacchetto){Style.RESET_ALL}")
         print(f"I. [INFO] Package Info Sheet {Fore.LIGHTBLACK_EX}(Scheda completa: nome, versione, capacità, tools...){Style.RESET_ALL}")
@@ -102,6 +103,11 @@ def main_menu():
             print_header("Build Store Catalog")
             from modules.store_generator import generate_store_catalog
             generate_store_catalog()
+            input(f"\n{Fore.LIGHTBLACK_EX}Premi Invio per tornare al menu...{Style.RESET_ALL}")
+        elif choice.upper() == 'D':
+            print_header("Dev Sync (Sincronizza modifiche live)")
+            from modules.dev_sync import dev_sync_package
+            dev_sync_package()
             input(f"\n{Fore.LIGHTBLACK_EX}Premi Invio per tornare al menu...{Style.RESET_ALL}")
         elif choice.upper() == 'C':
             print_header("Auto-Generate Capabilities — Tutti i pacchetti")

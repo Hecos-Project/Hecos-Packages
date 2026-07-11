@@ -5,8 +5,8 @@ version = "2.0.1"
 author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "Create and manage multiple lists (e.g. groceries, todos) with Hecos. Supports custom colors, archived lists, item states, and LLM autonomous management."
-type = "plugin"
-pip_isolation = "isolated"
+type = "app"
+pip_isolation = "shared"
 target_dir = "hpm"
 plugin_dir = "."
 hecos_min_version = "0.34.0"
@@ -106,19 +106,16 @@ description = "Creates a new empty list. Use this when the user asks to 'create 
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "name",
 ]
 
 [tool_schema.function.parameters.properties.name]
 type = "string"
-pip_isolation = "isolated"
 description = "The name of the list (e.g. 'Spesa', 'Cose da fare')."
 
 [tool_schema.function.parameters.properties.icon]
 type = "string"
-pip_isolation = "isolated"
 description = "Optional emoji icon for the list."
 
 [[tool_schema]]
@@ -129,7 +126,6 @@ description = "Lists all active lists."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [tool_schema.function.parameters.properties]
 
@@ -141,14 +137,12 @@ description = "Shows the content of a specific list. Use when user asks 'what's 
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "list_name",
 ]
 
 [tool_schema.function.parameters.properties.list_name]
 type = "string"
-pip_isolation = "isolated"
 description = "The name of the list to show."
 
 [[tool_schema]]
@@ -159,7 +153,6 @@ description = "Adds one or more items to a list. Use this when user says 'add mi
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "list_name",
     "items",
@@ -167,22 +160,18 @@ required = [
 
 [tool_schema.function.parameters.properties.list_name]
 type = "string"
-pip_isolation = "isolated"
 description = "The name of the list."
 
 [tool_schema.function.parameters.properties.items]
 type = "string"
-pip_isolation = "isolated"
 description = "The item(s) to add. Can be a single item or multiple items separated by comma."
 
 [tool_schema.function.parameters.properties.priority]
 type = "integer"
-pip_isolation = "isolated"
 description = "Optional priority: 0 (normal), 1 (high), 2 (urgent). Default is 0."
 
 [tool_schema.function.parameters.properties.label]
 type = "string"
-pip_isolation = "isolated"
 description = "Optional category/label for the item."
 
 [[tool_schema]]
@@ -193,7 +182,6 @@ description = "Marks an item as done/completed. Use when user says 'I bought mil
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "list_name",
     "item_text",
@@ -201,12 +189,10 @@ required = [
 
 [tool_schema.function.parameters.properties.list_name]
 type = "string"
-pip_isolation = "isolated"
 description = "The name of the list."
 
 [tool_schema.function.parameters.properties.item_text]
 type = "string"
-pip_isolation = "isolated"
 description = "The text or partial text of the item to check."
 
 [[tool_schema]]
@@ -217,7 +203,6 @@ description = "Restores a completed item back to pending."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "list_name",
     "item_text",
@@ -225,12 +210,10 @@ required = [
 
 [tool_schema.function.parameters.properties.list_name]
 type = "string"
-pip_isolation = "isolated"
 description = "The name of the list."
 
 [tool_schema.function.parameters.properties.item_text]
 type = "string"
-pip_isolation = "isolated"
 description = "The item to restore."
 
 [[tool_schema]]
@@ -241,7 +224,6 @@ description = "Deletes an item from a list completely."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "list_name",
     "item_text",
@@ -249,12 +231,10 @@ required = [
 
 [tool_schema.function.parameters.properties.list_name]
 type = "string"
-pip_isolation = "isolated"
 description = "The name of the list."
 
 [tool_schema.function.parameters.properties.item_text]
 type = "string"
-pip_isolation = "isolated"
 description = "The item to remove."
 
 [[tool_schema]]
@@ -265,14 +245,12 @@ description = "Clears all completed items from a list."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "list_name",
 ]
 
 [tool_schema.function.parameters.properties.list_name]
 type = "string"
-pip_isolation = "isolated"
 description = "The name of the list to clean up."
 
 [config_panel]
@@ -308,7 +286,7 @@ slash_commands = [
 ]
 has_widget = true
 has_config_panel = true
-has_api_routes = false
+has_api_routes = true
 has_system_calls = false
 syscall_notes = ""
 notes = "Universal list manager: shopping, to-do, blacklists, any type. Supports item priorities, labels, and archiving. Data stored in local SQLite DB. Export to desktop supported."

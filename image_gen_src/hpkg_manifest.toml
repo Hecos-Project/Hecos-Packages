@@ -12,6 +12,7 @@ category = "PLUGINS"
 plugin_tag = "IMAGE_GEN"
 is_class_based = true
 type = "plugin"
+pip_isolation = "isolated"
 plugin_dir = "."
 lazy_load = true
 readme = "README.md"
@@ -24,7 +25,6 @@ pip_requirements = [
     "tomli_w",
 ]
 python_requires = ">=3.11"
-pip_isolation = "isolated"
 signature = "nyokjzzh85DDbfN+Lp7fNCfJuPXwOVaXFKZAYEs09FvetbYgZHUo12I0REta0piI8WytLaAqAtdfG8u0gaoXDg=="
 
 [routing]

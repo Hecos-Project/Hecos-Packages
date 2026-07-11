@@ -6,7 +6,7 @@ author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "Universal media player for Hecos. OS-level playback (VLC/mpv), gallery for Drive and Chat, AI-driven playlist management."
 type = "plugin"
-pip_isolation = "isolated"
+pip_isolation = "shared"
 target_dir = "hpm"
 plugin_dir = "."
 hecos_min_version = "0.34.0"
@@ -101,16 +101,13 @@ description = "Play a media file or URL. Optionally specify a playlist_name to l
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [tool_schema.function.parameters.properties.path_or_url]
 type = "string"
-pip_isolation = "isolated"
 description = "Absolute file path or HTTP/HTTPS URL to play."
 
 [tool_schema.function.parameters.properties.playlist_name]
 type = "string"
-pip_isolation = "isolated"
 description = "(Optional) The name of a saved playlist to queue up."
 
 [[tool_schema]]
@@ -121,7 +118,6 @@ description = "Pause or resume the current track."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [[tool_schema]]
 
@@ -131,7 +127,6 @@ description = "Stop playback completely."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [[tool_schema]]
 
@@ -141,7 +136,6 @@ description = "Skip to the next track in the current queue."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [[tool_schema]]
 
@@ -151,7 +145,6 @@ description = "Go back to the previous track in the current queue."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [[tool_schema]]
 
@@ -161,14 +154,12 @@ description = "Set playback volume."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "level",
 ]
 
 [tool_schema.function.parameters.properties.level]
 type = "integer"
-pip_isolation = "isolated"
 description = "Volume from 0 (mute) to 100 (max)."
 
 [[tool_schema]]
@@ -179,7 +170,6 @@ description = "Return the current playback status (track name, position, volume)
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [[tool_schema]]
 
@@ -189,19 +179,16 @@ description = "Create a named playlist with a list of file paths."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "name",
 ]
 
 [tool_schema.function.parameters.properties.name]
 type = "string"
-pip_isolation = "isolated"
 description = "Playlist name (e.g. 'Jazz Evening')."
 
 [tool_schema.function.parameters.properties.items]
 type = "string"
-pip_isolation = "isolated"
 description = "Comma-separated list of absolute file paths."
 
 [[tool_schema]]
@@ -212,7 +199,6 @@ description = "Add a file to an existing playlist (creates it if missing)."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "name",
     "path",
@@ -220,12 +206,10 @@ required = [
 
 [tool_schema.function.parameters.properties.name]
 type = "string"
-pip_isolation = "isolated"
 description = "Playlist name."
 
 [tool_schema.function.parameters.properties.path]
 type = "string"
-pip_isolation = "isolated"
 description = "Absolute file path to add."
 
 [[tool_schema]]
@@ -236,7 +220,6 @@ description = "Remove a track from a playlist by its position (1-based)."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "name",
     "index",
@@ -244,12 +227,10 @@ required = [
 
 [tool_schema.function.parameters.properties.name]
 type = "string"
-pip_isolation = "isolated"
 description = "Playlist name."
 
 [tool_schema.function.parameters.properties.index]
 type = "integer"
-pip_isolation = "isolated"
 description = "1-based position of the track to remove."
 
 [[tool_schema]]
@@ -260,14 +241,12 @@ description = "Delete a named playlist permanently."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "name",
 ]
 
 [tool_schema.function.parameters.properties.name]
 type = "string"
-pip_isolation = "isolated"
 description = "Playlist name to delete."
 
 [[tool_schema]]
@@ -278,7 +257,6 @@ description = "List all saved playlists with their track count."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 
 [[tool_schema]]
 
@@ -288,14 +266,12 @@ description = "Show the contents of a saved playlist."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "name",
 ]
 
 [tool_schema.function.parameters.properties.name]
 type = "string"
-pip_isolation = "isolated"
 description = "Playlist name."
 
 [[tool_schema]]
@@ -306,24 +282,20 @@ description = "Load and play a saved playlist."
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "name",
 ]
 
 [tool_schema.function.parameters.properties.name]
 type = "string"
-pip_isolation = "isolated"
 description = "Playlist name."
 
 [tool_schema.function.parameters.properties.shuffle]
 type = "boolean"
-pip_isolation = "isolated"
 description = "If True, play tracks in random order."
 
 [tool_schema.function.parameters.properties.index]
 type = "integer"
-pip_isolation = "isolated"
 description = "0-based index to start playback from."
 
 [[tool_schema]]
@@ -334,34 +306,28 @@ description = "Scan a folder for audio/video files and optionally save as a play
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "folder",
 ]
 
 [tool_schema.function.parameters.properties.folder]
 type = "string"
-pip_isolation = "isolated"
 description = "Absolute path to the folder to scan."
 
 [tool_schema.function.parameters.properties.save_as]
 type = "string"
-pip_isolation = "isolated"
 description = "If provided, save the result as a named playlist."
 
 [tool_schema.function.parameters.properties.recursive]
 type = "boolean"
-pip_isolation = "isolated"
 description = "If True, scan subfolders too (default: True)."
 
 [tool_schema.function.parameters.properties.auto_play]
 type = "boolean"
-pip_isolation = "isolated"
 description = "If True, start playback immediately after scan (default: True)."
 
 [[tool_schema]]
 type = "function"
-pip_isolation = "isolated"
 
 [tool_schema.function]
 name = "MEDIA_PLAYER__play_by_index"
@@ -369,14 +335,12 @@ description = "Jump directly to a track by position in the current queue (0-base
 
 [tool_schema.function.parameters]
 type = "object"
-pip_isolation = "isolated"
 required = [
     "index",
 ]
 
 [tool_schema.function.parameters.properties.index]
 type = "integer"
-pip_isolation = "isolated"
 description = "Parameter index"
 
 [config_panel]
