@@ -1,7 +1,7 @@
 id = "messenger"
 manifest_version = "1"
 name = "Messenger"
-version = "1.0.1"
+version = "1.0.2"
 author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "Send and receive messages via Telegram, WhatsApp, and Discord.\n\n**Guida ai Comandi Rapidi:**\n- `/msg <piattaforma>:<destinatario> <testo>`: Invia un messaggio diretto scavalcando l'IA. Es: `/msg whatsapp:+393331234567 Ciao!`\n- `/send`: Alias esatto di `/msg`.\n"
@@ -13,10 +13,10 @@ hecos_min_version = "0.40.0"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
 readme = "README.md"
 readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/messenger_src/README.md"
-dependencies = []
-optional_dependencies = [
+dependencies = [
     "templates",
 ]
+optional_dependencies = []
 tag = "MESSENGER"
 lazy_load = true
 is_class_based = true

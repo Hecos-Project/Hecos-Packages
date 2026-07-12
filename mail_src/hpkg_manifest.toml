@@ -1,0 +1,137 @@
+id = "mail"
+manifest_version = "1"
+name = "Mail"
+version = "1.0.0"
+author = "Hecos"
+license = "GPL-3.0"
+description = "Integrated mail client for Hecos. Reads SMTP/IMAP profiles, manages drafts, sending, and syncing with automatic provider support and Address Book integration."
+type = "plugin"
+pip_isolation = "shared"
+target_dir = "hpm"
+plugin_dir = "."
+hecos_min_version = "0.40.0"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+readme = "README.md"
+readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/mail_src/README.md"
+dependencies = [
+    "templates",
+]
+tag = "MAIL"
+lazy_load = true
+is_class_based = true
+api_routes_file = "web/routes.py"
+
+[commands]
+sync_emails = "Synchronizes the mailbox by fetching new messages via IMAP."
+send_email = "Sends an email using the SMTP client. Supports HTML, text, and attachments."
+list_emails = "Lists emails from the inbox or a specified folder."
+get_email = "Retrieves a single email by ID with full body and attachments."
+
+[config_panel]
+tab_id = "mail"
+tab_label = "Mail"
+tab_icon = "fa-envelope"
+category = "CONNETTIVITÀ"
+template_file = "web/templates/config_mail.html"
+api_routes_file = "web/routes.py"
+config_api_get = "/api/mail/config"
+config_api_post = "/api/mail/config"
+
+[capabilities]
+llm_tools = [
+    "send_email",
+    "sync_emails",
+    "list_emails",
+    "get_email",
+]
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = "Stores messages in local SQLite DB at hecos/memory/mail.db. Credentials stored in mail.toml (never in git)."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "MAIL__send_email"
+description = "Sends an email to one or more recipients. Use when the user says 'send an email', 'manda una mail', 'scrivi a [name]', 'write to [email]'. Supports plain text and HTML body, CC, BCC."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "to",
+    "subject",
+    "body",
+]
+
+[tool_schema.function.parameters.properties.to]
+type = "string"
+description = "Recipient email address or comma-separated list of addresses."
+
+[tool_schema.function.parameters.properties.subject]
+type = "string"
+description = "Subject line of the email."
+
+[tool_schema.function.parameters.properties.body]
+type = "string"
+description = "Email body content. Can be plain text or HTML."
+
+[tool_schema.function.parameters.properties.cc]
+type = "string"
+description = "Optional: CC recipients (comma-separated email addresses)."
+
+[tool_schema.function.parameters.properties.bcc]
+type = "string"
+description = "Optional: BCC recipients (comma-separated email addresses)."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "MAIL__sync_emails"
+description = "Fetches and syncs new emails from the IMAP server. Use when the user says 'check my email', 'sync mail', 'controlla le email', 'nuove email?'."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.folder]
+type = "string"
+description = "Optional: IMAP folder to sync (default: INBOX)."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "MAIL__list_emails"
+description = "Lists emails from the inbox or specified folder. Use when the user asks 'show my emails', 'mostrami le email', 'lista messaggi', 'ultime email'."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.folder]
+type = "string"
+description = "Optional: IMAP folder name (default: INBOX)."
+
+[tool_schema.function.parameters.properties.limit]
+type = "integer"
+description = "Optional: max number of emails to return (default: 20)."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "MAIL__get_email"
+description = "Retrieves a single email by its ID. Use when the user asks to read or open a specific message."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "email_id",
+]
+
+[tool_schema.function.parameters.properties.email_id]
+type = "string"
+description = "The unique ID of the email to retrieve."
