@@ -1,0 +1,443 @@
+id = "pc_automation"
+manifest_version = "1"
+name = "PC Automation"
+version = "1.0.0"
+author = "Antonio Meloni"
+license = "GPL-3.0"
+description = "Full PC control: mouse movement, keyboard input, window management, and Windows Accessibility API for reading browser tabs and UI controls. Combine with WEBCAM desktop_screenshot for a full see-and-act loop. Requires Windows for UIAutomation features (browser tabs, window controls); mouse/keyboard works cross-platform."
+icon = "🖱️"
+icon_url = ""
+screenshots = []
+category = "PLUGINS"
+plugin_tag = "AUTOMATION"
+is_class_based = true
+type = "plugin"
+pip_isolation = "shared"
+plugin_dir = "."
+lazy_load = true
+readme = "README.md"
+readme_url = ""
+platform = [
+    "windows",
+]
+dependencies = []
+pip_requirements = [
+    "pyautogui>=0.9.54",
+    "pygetwindow>=0.0.9",
+    "pytesseract>=0.3.13",
+    "opencv-python>=4.9.0",
+    "mss>=9.0.2",
+    "pyperclip>=1.9.0",
+    "pywinauto>=0.6.8",
+    "pywin32>=308",
+]
+python_requires = ">=3.11"
+signature = ""
+
+[routing]
+instructions = "VISION/AUTOMATION SYNERGY: You DO have 'eyes'! You can interact with the user's screen. When asked to click on something, FIRST call WEBCAM__desktop_screenshot to perceive the screen. THEN, instead of guessing (x, y) coordinates, use AUTOMATION__click_text to deterministically find and click labeled buttons, tabs, or menus. ATTENTION: For browser-specific tasks (searching, reading web content, or switching tabs in a browser), PREFER the BROWSER plugin if it's enabled in CDP Mode. Only use AUTOMATION for native desktop apps or if BROWSER tools fail."
+
+[[slash_commands]]
+id = "type"
+manifest_version = "1"
+aliases = [
+    "/type",
+    "/write",
+]
+description = "Simulates typing text on the keyboard"
+usage = "/type <text>"
+example = "/type Hello world!"
+icon = "⌨️"
+method = "type_text"
+requires_args = true
+
+[[slash_commands]]
+id = "click_text"
+manifest_version = "1"
+aliases = [
+    "/click_text",
+    "/click_word",
+]
+description = "Finds text on the screen (OCR) and clicks it"
+usage = "/click_text <text>"
+example = "/click_text Submit"
+icon = "🖱️"
+method = "click_text"
+requires_args = true
+
+[[slash_commands]]
+id = "hotkey"
+manifest_version = "1"
+aliases = [
+    "/hotkey",
+    "/shortcut",
+]
+description = "Executes a combination of keys (separated by + or comma)"
+usage = "/hotkey <keys>"
+example = "/hotkey ctrl+c"
+icon = "⚡"
+method = "hotkey"
+requires_args = true
+
+[[slash_commands]]
+id = "focus"
+manifest_version = "1"
+aliases = [
+    "/focus",
+    "/window",
+]
+description = "Brings a window to the foreground by its title"
+usage = "/focus <title>"
+example = "/focus chrome"
+icon = "🪟"
+method = "focus_window"
+requires_args = true
+
+[config_panel]
+tab_id = "automation"
+tab_label = "PC Automation"
+category = "SISTEMA"
+tab_icon = "<i class=\"fas fa-magic\"></i>"
+template_file = "web/templates/config_panel.html"
+js_file = "web/static/js/automation_panel.js"
+api_routes_file = "web/routes.py"
+config_api_get = "/hecos/api/plugins/pc_automation/config"
+config_api_post = "/hecos/api/plugins/pc_automation/config"
+
+[capabilities]
+llm_tools = [
+    "AUTOMATION__get_screen_size",
+    "AUTOMATION__get_mouse_position",
+    "AUTOMATION__move_to",
+    "AUTOMATION__click_text",
+    "AUTOMATION__click",
+    "AUTOMATION__scroll",
+    "AUTOMATION__drag",
+    "AUTOMATION__type_text",
+    "AUTOMATION__press_key",
+    "AUTOMATION__hotkey",
+    "AUTOMATION__type_and_enter",
+    "AUTOMATION__list_windows",
+    "AUTOMATION__focus_window",
+    "AUTOMATION__minimize_window",
+    "AUTOMATION__maximize_window",
+    "AUTOMATION__get_browser_tabs",
+    "AUTOMATION__focus_browser_tab",
+    "AUTOMATION__read_window_controls",
+]
+slash_commands = [
+    "/type",
+    "/write",
+    "/click_text",
+    "/click_word",
+    "/hotkey",
+    "/shortcut",
+    "/focus",
+    "/window",
+]
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = "UIAutomation features (get_browser_tabs, focus_browser_tab, read_window_controls) require Windows + pywinauto. Core mouse/keyboard tools work on Windows, macOS and Linux via pyautogui."
+
+[[tool_schema]]
+name = "AUTOMATION__get_screen_size"
+description = "Returns the current screen resolution in pixels (width x height). Use to determine valid coordinate boundaries before clicking."
+
+[tool_schema.parameters]
+type = "object"
+required = []
+
+[[tool_schema]]
+name = "AUTOMATION__get_mouse_position"
+description = "Returns the current mouse cursor position as (x, y) pixel coordinates."
+
+[tool_schema.parameters]
+type = "object"
+required = []
+
+[[tool_schema]]
+name = "AUTOMATION__move_to"
+description = "Smoothly moves the mouse cursor to the specified absolute screen coordinates."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "x",
+    "y",
+]
+
+[tool_schema.parameters.properties.x]
+type = "integer"
+description = "Horizontal pixel coordinate."
+
+[tool_schema.parameters.properties.y]
+type = "integer"
+description = "Vertical pixel coordinate."
+
+[tool_schema.parameters.properties.duration]
+type = "number"
+description = "Movement duration in seconds (0 = instant). Default: 0.15."
+
+[[tool_schema]]
+name = "AUTOMATION__click_text"
+description = "Scans the screen using local OCR to find a specific text string and clicks on its exact bounding box center. Prefer this over guessing x, y coordinates when trying to click labeled buttons, tabs, or menus."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "text",
+]
+
+[tool_schema.parameters.properties.text]
+type = "string"
+description = "The exact word or phrase to find on the screen, e.g. 'YouTube' or 'Send'."
+
+[tool_schema.parameters.properties.instance]
+type = "integer"
+description = "If multiple matches exist, which one to click (0 = first match). Default: 0."
+
+[tool_schema.parameters.properties.button]
+type = "string"
+description = "Which mouse button to click. Default: 'left'."
+
+[tool_schema.parameters.properties.clicks]
+type = "integer"
+description = "Number of clicks (1 or 2). Default: 1."
+
+[[tool_schema]]
+name = "AUTOMATION__click"
+description = "Clicks the mouse at the specified screen coordinates. Use desktop_screenshot first to identify the target position."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "x",
+    "y",
+]
+
+[tool_schema.parameters.properties.x]
+type = "integer"
+description = "Horizontal pixel coordinate."
+
+[tool_schema.parameters.properties.y]
+type = "integer"
+description = "Vertical pixel coordinate."
+
+[tool_schema.parameters.properties.button]
+type = "string"
+description = "Which mouse button to click. Default: 'left'."
+
+[tool_schema.parameters.properties.clicks]
+type = "integer"
+description = "1 = single click, 2 = double click. Default: 1."
+
+[[tool_schema]]
+name = "AUTOMATION__scroll"
+description = "Scrolls the mouse wheel at the specified position. Positive clicks scroll up, negative scroll down."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "x",
+    "y",
+    "clicks",
+]
+
+[tool_schema.parameters.properties.x]
+type = "integer"
+description = "Horizontal pixel coordinate of scroll position."
+
+[tool_schema.parameters.properties.y]
+type = "integer"
+description = "Vertical pixel coordinate of scroll position."
+
+[tool_schema.parameters.properties.clicks]
+type = "integer"
+description = "Number of scroll steps. Positive = up, negative = down."
+
+[[tool_schema]]
+name = "AUTOMATION__drag"
+description = "Performs a click-and-drag from one screen position to another. Useful for moving files, selecting text, or adjusting sliders."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "from_x",
+    "from_y",
+    "to_x",
+    "to_y",
+]
+
+[tool_schema.parameters.properties.from_x]
+type = "integer"
+description = "Start X coordinate."
+
+[tool_schema.parameters.properties.from_y]
+type = "integer"
+description = "Start Y coordinate."
+
+[tool_schema.parameters.properties.to_x]
+type = "integer"
+description = "End X coordinate."
+
+[tool_schema.parameters.properties.to_y]
+type = "integer"
+description = "End Y coordinate."
+
+[tool_schema.parameters.properties.duration]
+type = "number"
+description = "Drag duration in seconds. Default: 0.4."
+
+[[tool_schema]]
+name = "AUTOMATION__type_text"
+description = "Simulates keyboard typing of the given text, character by character. Does NOT press Enter — use type_and_enter for that."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "text",
+]
+
+[tool_schema.parameters.properties.text]
+type = "string"
+description = "The text string to type."
+
+[tool_schema.parameters.properties.interval]
+type = "number"
+description = "Delay in seconds between each keystroke. Default: 0.02."
+
+[[tool_schema]]
+name = "AUTOMATION__press_key"
+description = "Presses and releases a single keyboard key. Valid keys include: enter, esc, tab, space, backspace, delete, up, down, left, right, home, end, f1-f12, ctrl, alt, shift, win."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "key",
+]
+
+[tool_schema.parameters.properties.key]
+type = "string"
+description = "Key name (e.g. 'enter', 'esc', 'f5', 'tab', 'space', 'delete')."
+
+[[tool_schema]]
+name = "AUTOMATION__hotkey"
+description = "Executes a keyboard shortcut by pressing multiple keys simultaneously. Common examples: ['ctrl','c'] (copy), ['ctrl','v'] (paste), ['ctrl','z'] (undo), ['alt','f4'] (close window)."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "keys",
+]
+
+[tool_schema.parameters.properties.keys]
+type = "array"
+description = "Ordered list of keys to hold together (e.g. ['ctrl', 'c'])."
+
+[tool_schema.parameters.properties.keys.items]
+type = "string"
+
+[[tool_schema]]
+name = "AUTOMATION__type_and_enter"
+description = "Types the given text and immediately presses Enter. Use for submitting forms, executing terminal commands, or confirming dialogs."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "text",
+]
+
+[tool_schema.parameters.properties.text]
+type = "string"
+description = "The text to type before pressing Enter."
+
+[[tool_schema]]
+name = "AUTOMATION__list_windows"
+description = "Returns a list of all currently visible window titles. Always call this before focus_window to find the exact window title."
+
+[tool_schema.parameters]
+type = "object"
+required = []
+
+[[tool_schema]]
+name = "AUTOMATION__focus_window"
+description = "Brings a window to the foreground using a partial, case-insensitive title match. Use list_windows first to identify the correct title."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "title",
+]
+
+[tool_schema.parameters.properties.title]
+type = "string"
+description = "Partial window title to match (e.g. 'Notepad', 'Chrome', 'Excel')."
+
+[[tool_schema]]
+name = "AUTOMATION__minimize_window"
+description = "Minimizes a window to the taskbar using a partial title match."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "title",
+]
+
+[tool_schema.parameters.properties.title]
+type = "string"
+description = "Partial window title to match."
+
+[[tool_schema]]
+name = "AUTOMATION__maximize_window"
+description = "Maximizes a window to fill the screen using a partial title match."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "title",
+]
+
+[tool_schema.parameters.properties.title]
+type = "string"
+description = "Partial window title to match."
+
+[[tool_schema]]
+name = "AUTOMATION__get_browser_tabs"
+description = "Returns titles of all currently open browser tabs (Chrome, Edge, Opera, Brave) using the Windows Accessibility API. No screenshot needed. Call this FIRST when the user asks to switch to a browser tab."
+
+[tool_schema.parameters]
+type = "object"
+required = []
+
+[[tool_schema]]
+name = "AUTOMATION__focus_browser_tab"
+description = "Clicks on a browser tab whose title contains the given fragment. Uses Windows Accessibility API — no coordinate guessing. Call AUTOMATION__get_browser_tabs first to verify the correct tab title."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "title_fragment",
+]
+
+[tool_schema.parameters.properties.title_fragment]
+type = "string"
+description = "Part of the tab title to match (case-insensitive), e.g. 'YouTube' or 'Wikipedia'."
+
+[[tool_schema]]
+name = "AUTOMATION__read_window_controls"
+description = "Reads all interactive controls (buttons, fields, links) from an application window's accessibility tree. Use to understand a GUI's structure before clicking, no screenshot needed."
+
+[tool_schema.parameters]
+type = "object"
+required = [
+    "title_fragment",
+]
+
+[tool_schema.parameters.properties.title_fragment]
+type = "string"
+description = "Part of the window title to target, e.g. 'Notepad' or 'Chrome'."
+
+[file_hashes]
