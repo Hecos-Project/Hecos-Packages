@@ -1,0 +1,321 @@
+id = "browser_automation"
+manifest_version = "1"
+name = "AI Browser"
+version = "1.0.0"
+author = "Hecos Team / Antonio Meloni"
+license = "GPL-3.0"
+description = "Hecos AI-controlled Playwright browser. Navigate, read DOM, click elements and fill forms without vision or coordinate guessing."
+icon = "🌐"
+icon_url = ""
+screenshots = []
+category = "SISTEMA"
+tag = "BROWSER"
+is_class_based = true
+type = "plugin"
+pip_isolation = "shared"
+plugin_dir = "."
+lazy_load = true
+readme = "README.md"
+readme_url = ""
+platform = []
+dependencies = []
+pip_requirements = [
+    "playwright>=1.40.0",
+]
+python_requires = ">=3.11"
+signature = ""
+
+[config_panel]
+tab_id = "browser"
+tab_label = "AI Browser"
+tab_icon = "fa-globe"
+template_file = "web/templates/config_panel.html"
+js_file = "web/static/js/browser_panel.js"
+css_file = "web/static/css/browser_automation.css"
+category = "SISTEMA"
+api_routes_file = "web/routes.py"
+config_api_get = "/hecos/api/plugins/browser_automation/config"
+config_api_post = "/hecos/api/plugins/browser_automation/config"
+
+[routing]
+instructions = "BROWSER CONTROL DECISION TREE — Follow these steps in order: (1) ALWAYS start with BROWSER__list_tabs. (2) If it returns a list of tabs → you are in CDP mode. Use BROWSER__switch_tab(index) to go to the right tab, then use BROWSER page tools (get_page_text, click_element, type_in_field). (3) If list_tabs returns 'CDP connection is not active' → Chrome was NOT launched in AI-Ready mode. IMMEDIATELY fall back to: AUTOMATION__get_browser_tabs to find open tabs by title (this reads from Windows accessibility, real browser windows only), then AUTOMATION__focus_browser_tab with the matching title fragment. NEVER stop and ask the user — always attempt the fallback automatically."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__open_url"
+description = "Opens a URL in the Hecos AI browser. The browser window will appear automatically. Use this instead of the WEB plugin when you need to interact with a page."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "url",
+]
+
+[tool_schema.function.parameters.properties.url]
+type = "string"
+description = "Full URL or domain (e.g. 'youtube.com' or 'https://google.com')."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__get_current_url"
+description = "Returns the URL currently loaded in the Hecos browser."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties]
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__go_back"
+description = "Navigate the browser back to the previous page."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties]
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__get_page_text"
+description = "Returns all visible text from the current browser page. Use after open_url to understand the page before interacting."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.max_chars]
+type = "integer"
+description = "Max characters to return. Default: 4000."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__get_links"
+description = "Returns all hyperlinks (label → URL) on the current page as a numbered list."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties]
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__get_inputs"
+description = "Lists all input fields, buttons and form elements on the current page. Use to identify fields before calling type_in_field."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties]
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__get_title"
+description = "Returns the title of the current browser page."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties]
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__click_element"
+description = "Clicks a page element by its visible text label or aria-label. Intelligent fallback to CSS selectors. Prefer this over coordinate-based clicking."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "text_or_selector",
+]
+
+[tool_schema.function.parameters.properties.text_or_selector]
+type = "string"
+description = "Visible text, aria-label, or CSS selector of the element to click."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__type_in_field"
+description = "Finds an input field by its label/placeholder and types text into it. Optionally presses Enter to submit."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "label_or_selector",
+    "text",
+]
+
+[tool_schema.function.parameters.properties.label_or_selector]
+type = "string"
+description = "Label, placeholder, aria-label or CSS selector of the input field."
+
+[tool_schema.function.parameters.properties.text]
+type = "string"
+description = "The text to type."
+
+[tool_schema.function.parameters.properties.press_enter]
+type = "boolean"
+description = "If true, presses Enter after typing. Useful for search boxes. Default: false."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__scroll"
+description = "Scrolls the browser page up or down."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.direction]
+type = "string"
+enum = [
+    "down",
+    "up",
+]
+description = "Scroll direction. Default: 'down'."
+
+[tool_schema.function.parameters.properties.amount]
+type = "integer"
+description = "Pixels to scroll. Default: 300."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__press_key"
+description = "Presses a keyboard key in the browser context (e.g. 'Enter', 'Escape', 'Tab', 'ArrowDown')."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "key",
+]
+
+[tool_schema.function.parameters.properties.key]
+type = "string"
+description = "Key name following web standards, e.g. 'Enter', 'ArrowDown', 'Escape'."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__run_js"
+description = "Executes JavaScript in the browser and returns the result. Powerful for extracting data or triggering actions not accessible via DOM."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "code",
+]
+
+[tool_schema.function.parameters.properties.code]
+type = "string"
+description = "JavaScript expression or statement, e.g. 'document.title' or 'document.querySelector(\"h1\").innerText'."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__screenshot"
+description = "Takes a screenshot of the current browser viewport. Returns the file path which the vision AI can analyze. Use only when text-based tools are insufficient."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties]
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__list_tabs"
+description = "List all open tabs/pages in the current browser. Use in CDP mode to find existing sites like YouTube."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties]
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__switch_tab"
+description = "Switches the active browser focus to a specific tab by its ID."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "index",
+]
+
+[tool_schema.function.parameters.properties.index]
+type = "integer"
+description = "Numeric ID of the tab to focus (from list_tabs)."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__new_tab"
+description = "Opens a new tab in the browser and navigates to the specified URL."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.url]
+type = "string"
+description = "The URL to open in the new tab."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__close_tab"
+description = "Closes the currently active browser tab."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties]
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "BROWSER__close"
+description = "Closes the ENTIRE Hecos AI browser window."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties]
+
+[capabilities]
+llm_tools = [
+    "open_url",
+    "get_current_url",
+    "go_back",
+    "get_page_text",
+    "get_links",
+    "get_inputs",
+    "get_title",
+    "click_element",
+    "type_in_field",
+    "scroll",
+    "press_key",
+    "run_js",
+    "screenshot",
+    "list_tabs",
+    "switch_tab",
+    "new_tab",
+    "close_tab",
+    "close",
+]
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = ""

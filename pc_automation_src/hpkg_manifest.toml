@@ -9,7 +9,7 @@ icon = "🖱️"
 icon_url = ""
 screenshots = []
 category = "PLUGINS"
-plugin_tag = "AUTOMATION"
+tag = "AUTOMATION"
 is_class_based = true
 type = "plugin"
 pip_isolation = "shared"
@@ -106,24 +106,24 @@ config_api_post = "/hecos/api/plugins/pc_automation/config"
 
 [capabilities]
 llm_tools = [
-    "AUTOMATION__get_screen_size",
-    "AUTOMATION__get_mouse_position",
-    "AUTOMATION__move_to",
-    "AUTOMATION__click_text",
-    "AUTOMATION__click",
-    "AUTOMATION__scroll",
-    "AUTOMATION__drag",
-    "AUTOMATION__type_text",
-    "AUTOMATION__press_key",
-    "AUTOMATION__hotkey",
-    "AUTOMATION__type_and_enter",
-    "AUTOMATION__list_windows",
-    "AUTOMATION__focus_window",
-    "AUTOMATION__minimize_window",
-    "AUTOMATION__maximize_window",
-    "AUTOMATION__get_browser_tabs",
-    "AUTOMATION__focus_browser_tab",
-    "AUTOMATION__read_window_controls",
+    "get_screen_size",
+    "get_mouse_position",
+    "move_to",
+    "click_text",
+    "click",
+    "scroll",
+    "drag",
+    "type_text",
+    "press_key",
+    "hotkey",
+    "type_and_enter",
+    "list_windows",
+    "focus_window",
+    "minimize_window",
+    "maximize_window",
+    "get_browser_tabs",
+    "focus_browser_tab",
+    "read_window_controls",
 ]
 slash_commands = [
     "/type",
