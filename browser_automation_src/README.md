@@ -1,73 +1,147 @@
-# Hecos AI Browser Automation
+# 🌐 Hecos AI Browser Automation
 
-Provides a programmable, AI-controlled Chromium browser (via Playwright) for Hecos.
+Provides a programmable, AI-controlled browser for Hecos. Navigate the web, read pages, fill forms and interact with any site — all from natural language in chat.
 
-## Features
+---
+
+## ✨ Features
 
 - Navigate URLs, read DOM content, click elements, fill forms
-- Two modes: **App Mode** (isolated Chromium) and **CDP Takeover** (hook into your real Chrome/Edge)
+- Two modes: **CDP Takeover** (hook into your real Chrome/Edge) and **App Mode** (isolated Chromium)
 - No coordinate guessing — uses semantic DOM selectors
 - Ad blocker, headless mode, multi-tab support
-- Full Config Hub panel with live settings
+- Full configuration panel in the Hecos Config Hub
 
-## Installation
+---
 
-Install via the Hecos Package Manager (HPM). After installation, run:
+## 🚀 Installation
 
-```
+Install via the Hecos Package Manager (HPM). After installation, if you want to use **App Mode**, install the Chromium binary:
+
+```bash
 python -m playwright install chromium
 ```
 
-to install the Chromium browser binary (required for App Mode).
+---
 
-## CDP Mode (Takeover)
+## ⚙️ Browser Modes
 
-To use your real Chrome or Edge browser, launch it with:
+### 🎯 Mode 1: Your Real Browser (CDP Takeover) — *Recommended*
+
+Hecos "undercover" takes control of your existing Google Chrome or Edge. It sees your extensions, active logins, bookmarks and cookies.
+
+**Requirement:** Chrome must be launched with the remote debugging flag:
 
 ```
 chrome.exe --remote-debugging-port=9222
 ```
 
-Then switch to CDP Mode in the Config Hub → AI Browser panel.
+> You can create a desktop shortcut with this parameter, or use the **"Avvia Chrome con debug"** button in the config panel.
 
-## Direct Commands (Slash Commands)
+**Advantages:**
+- Access to your real sessions (Gmail, LinkedIn, etc.)
+- No separate browser download needed
+- Multi-tab support via `BROWSER__list_tabs` and `BROWSER__switch_tab`
 
-You can use the following commands directly in the Hecos chat to control the browser manually without invoking the LLM:
+---
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `/b <url>` or `/browser <url>` | Apre il browser AI sull'URL specificato, oppure effettua una ricerca su Google se non viene fornito un URL valido. | `/b youtube.com` oppure `/b gatti divertenti` |
-| `/b_close` | Chiude il browser AI e interrompe la sessione. | `/b_close` |
-| `/b_tabs` | Mostra la lista delle schede attualmente aperte nel browser AI. | `/b_tabs` |
+### 🧪 Mode 2: Isolated AI Browser (App Mode)
 
-## Available Tools (LLM)
+Hecos uses a dedicated Chromium browser, completely separate from yours. No access to your passwords or saved sessions.
 
-| Tool | Description |
-|------|-------------|
-| `BROWSER__open_url` | Navigate to a URL |
-| `BROWSER__get_page_text` | Read all visible text from the current page |
-| `BROWSER__get_links` | List all hyperlinks on the page |
-| `BROWSER__get_inputs` | List all form elements |
-| `BROWSER__click_element` | Click by visible text or selector |
-| `BROWSER__type_in_field` | Type into a form field |
-| `BROWSER__scroll` | Scroll the page |
-| `BROWSER__press_key` | Press a keyboard key |
-| `BROWSER__run_js` | Execute JavaScript |
-| `BROWSER__screenshot` | Take a viewport screenshot |
-| `BROWSER__list_tabs` | List all open tabs |
-| `BROWSER__switch_tab` | Switch to a specific tab |
-| `BROWSER__new_tab` | Open a new tab |
-| `BROWSER__close_tab` | Close current tab |
-| `BROWSER__close` | Close the browser |
-| `BROWSER__get_current_url` | Get current URL |
-| `BROWSER__go_back` | Navigate back |
-| `BROWSER__get_title` | Get page title |
+**Advantages:**
+- Privacy — no access to your personal data
+- Great for background web searches without disturbing you
+- Runs headlessly in the background
 
-## Requirements
+---
 
-- `playwright >= 1.40.0`
-- Chromium binaries (install with `python -m playwright install chromium`)
+## 💬 Slash Commands
 
-## License
+Type these commands directly in chat to control the browser instantly.
 
-GPL-3.0 — Antonio Meloni / Hecos Project
+| Command | Alias | Description | Example |
+|---------|-------|-------------|---------|
+| `/browser <url>` | `/b`, `/apri`, `/open` | Opens a URL in the Hecos AI browser | `/browser youtube.com` |
+| `/b_close` | — | Closes the AI browser | `/b_close` |
+| `/b_tabs` | — | Shows a list of open tabs | `/b_tabs` |
+| `/screen` | `/screenshot`, `/vedi` | Takes a screenshot of the current page and shows it in chat | `/screen` |
+
+---
+
+## 🤖 LLM Tools (AI Commands)
+
+These tools are used automatically by the AI during conversations. You can also ask for them explicitly in natural language.
+
+| Tool | Description | Example prompt |
+|------|-------------|----------------|
+| `BROWSER__open_url` | Opens a URL in the browser | *"Apri Amazon.it"* |
+| `BROWSER__get_page_text` | Reads all visible text on the current page | *"Cosa c'è scritto qui?"* |
+| `BROWSER__get_links` | Lists all hyperlinks on the page | *"Mostrami tutti i link di questa pagina"* |
+| `BROWSER__get_inputs` | Lists all form fields and buttons | *"Quali campi ha questo form?"* |
+| `BROWSER__get_title` | Returns the current page title | *"Che pagina è aperta?"* |
+| `BROWSER__get_current_url` | Returns the current URL | *"Qual è l'URL corrente?"* |
+| `BROWSER__click_element` | Clicks an element by visible text or CSS selector | *"Clicca sul pulsante Accetta"* |
+| `BROWSER__type_in_field` | Types text into a form field | *"Cerca 'Python tutorial' su Google"* |
+| `BROWSER__scroll` | Scrolls the page up or down | *"Scorri in basso"* |
+| `BROWSER__press_key` | Presses a keyboard key | *"Premi Invio"* |
+| `BROWSER__run_js` | Executes JavaScript on the current page | *"Esegui document.title in JS"* |
+| `BROWSER__screenshot` | Takes a viewport screenshot for visual AI analysis | *"Fai uno screenshot di questa pagina"* |
+| `BROWSER__list_tabs` | Lists all open browser tabs (CDP only) | *"Quante tab ho aperte?"* |
+| `BROWSER__switch_tab` | Switches to a specific tab by ID | *"Passa alla tab di YouTube"* |
+| `BROWSER__new_tab` | Opens a new tab | *"Apri una nuova tab su google.com"* |
+| `BROWSER__close_tab` | Closes the current tab | *"Chiudi questa tab"* |
+| `BROWSER__go_back` | Navigates back | *"Torna indietro"* |
+| `BROWSER__close` | Closes the entire browser | *"Chiudi il browser"* |
+
+---
+
+## 📖 Practical Examples
+
+### 🔍 Web search and reading
+```
+"Cerca su Google 'migliori ristoranti Roma 2024' e dimmi i primi risultati"
+→ Hecos opens Google, searches, reads results and replies.
+
+"Apri Wikipedia e cercami la pagina sull'Intelligenza Artificiale. Riassumi l'intro."
+→ Navigation + reading + summary in one message.
+```
+
+### 📝 Form filling (CDP Mode)
+```
+"Vai su mail.google.com, clicca su 'Scrivi' e compila il destinatario con mario@rossi.it,
+ oggetto 'Ciao' e testo 'Come stai?'"
+→ Works in CDP mode because Hecos uses YOUR Chrome with your saved credentials.
+```
+
+### 📸 Screenshot and visual analysis
+```
+"/browser amazon.it → /screen → 'Cosa vedi? Ci sono offerte del giorno?'"
+→ Open, take screenshot, AI analyzes the image visually.
+```
+
+### 🗂️ Multi-tab management (CDP Mode)
+```
+"Quante tab ho aperte in Chrome? Mostrami i titoli"
+→ Hecos lists all your real Chrome tabs.
+
+"Passa alla tab di YouTube e dimmi che video sta suonando"
+→ switch_tab + get_page_text to read the current video title.
+```
+
+---
+
+## 🔒 Privacy & Security
+
+| Mode | Access to your data | Recommended for |
+|------|---------------------|-----------------|
+| CDP Takeover | ✅ Sees logins, cookies, sessions | Tasks requiring authentication |
+| App Mode | ❌ Completely isolated | Anonymous browsing, web scraping |
+
+---
+
+## 📝 Notes
+
+- In CDP mode, Hecos first tries to connect to your Chrome. If it fails, it automatically falls back to AUTOMATION mode to find open windows.
+- The `BROWSER__screenshot` tool returns a file path; the vision AI can analyze it to describe the page visually.
+- For YouTube playback: use `run_js("document.querySelector('video').play()")` if `click_element('play')` doesn't work.
