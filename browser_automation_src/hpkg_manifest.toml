@@ -38,7 +38,7 @@ config_api_get = "/hecos/api/plugins/browser_automation/config"
 config_api_post = "/hecos/api/plugins/browser_automation/config"
 
 [routing]
-instructions = "BROWSER CONTROL DECISION TREE — Follow these steps in order: (1) ALWAYS start with BROWSER__list_tabs. (2) If it returns a list of tabs → you are in CDP mode. Use BROWSER__switch_tab(index) to go to the right tab, then use BROWSER page tools (get_page_text, click_element, type_in_field). (3) If list_tabs returns 'CDP connection is not active' → Chrome was NOT launched in AI-Ready mode. IMMEDIATELY fall back to: AUTOMATION__get_browser_tabs to find open tabs by title (this reads from Windows accessibility, real browser windows only), then AUTOMATION__focus_browser_tab with the matching title fragment. NEVER stop and ask the user — always attempt the fallback automatically."
+instructions = "BROWSER AUTOMATION — STRICT MULTI-STEP EXECUTION RULES:\n\nYou MUST continue making tool calls until the user's full task is done. NEVER stop after just one step and produce a text response instead of a tool call.\n\nSTEP-BY-STEP RULES:\n1. USER SAYS \"open X\" → call BROWSER__open_url. Then IMMEDIATELY continue with the NEXT step — do NOT produce a text response and wait.\n2. USER SAYS \"search for X\" on a page → call BROWSER__type_in_field(label_or_selector=\"search\", text=\"X\", press_enter=True). No text response in between.\n3. USER SAYS \"click play\" → call BROWSER__click_element(text_or_selector=\"play\") or run_js to trigger play.\n4. USER SAYS \"open X, search Y, click play\" → you MUST execute ALL THREE steps in sequence, each as a separate tool call, WITHOUT producing any text response between them.\n5. After BROWSER__open_url succeeds, if the user asked you to do more (search, click, etc.), immediately issue the NEXT tool call. Do NOT say \"OK YouTube is open, now I'll search...\". JUST SEARCH.\n\nDECISION TREE FOR BROWSER MODE:\n- If browser already running: use list_tabs first to find the correct tab, then switch_tab if needed.\n- YouTube search bar selector: 'input#search' or use label_or_selector=\"search\".\n- YouTube play button: click_element('play') or run_js(\"document.querySelector('video').play()\").\n- NEVER stop mid-task. The task is only complete when ALL requested actions are done."
 
 [[tool_schema]]
 
@@ -312,10 +312,55 @@ llm_tools = [
     "close_tab",
     "close",
 ]
-slash_commands = []
+slash_commands = [
+    "/b",
+    "/browser",
+    "/b_close",
+    "/b_tabs",
+]
 has_widget = false
 has_config_panel = true
 has_api_routes = true
 has_system_calls = false
 syscall_notes = ""
 notes = ""
+
+[[slash_commands]]
+id = "b"
+manifest_version = "1"
+aliases = [
+    "/b",
+    "/browser",
+]
+description = "Apre il browser AI su un URL o effettua una ricerca."
+usage = "/b <url_o_ricerca>"
+example = "/b youtube.com"
+icon = "??"
+method = "slash_b"
+requires_args = true
+
+[[slash_commands]]
+id = "b_close"
+manifest_version = "1"
+aliases = [
+    "/b_close",
+]
+description = "Chiude il browser AI."
+usage = "/b_close"
+example = "/b_close"
+icon = "??"
+method = "slash_b_close"
+requires_args = false
+
+[[slash_commands]]
+id = "b_tabs"
+manifest_version = "1"
+aliases = [
+    "/b_tabs",
+]
+description = "Mostra la lista delle schede aperte nel browser AI."
+usage = "/b_tabs"
+example = "/b_tabs"
+icon = "??"
+method = "slash_b_tabs"
+requires_args = false

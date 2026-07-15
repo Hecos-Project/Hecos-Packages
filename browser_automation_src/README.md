@@ -30,6 +30,16 @@ chrome.exe --remote-debugging-port=9222
 
 Then switch to CDP Mode in the Config Hub → AI Browser panel.
 
+## Direct Commands (Slash Commands)
+
+You can use the following commands directly in the Hecos chat to control the browser manually without invoking the LLM:
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/b <url>` or `/browser <url>` | Apre il browser AI sull'URL specificato, oppure effettua una ricerca su Google se non viene fornito un URL valido. | `/b youtube.com` oppure `/b gatti divertenti` |
+| `/b_close` | Chiude il browser AI e interrompe la sessione. | `/b_close` |
+| `/b_tabs` | Mostra la lista delle schede attualmente aperte nel browser AI. | `/b_tabs` |
+
 ## Available Tools (LLM)
 
 | Tool | Description |
