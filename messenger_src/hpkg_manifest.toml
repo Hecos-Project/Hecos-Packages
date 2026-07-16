@@ -15,6 +15,7 @@ readme = "README.md"
 readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/messenger_src/README.md"
 dependencies = [
     "templates",
+    "browser_automation",
 ]
 optional_dependencies = []
 tag = "MESSENGER"
