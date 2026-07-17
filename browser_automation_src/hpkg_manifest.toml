@@ -1,10 +1,10 @@
 id = "browser_automation"
 manifest_version = "1"
-name = "AI Browser"
+name = "Browser Automation"
 version = "1.0.2"
 author = "Hecos Team / Antonio Meloni"
 license = "GPL-3.0"
-description = "Hecos AI-controlled Playwright browser. Navigate, read DOM, click elements and fill forms without vision or coordinate guessing."
+description = "Hecos AI-controlled Playwright browser. Navigate, read DOM, click elements and fill forms without vision or coordinate guessing. Funziona sia in modo autonomo con l'IA che tramite comandi diretti (slash commands come /b, /b_close, /b_tabs)."
 icon = "🌐"
 icon_url = ""
 screenshots = []
@@ -317,6 +317,14 @@ slash_commands = [
     "/browser",
     "/b_close",
     "/b_tabs",
+    "/b_back",
+    "/b_click",
+    "/b_type",
+    "/b_scroll",
+    "/b_shot",
+    "/b_new",
+    "/b_close_tab",
+    "/b_switch",
 ]
 has_widget = false
 has_config_panel = true
@@ -364,3 +372,107 @@ example = "/b_tabs"
 icon = "??"
 method = "slash_b_tabs"
 requires_args = false
+
+[[slash_commands]]
+id = "b_back"
+manifest_version = "1"
+aliases = [
+    "/b_back",
+]
+description = "Naviga indietro nel browser."
+usage = "/b_back"
+example = "/b_back"
+icon = "⬅️"
+method = "slash_b_back"
+requires_args = false
+
+[[slash_commands]]
+id = "b_click"
+manifest_version = "1"
+aliases = [
+    "/b_click",
+]
+description = "Clicca un elemento per testo o selettore."
+usage = "/b_click <testo_o_selettore>"
+example = "/b_click Accedi"
+icon = "🖱️"
+method = "slash_b_click"
+requires_args = true
+
+[[slash_commands]]
+id = "b_type"
+manifest_version = "1"
+aliases = [
+    "/b_type",
+]
+description = "Scrive del testo in un campo."
+usage = "/b_type <selettore> | <testo>"
+example = "/b_type Cerca | gatti divertenti"
+icon = "⌨️"
+method = "slash_b_type"
+requires_args = true
+
+[[slash_commands]]
+id = "b_scroll"
+manifest_version = "1"
+aliases = [
+    "/b_scroll",
+]
+description = "Scorre la pagina su o giù."
+usage = "/b_scroll [up|down]"
+example = "/b_scroll down"
+icon = "↕️"
+method = "slash_b_scroll"
+requires_args = false
+
+[[slash_commands]]
+id = "b_shot"
+manifest_version = "1"
+aliases = [
+    "/b_shot",
+]
+description = "Scatta uno screenshot della pagina attuale."
+usage = "/b_shot"
+example = "/b_shot"
+icon = "📸"
+method = "slash_b_shot"
+requires_args = false
+
+[[slash_commands]]
+id = "b_new"
+manifest_version = "1"
+aliases = [
+    "/b_new",
+]
+description = "Apre una nuova scheda."
+usage = "/b_new [url]"
+example = "/b_new google.com"
+icon = "➕"
+method = "slash_b_new"
+requires_args = false
+
+[[slash_commands]]
+id = "b_close_tab"
+manifest_version = "1"
+aliases = [
+    "/b_close_tab",
+]
+description = "Chiude la scheda corrente."
+usage = "/b_close_tab"
+example = "/b_close_tab"
+icon = "❌"
+method = "slash_b_close_tab"
+requires_args = false
+
+[[slash_commands]]
+id = "b_switch"
+manifest_version = "1"
+aliases = [
+    "/b_switch",
+]
+description = "Cambia scheda attiva specificando l'ID."
+usage = "/b_switch <id>"
+example = "/b_switch 1"
+icon = "🔄"
+method = "slash_b_switch"
+requires_args = true
