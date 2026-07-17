@@ -130,7 +130,7 @@ aliases = [
     "/calendario",
     "/appuntamenti",
 ]
-description = "Elenca i prossimi eventi nel calendario"
+description = "Lists the upcoming events in the calendar"
 usage = "/calendar"
 example = "/calendar"
 icon = "📅"

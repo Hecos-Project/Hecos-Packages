@@ -21,14 +21,14 @@ def build_package():
     src_dirs = [d for d in packages_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
     
     if not src_dirs:
-        log_warn(f"Nessuna cartella '*_src' trovata in {packages_dir}")
+        log_warn(f"No '*_src' folder found in {packages_dir}")
         return
         
-    print("Pacchetti disponibili:")
+    print("Available packages:")
     for i, d in enumerate(src_dirs):
         print(f"  {i+1}. {d.name}")
         
-    choice = input("\nSeleziona il pacchetto da compilare (0 per annullare): ")
+    choice = input("\nSelect the package to build (0 to cancel): ")
     try:
         idx = int(choice) - 1
         if idx == -1: return
@@ -39,7 +39,7 @@ def build_package():
 def _build_single_package(target_dir, packages_dir):
     manifest_path = target_dir / "hpkg_manifest.toml"
     if not manifest_path.exists():
-        log_error(f"{manifest_path.name} non trovato in {target_dir}")
+        log_error(f"{manifest_path.name} not found in {target_dir}")
         return False
 
     # Auto-generate capabilities
@@ -50,36 +50,36 @@ def _build_single_package(target_dir, packages_dir):
     try:
         manifest = tomllib.loads(manifest_path.read_bytes().decode("utf-8"))
     except Exception as e:
-        log_error(f"Errore sintassi TOML in {manifest_path.name}: {e}")
+        log_error(f"TOML syntax error in {manifest_path.name}: {e}")
         return False
 
-    log_info(f"Validazione pacchetto '{manifest.get('name', 'Unknown')}' in corso...")
+    log_info(f"Validating package '{manifest.get('name', 'Unknown')}'...")
     errors = []
     
-    if "id" not in manifest: errors.append("Manca il campo 'id'")
-    if "version" not in manifest: errors.append("Manca il campo 'version'")
+    if "id" not in manifest: errors.append("Missing 'id' field")
+    if "version" not in manifest: errors.append("Missing 'version' field")
 
     if "config_panel" in manifest:
         cp = manifest["config_panel"]
         for key in ["template_file", "js_file", "css_file", "api_routes_file"]:
             if key in cp and not (target_dir / cp[key]).exists():
-                errors.append(f"File {key} non trovato: {cp[key]}")
+                errors.append(f"File {key} not found: {cp[key]}")
 
     if "readme" in manifest:
         readme_file = manifest["readme"]
         if not (target_dir / readme_file).exists():
-            errors.append(f"File readme '{readme_file}' non trovato")
+            errors.append(f"Readme file '{readme_file}' not found")
     else:
-        errors.append("Manca il campo obbligatorio 'readme' (inserire almeno un file README.md)")
+        errors.append("Missing required 'readme' field (insert at least a README.md file)")
 
     if errors:
-        log_error("Validazione fallita. Correggi i seguenti errori:")
+        log_error("Validation failed. Fix the following errors:")
         for err in errors: log_error(f"  - {err}")
         return False
         
-    log_debug("Validazione superata.")
+    log_debug("Validation passed.")
 
-    log_info("Calcolo hash dei file...")
+    log_info("Calculating file hashes...")
     file_hashes = {}
     files_to_pack = []
     
@@ -96,7 +96,7 @@ def _build_single_package(target_dir, packages_dir):
     manifest["file_hashes"] = file_hashes
 
     # Creazione Payload Bytes per la Firma
-    log_info("Generazione payload per firma crittografica...")
+    log_info("Generating payload for cryptographic signature...")
     payload_dict = dict(manifest)
     payload_dict.pop("signature", None)
     
@@ -106,22 +106,22 @@ def _build_single_package(target_dir, packages_dir):
     signature_b64 = sign_payload(payload_bytes)
     if signature_b64:
         manifest["signature"] = signature_b64
-        log_info("Firma applicata con successo.")
+        log_info("Signature applied successfully.")
     else:
-        log_warn("Pacchetto non firmato. L'installazione su Hecos potrebbe fallire se richiede pacchetti verificati.")
+        log_warn("Unsigned package. Installation on Hecos may fail if it requires verified packages.")
 
     # Converti in TOML finale
     try:
         import tomli_w
         final_toml = tomli_w.dumps(manifest).encode("utf-8")
     except ImportError:
-        log_debug("tomli_w non trovato, uso il serializzatore TOML custom.")
+        log_debug("tomli_w not found, using custom TOML serializer.")
         final_toml = _json_to_toml(manifest).encode("utf-8")
 
     pkg_name = f"{manifest['id']}-{manifest['version']}.hpkg"
     out_path = packages_dir / pkg_name
     
-    log_info(f"Creazione archivio compresso {pkg_name}...")
+    log_info(f"Creating compressed archive {pkg_name}...")
     with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("hpkg_manifest.toml", final_toml)
         for full, rel in files_to_pack:
@@ -137,14 +137,14 @@ def build_package():
     src_dirs = [d for d in src_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
     
     if not src_dirs:
-        log_warn(f"Nessuna cartella '*_src' trovata in {src_dir}")
+        log_warn(f"No '*_src' folder found in {src_dir}")
         return
         
-    print("Pacchetti disponibili:")
+    print("Available packages:")
     for i, d in enumerate(src_dirs):
         print(f"  {i+1}. {d.name}")
         
-    choice = input("\nSeleziona il pacchetto da compilare (0 per annullare): ")
+    choice = input("\nSelect the package to build (0 to cancel): ")
     try:
         idx = int(choice) - 1
         if idx == -1: return
@@ -160,12 +160,12 @@ def build_all_packages():
     src_dirs = [d for d in src_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
     
     if not src_dirs:
-        log_warn(f"Nessuna cartella '*_src' trovata in {src_dir}")
+        log_warn(f"No '*_src' folder found in {src_dir}")
         return
 
-    log_info(f"Trovati {len(src_dirs)} pacchetti da compilare.")
+    log_info(f"Found {len(src_dirs)} packages to build.")
     for target_dir in src_dirs:
-        print(f"\n--- Compilazione di {target_dir.name} ---")
+        print(f"\n--- Building {target_dir.name} ---")
         _build_single_package(target_dir, packages_dir)
 
 def get_available_hpkg():
@@ -173,14 +173,14 @@ def get_available_hpkg():
     hpkg_files = [f for f in packages_dir.glob("*.hpkg")]
     
     if not hpkg_files:
-        log_warn(f"Nessun pacchetto .hpkg trovato in {packages_dir}")
+        log_warn(f"No .hpkg package found in {packages_dir}")
         return None
         
-    print("Pacchetti disponibili:")
+    print("Available packages:")
     for i, f in enumerate(hpkg_files):
         print(f"  {i+1}. {f.name}")
         
-    choice = input("\nSeleziona il pacchetto (0 per annullare): ")
+    choice = input("\nSelect the package (0 to cancel): ")
     try:
         idx = int(choice) - 1
         if idx == -1: return None
@@ -192,22 +192,22 @@ def inspect_package():
     pkg_path = get_available_hpkg()
     if not pkg_path: return
 
-    log_info(f"Ispezione pacchetto: {pkg_path.name}")
+    log_info(f"Inspecting package: {pkg_path.name}")
     try:
         with zipfile.ZipFile(pkg_path, 'r') as zf:
             files = zf.namelist()
             if "hpkg_manifest.toml" not in files:
-                log_error("Il pacchetto non contiene 'hpkg_manifest.toml'!")
+                log_error("The package does not contain 'hpkg_manifest.toml'!")
                 return
             
             manifest_bytes = zf.read("hpkg_manifest.toml")
             manifest = tomllib.loads(manifest_bytes.decode("utf-8"))
             
-            print("\n--- INFORMAZIONI PACCHETTO ---")
+            print("\n--- PACKAGE INFORMATION ---")
             print(f"ID:      {manifest.get('id', 'N/A')}")
-            print(f"Nome:    {manifest.get('name', 'N/A')}")
+            print(f"Name:    {manifest.get('name', 'N/A')}")
             print(f"Vers:    {manifest.get('version', 'N/A')}")
-            print(f"Autore:  {manifest.get('author', 'N/A')}")
+            print(f"Author:  {manifest.get('author', 'N/A')}")
             print("------------------------------")
             
             # Controllo firma
@@ -219,26 +219,26 @@ def inspect_package():
                 
                 is_valid = verify_signature(payload_bytes, signature_b64)
                 if is_valid:
-                    log_info("Firma Crittografica: VALIDA")
+                    log_info("Cryptographic Signature: VALID")
                 else:
-                    log_error("Firma Crittografica: NON VALIDA o CHIAVE MANCANTE")
+                    log_error("Cryptographic Signature: INVALID or MISSING KEY")
             else:
-                log_warn("Firma Crittografica: ASSENTE")
+                log_warn("Cryptographic Signature: MISSING")
 
-            print("\n--- CONTENUTO FILE ---")
+            print("\n--- FILE CONTENT ---")
             for f in files:
                 info = zf.getinfo(f)
                 size = info.file_size
                 print(f"  - {f} ({size} bytes)")
             
     except Exception as e:
-        log_error(f"Errore durante la lettura del pacchetto: {e}")
+        log_error(f"Error reading package: {e}")
 
 def _unpack_single_package(pkg_path, ask_overwrite=True):
     try:
         with zipfile.ZipFile(pkg_path, 'r') as zf:
             if "hpkg_manifest.toml" not in zf.namelist():
-                log_error(f"Il pacchetto {pkg_path.name} non contiene 'hpkg_manifest.toml'. Uso nome fallback.")
+                log_error(f"Package {pkg_path.name} does not contain 'hpkg_manifest.toml'. Using fallback name.")
                 out_dir_name = f"{pkg_path.stem}_src"
             else:
                 manifest_bytes = zf.read("hpkg_manifest.toml")
@@ -250,18 +250,18 @@ def _unpack_single_package(pkg_path, ask_overwrite=True):
 
             if out_dir.exists():
                 if ask_overwrite:
-                    log_warn(f"La cartella {out_dir_name} esiste gia'.")
-                    ans = input("Vuoi sovrascriverla? (s/N): ")
-                    if ans.lower() != 's':
+                    log_warn(f"Folder {out_dir_name} already exists.")
+                    ans = input("Do you want to overwrite it? (y/N): ")
+                    if ans.lower() != 'y':
                         return
                 else:
-                    log_info(f"Sovrascrivo la cartella esistente {out_dir_name}...")
+                    log_info(f"Overwriting existing folder {out_dir_name}...")
 
-            log_info(f"Decompressione di {pkg_path.name} in {out_dir_name}...")
+            log_info(f"Unpacking {pkg_path.name} into {out_dir_name}...")
             zf.extractall(out_dir)
-            log_info("Decompressione completata con successo.")
+            log_info("Unpacking completed successfully.")
     except Exception as e:
-        log_error(f"Errore durante l'estrazione di {pkg_path.name}: {e}")
+        log_error(f"Error extracting {pkg_path.name}: {e}")
 
 def unpack_package():
     pkg_path = get_available_hpkg()
@@ -273,10 +273,10 @@ def unpack_all_packages():
     hpkg_files = [f for f in packages_dir.glob("*.hpkg")]
     
     if not hpkg_files:
-        log_warn(f"Nessun pacchetto .hpkg trovato in {packages_dir}")
+        log_warn(f"No .hpkg package found in {packages_dir}")
         return
 
-    log_info(f"Trovati {len(hpkg_files)} pacchetti da decomprimere.")
+    log_info(f"Found {len(hpkg_files)} packages to unpack.")
     for pkg_path in hpkg_files:
-        print(f"\n--- Estrazione di {pkg_path.name} ---")
+        print(f"\n--- Extracting {pkg_path.name} ---")
         _unpack_single_package(pkg_path, ask_overwrite=False)

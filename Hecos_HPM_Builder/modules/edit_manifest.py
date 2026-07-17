@@ -100,11 +100,11 @@ def pick_version(current: str) -> str:
     The user can also type a version string manually.
     """
     print(f"\n{Fore.CYAN}{'─'*56}{Style.RESET_ALL}")
-    print(f"  {Style.BRIGHT}Selettore Versione Interattivo{Style.RESET_ALL}")
+    print(f"  {Style.BRIGHT}Interactive Version Selector{Style.RESET_ALL}")
     print(f"{Fore.CYAN}{'─'*56}{Style.RESET_ALL}")
-    print(f"  {Fore.LIGHTBLACK_EX}← → per spostarti · ↑ ↓ per cambiare valore{Style.RESET_ALL}")
-    print(f"  {Fore.LIGHTBLACK_EX}Invio per confermare · Esc o Q per annullare{Style.RESET_ALL}")
-    print(f"  {Fore.LIGHTBLACK_EX}Digita direttamente es. '2.0.1' e premi Invio{Style.RESET_ALL}")
+    print(f"  {Fore.LIGHTBLACK_EX}← → to move · ↑ ↓ to change value{Style.RESET_ALL}")
+    print(f"  {Fore.LIGHTBLACK_EX}Enter to confirm · Esc or Q to cancel{Style.RESET_ALL}")
+    print(f"  {Fore.LIGHTBLACK_EX}Type directly e.g. '2.0.1' and press Enter{Style.RESET_ALL}")
     print(f"{Fore.CYAN}{'─'*56}{Style.RESET_ALL}\n")
 
     parts   = _parse_version(current)
@@ -118,8 +118,8 @@ def pick_version(current: str) -> str:
             f"{Style.BRIGHT}{lbl}{Style.RESET_ALL}" if i == sel else lbl
             for i, lbl in enumerate(labels)
         ) + Style.RESET_ALL
-        version_row = f"  Versione: {_render_version(parts, sel)}"
-        typed_row   = f"  Libera: {Fore.YELLOW}{typed}{'▌' if typed else ''}{Style.RESET_ALL}"
+        version_row = f"  Version: {_render_version(parts, sel)}"
+        typed_row   = f"  Free: {Fore.YELLOW}{typed}{'▌' if typed else ''}{Style.RESET_ALL}"
         # Move up 3 lines and overwrite
         sys.stdout.write("\r\033[2A")   # up 2
         sys.stdout.write("\r\033[K" + version_row + "\n")
@@ -128,9 +128,9 @@ def pick_version(current: str) -> str:
         sys.stdout.flush()
 
     # Initial draw (no cursor move needed yet — print fresh)
-    print(f"  Versione: {_render_version(parts, sel)}")
+    print(f"  Version: {_render_version(parts, sel)}")
     print(f"  {Fore.LIGHTBLACK_EX}  " + "    ".join(labels) + Style.RESET_ALL)
-    print(f"  Libera: {Fore.YELLOW}▌{Style.RESET_ALL}", end="", flush=True)
+    print(f"  Free: {Fore.YELLOW}▌{Style.RESET_ALL}", end="", flush=True)
 
     while True:
         ch = _getch()
@@ -174,24 +174,24 @@ def pick_version(current: str) -> str:
                 result = ".".join(str(p) for p in parsed)
             else:
                 result = ".".join(str(p) for p in parts)
-            print(f"\n  {Fore.GREEN}✓ Versione confermata: {Style.BRIGHT}{result}{Style.RESET_ALL}\n")
+            print(f"\n  {Fore.GREEN}✓ Version confirmed: {Style.BRIGHT}{result}{Style.RESET_ALL}\n")
             return result
 
         # ── Cancel (ESC or Q) ──
         elif ch == _ESC or ch.lower() == 'q':
             print()
-            print(f"\n  {Fore.YELLOW}✗ Annullato — versione invariata: {current}{Style.RESET_ALL}\n")
+            print(f"\n  {Fore.YELLOW}✗ Cancelled — version unchanged: {current}{Style.RESET_ALL}\n")
             return current
 
 
 # ── Metadata editor fields ────────────────────────────────────────────────────
 
 _EDITABLE_FIELDS = [
-    ("version",     "Versione",     True),   # True = use version picker
-    ("name",        "Nome",         False),
-    ("author",      "Autore",       False),
-    ("description", "Descrizione",  False),
-    ("license",     "Licenza",      False),
+    ("version",     "Version",     True),   # True = use version picker
+    ("name",        "Name",         False),
+    ("author",      "Author",       False),
+    ("description", "Description",  False),
+    ("license",     "License",      False),
 ]
 
 
@@ -203,21 +203,21 @@ def _prompt_field(label: str, current, use_version_picker: bool, default_val: st
     if use_version_picker:
         return pick_version(str(current))
     else:
-        display = str(current) if current else "(vuoto)"
+        display = str(current) if current else "(empty)"
         print(f"\n  {Fore.CYAN}{label}{Style.RESET_ALL}")
-        print(f"  {Fore.LIGHTBLACK_EX}1. Mantieni attuale:{Style.RESET_ALL} {display}")
-        print(f"  {Fore.LIGHTBLACK_EX}2. Usa default:{Style.RESET_ALL} {default_val}")
-        print(f"  {Fore.LIGHTBLACK_EX}3. Inserisci nuovo valore{Style.RESET_ALL}")
+        print(f"  {Fore.LIGHTBLACK_EX}1. Keep current:{Style.RESET_ALL} {display}")
+        print(f"  {Fore.LIGHTBLACK_EX}2. Use default:{Style.RESET_ALL} {default_val}")
+        print(f"  {Fore.LIGHTBLACK_EX}3. Enter new value{Style.RESET_ALL}")
         
         while True:
-            choice = input(f"  Scelta (1/2/3) [1]: ").strip() or "1"
+            choice = input(f"  Choice (1/2/3) [1]: ").strip() or "1"
             if choice == "1":
                 return current
             elif choice == "2":
                 return default_val
             elif choice == "3":
-                return input(f"  Nuovo {label}: ").strip()
-            print("  Scelta non valida.")
+                return input(f"  New {label}: ").strip()
+            print("  Invalid choice.")
 
 
 def _write_manifest(path: Path, manifest: dict) -> bool:
@@ -230,7 +230,7 @@ def _write_manifest(path: Path, manifest: dict) -> bool:
             path.write_bytes(_json_to_toml(manifest).encode("utf-8"))
         return True
     except Exception as e:
-        log_error(f"Errore nella scrittura del manifest: {e}")
+        log_error(f"Error writing manifest: {e}")
         return False
 
 
@@ -245,10 +245,10 @@ def edit_manifest():
     src_dirs = sorted([d for d in src_dir.iterdir() if d.is_dir() and d.name.endswith("_src")])
 
     if not src_dirs:
-        log_warn(f"Nessuna cartella '*_src' trovata in {src_dir}")
+        log_warn(f"No '*_src' folder found in {src_dir}")
         return
 
-    print(f"{Fore.CYAN}Pacchetti disponibili:{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Available packages:{Style.RESET_ALL}")
     for i, d in enumerate(src_dirs):
         # Peek at version
         mpath = d / "hpkg_manifest.toml"
@@ -261,32 +261,32 @@ def edit_manifest():
                 pass
         print(f"  {Fore.WHITE}{i+1}.{Style.RESET_ALL} {d.name}{version_hint}")
 
-    choice = input(f"\n{Fore.YELLOW}Seleziona il pacchetto da modificare (0 per annullare):{Style.RESET_ALL} ").strip()
+    choice = input(f"\n{Fore.YELLOW}Select the package to edit (0 to cancel):{Style.RESET_ALL} ").strip()
     try:
         idx = int(choice) - 1
         if idx < 0:
             return
         target_dir = src_dirs[idx]
     except (ValueError, IndexError):
-        log_warn("Selezione non valida.")
+        log_warn("Invalid selection.")
         return
 
     manifest_path = target_dir / "hpkg_manifest.toml"
     if not manifest_path.exists():
-        log_error(f"hpkg_manifest.toml non trovato in {target_dir.name}")
+        log_error(f"hpkg_manifest.toml not found in {target_dir.name}")
         return
 
     try:
         manifest = tomllib.loads(manifest_path.read_bytes().decode("utf-8"))
     except Exception as e:
-        log_error(f"Errore lettura manifest: {e}")
+        log_error(f"Error reading manifest: {e}")
         return
 
     print(f"\n{Fore.CYAN}{'─'*56}{Style.RESET_ALL}")
-    print(f"  Modifica Metadati: {Style.BRIGHT}{manifest.get('name', target_dir.name)}{Style.RESET_ALL}")
+    print(f"  Edit Metadata: {Style.BRIGHT}{manifest.get('name', target_dir.name)}{Style.RESET_ALL}")
     print(f"{Fore.CYAN}{'─'*56}{Style.RESET_ALL}\n")
 
-    print(f"  {Fore.LIGHTBLACK_EX}Lascia vuoto per mantenere il valore attuale.{Style.RESET_ALL}\n")
+    print(f"  {Fore.LIGHTBLACK_EX}Leave blank to keep current value.{Style.RESET_ALL}\n")
 
     from modules.settings import load_config
     cfg = load_config()
@@ -303,22 +303,22 @@ def edit_manifest():
             log_info(f"  {label}: {current!r} → {new_val!r}")
 
     if not changed:
-        print(f"\n  {Fore.LIGHTBLACK_EX}Nessuna modifica effettuata.{Style.RESET_ALL}\n")
+        print(f"\n  {Fore.LIGHTBLACK_EX}No changes made.{Style.RESET_ALL}\n")
         return
 
     print(f"\n{Fore.CYAN}{'─'*56}{Style.RESET_ALL}")
-    print(f"  {Fore.WHITE}Riepilogo modifiche:{Style.RESET_ALL}")
+    print(f"  {Fore.WHITE}Summary of changes:{Style.RESET_ALL}")
     for field_key, label, _ in _EDITABLE_FIELDS:
         print(f"    {Fore.LIGHTBLACK_EX}{label}:{Style.RESET_ALL} {manifest.get(field_key, '')}")
     print(f"{Fore.CYAN}{'─'*56}{Style.RESET_ALL}\n")
 
-    confirm = input(f"{Fore.YELLOW}Salvare le modifiche nel manifest? (s/N):{Style.RESET_ALL} ").strip().lower()
-    if confirm != 's':
-        print(f"\n  {Fore.YELLOW}Annullato — nessuna modifica salvata.{Style.RESET_ALL}\n")
+    confirm = input(f"{Fore.YELLOW}Save changes to manifest? (y/N):{Style.RESET_ALL} ").strip().lower()
+    if confirm != 'y':
+        print(f"\n  {Fore.YELLOW}Cancelled — no changes saved.{Style.RESET_ALL}\n")
         return
 
     if _write_manifest(manifest_path, manifest):
-        log_info(f"Manifest aggiornato con successo: {manifest_path}")
-        print(f"\n  {Fore.LIGHTBLACK_EX}Ricorda di ricompilare il pacchetto (opzione 3 o 4) per applicare le modifiche.{Style.RESET_ALL}\n")
+        log_info(f"Manifest updated successfully: {manifest_path}")
+        print(f"\n  {Fore.LIGHTBLACK_EX}Remember to rebuild the package (option 3 or 4) to apply changes.{Style.RESET_ALL}\n")
     else:
-        log_error("Salvataggio fallito.")
+        log_error("Save failed.")

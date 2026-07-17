@@ -6,44 +6,44 @@ from modules.settings import get_src_dir, load_config
 def _prompt_field(label: str, default_val: str) -> str:
     """Prompt the user for a new value, offering the default as an option."""
     print(f"\n  {Fore.CYAN}{label}{Style.RESET_ALL}")
-    print(f"  {Fore.LIGHTBLACK_EX}1. Usa valore di default:{Style.RESET_ALL} {default_val}")
-    print(f"  {Fore.LIGHTBLACK_EX}2. Inserisci nuovo valore{Style.RESET_ALL}")
+    print(f"  {Fore.LIGHTBLACK_EX}1. Use default value:{Style.RESET_ALL} {default_val}")
+    print(f"  {Fore.LIGHTBLACK_EX}2. Enter new value{Style.RESET_ALL}")
     
     while True:
-        choice = input(f"  Scelta (1/2) [1]: ").strip() or "1"
+        choice = input(f"  Choice (1/2) [1]: ").strip() or "1"
         if choice == "1":
             return default_val
         elif choice == "2":
-            return input(f"  Nuovo {label}: ").strip()
-        print("  Scelta non valida.")
+            return input(f"  New {label}: ").strip()
+        print("  Invalid choice.")
 
 def scaffold_package():
     packages_dir = get_src_dir()
     cfg = load_config()
     defaults = cfg.get("defaults", {})
     
-    pkg_id = input("1. Inserisci il Package ID (es. my_plugin, no spazi): ").strip().lower()
+    pkg_id = input("1. Enter Package ID (e.g., my_plugin, no spaces): ").strip().lower()
     if not pkg_id: 
-        log_warn("Nessun ID inserito, operazione annullata.")
+        log_warn("No ID entered, operation cancelled.")
         return
 
-    pkg_name = input("2. Inserisci il nome leggibile (es. My Awesome Plugin): ").strip()
-    pkg_type = input("3. Tipo di pacchetto (plugin/module/theme) [plugin]: ").strip().lower() or "plugin"
+    pkg_name = input("2. Enter human-readable name (e.g., My Awesome Plugin): ").strip()
+    pkg_type = input("3. Package type (plugin/module/theme) [plugin]: ").strip().lower() or "plugin"
     
     src_dir = packages_dir / f"{pkg_id}_src"
     if src_dir.exists():
-        log_error(f"La cartella {src_dir.name} esiste gia'!")
+        log_error(f"Folder {src_dir.name} already exists!")
         return
 
-    log_info(f"Creazione alberatura in {src_dir}...")
+    log_info(f"Creating directory structure in {src_dir}...")
     
     # Prompt for other manifest fields
-    print(f"\n{Fore.YELLOW}--- Configurazione Manifest ---{Style.RESET_ALL}")
-    pkg_author = _prompt_field("Autore", defaults.get("author", "Hecos Developer"))
-    pkg_version = _prompt_field("Versione Iniziale", defaults.get("version", "1.0.0"))
-    pkg_desc = _prompt_field("Descrizione", defaults.get("description", f"Descrizione del pacchetto {pkg_name}."))
-    pkg_license = _prompt_field("Licenza", defaults.get("license", "MIT"))
-    pkg_hecos_min = _prompt_field("Versione Minima Hecos", defaults.get("hecos_min_version", "0.39.0"))
+    print(f"\n{Fore.YELLOW}--- Manifest Configuration ---{Style.RESET_ALL}")
+    pkg_author = _prompt_field("Author", defaults.get("author", "Hecos Developer"))
+    pkg_version = _prompt_field("Initial Version", defaults.get("version", "1.0.0"))
+    pkg_desc = _prompt_field("Description", defaults.get("description", f"{pkg_name} package description."))
+    pkg_license = _prompt_field("License", defaults.get("license", "MIT"))
+    pkg_hecos_min = _prompt_field("Minimum Hecos Version", defaults.get("hecos_min_version", "0.39.0"))
     
     # Crea cartelle base
     os.makedirs(src_dir / "plugin" / pkg_id)
@@ -110,4 +110,4 @@ tools = {pkg_id.capitalize()}Tools()
     with open(src_dir / "web_ui" / "static" / "js" / f"{pkg_id}_panel.js", "w", encoding="utf-8") as f:
         f.write(f"// {pkg_name} JS Logic\nconsole.log('{pkg_name} loaded!');\n")
 
-    log_info("Scaffold completato con successo!")
+    log_info("Scaffold completed successfully!")

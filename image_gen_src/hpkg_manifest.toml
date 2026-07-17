@@ -39,7 +39,7 @@ aliases = [
     "/photo",
     "/foto",
 ]
-description = "Genera un'immagine AI da una descrizione testuale"
+description = "Generates an AI image from a text description"
 usage = "/img <descrizione>"
 example = "/img foto fotorealistica di un gatto su Marte"
 icon = "🖼️"

@@ -20,7 +20,7 @@ DEFAULT_CONFIG = {
     "defaults": {
         "author": "Hecos Developer",
         "license": "MIT",
-        "description": "Descrizione del pacchetto",
+        "description": "Package description",
         "version": "1.0.0",
         "hecos_min_version": "0.35.0"
     }
@@ -66,7 +66,7 @@ def load_config() -> dict:
                         _config_cache["defaults"][dk] = dv
             return _config_cache
         except Exception as e:
-            print(f"[ERROR] Impossibile leggere config.toml: {e}")
+            print(f"[ERROR] Cannot read config.toml: {e}")
     
     _config_cache = DEFAULT_CONFIG.copy()
     return _config_cache

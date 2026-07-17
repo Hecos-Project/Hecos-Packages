@@ -60,7 +60,7 @@ aliases = [
     "/reminders",
     "/promemoria list",
 ]
-description = "Elenca tutti i promemoria attivi"
+description = "Lists all active reminders"
 usage = "/reminders"
 example = "/reminders"
 icon = "📋"

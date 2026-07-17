@@ -14,20 +14,20 @@ def dev_sync_package():
     hecos_hpm_dir = get_hecos_root() / "hpm"
     
     if not hecos_hpm_dir.exists():
-        log_error(f"Cartella HPM live non trovata: {hecos_hpm_dir}")
+        log_error(f"Live HPM folder not found: {hecos_hpm_dir}")
         return
         
     src_dirs = [d for d in src_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
     
     if not src_dirs:
-        log_warn(f"Nessuna cartella '*_src' trovata in {src_dir}")
+        log_warn(f"No '*_src' folder found in {src_dir}")
         return
         
-    print("\nPacchetti disponibili per la sincronizzazione Sviluppo -> Live:")
+    print("\nPackages available for Development -> Live synchronization:")
     for i, d in enumerate(src_dirs):
         print(f"  {i+1}. {d.name}")
         
-    choice = input("\nSeleziona il pacchetto da sincronizzare (0 per annullare): ")
+    choice = input("\nSelect the package to synchronize (0 to cancel): ")
     try:
         idx = int(choice) - 1
         if idx == -1: return
@@ -40,11 +40,11 @@ def dev_sync_package():
     live_pkg_dir = hecos_hpm_dir / pkg_id
 
     if not live_pkg_dir.exists():
-        log_error(f"Il pacchetto '{pkg_id}' non è attualmente installato in Hecos.")
-        log_warn("Devi installare il pacchetto normalmente via .hpkg almeno una volta prima di usare il Dev Sync.")
+        log_error(f"Package '{pkg_id}' is not currently installed in Hecos.")
+        log_warn("You must install the package normally via .hpkg at least once before using Dev Sync.")
         return
 
-    log_info(f"Sincronizzazione in corso da '{target_dir.name}' a '{live_pkg_dir}'...")
+    log_info(f"Synchronizing from '{target_dir.name}' to '{live_pkg_dir}'...")
     
     # Copiamo i file usando shutil.copytree che sovrascrive i file esistenti
     # ignorando cartelle speciali come __pycache__
@@ -55,7 +55,7 @@ def dev_sync_package():
             dirs_exist_ok=True,
             ignore=shutil.ignore_patterns('__pycache__', '*.pyc', '.git', 'hpkg_manifest.json')
         )
-        log_info(f"✅ Sincronizzazione completata! Le tue modifiche sono ora attive nel sistema live.")
-        log_info(f"   (Nota: potrebbe essere necessario riavviare Hecos o ricaricare il pacchetto dal Package Manager se hai modificato codice Python core).")
+        log_info(f"✅ Synchronization completed! Your changes are now active in the live system.")
+        log_info(f"   (Note: you may need to restart Hecos or reload the package from the Package Manager if you modified core Python code).")
     except Exception as e:
-        log_error(f"Errore durante la sincronizzazione: {e}")
+        log_error(f"Error during synchronization: {e}")

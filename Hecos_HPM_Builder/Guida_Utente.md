@@ -83,13 +83,12 @@ Lo script eseguirà nell'ordine:
 Output atteso se tutto va bene:
 
 ```
-[SCAN] Validazione in corso...
-[OK] Validazione superata.
-[PACK] Compilazione archivio...
-[SIGN] Firma pacchetto con hpm_private.pem...
-[OK] Firma applicata correttamente.
-[DONE] Pacchetto creato con successo!
-[FILE] Destinazione: C:\Hecos-Packages\voice_visualizer-1.0.0.hpkg (11.2 KB)
+[INFO] Validating package 'Voice Visualizer'...
+[INFO] Calculating file hashes...
+[INFO] Generating payload for cryptographic signature...
+[INFO] Signature applied successfully.
+[INFO] Creating compressed archive voice_visualizer-1.0.0.hpkg...
+[INFO] DONE -> C:\Hecos-Packages\packages\voice_visualizer-1.0.0.hpkg (11.2 KB)
 ```
 
 ---
@@ -98,8 +97,19 @@ Output atteso se tutto va bene:
 
 1. Apri il browser su `https://localhost:7070/hecos/config/ui#packages`.
 2. Nella tab **Packages**, clicca su **Install Package**.
-3. Seleziona il file `.hpkg` appena creato.
+3. Seleziona il file `.hpkg` appena creato (si troverà in `C:\Hecos-Packages\packages\`).
 4. Hecos verifica la firma, estrae i file, e ricarica la UI.
+
+---
+
+## Strumenti Avanzati (Novità v1.4.0)
+
+L'HPM Builder offre molti altri strumenti avanzati dal menu principale:
+- **`8. [EDT] Edit Manifest`**: Editor interattivo per aggiornare velocemente Versione, Nome, Autore e Descrizione senza aprire il file TOML a mano.
+- **`D. [SYNC] Dev Sync`**: Sincronizza istantaneamente le tue modifiche dalla cartella `_src` alla cartella live di Hecos per provare il codice in tempo reale, senza dover ricompilare il `.hpkg`.
+- **`C. [CAP] Auto-Generate Capabilities`**: Scansiona il codice per estrarre LLM Tools, comandi slash e widget, inserendoli automaticamente nel manifest per far capire ad Antigravity cosa fa il pacchetto.
+- **`I. [INFO]` / `A. [ALLI]`**: Stampa a schermo delle pratiche "Schede Informative" dei pacchetti, con tutte le caratteristiche e capacità riassunte chiaramente.
+- **`9. [CAT] Build Store Catalog`**: Crea il file `index.json` utile se vuoi caricare i tuoi pacchetti in un repository o in uno Store online personalizzato.
 
 ---
 

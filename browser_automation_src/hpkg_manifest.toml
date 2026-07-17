@@ -332,7 +332,7 @@ aliases = [
     "/b",
     "/browser",
 ]
-description = "Apre il browser AI su un URL o effettua una ricerca."
+description = "Opens the AI browser on a URL or performs a search."
 usage = "/b <url_o_ricerca>"
 example = "/b youtube.com"
 icon = "??"
@@ -345,7 +345,7 @@ manifest_version = "1"
 aliases = [
     "/b_close",
 ]
-description = "Chiude il browser AI."
+description = "Closes the AI browser."
 usage = "/b_close"
 example = "/b_close"
 icon = "??"
@@ -358,7 +358,7 @@ manifest_version = "1"
 aliases = [
     "/b_tabs",
 ]
-description = "Mostra la lista delle schede aperte nel browser AI."
+description = "Shows the list of open tabs in the AI browser."
 usage = "/b_tabs"
 example = "/b_tabs"
 icon = "??"

@@ -21,8 +21,8 @@ def sha256_file(path: Path) -> str:
 
 def generate_key_pair() -> bool:
     if not HAS_CRYPTO:
-        log_error("Il pacchetto 'cryptography' non e' installato.")
-        log_info("Esegui: pip install cryptography")
+        log_error("Package 'cryptography' is not installed.")
+        log_info("Run: pip install cryptography")
         return False
 
     trusted_dir = get_trusted_keys_dir()
@@ -32,12 +32,12 @@ def generate_key_pair() -> bool:
     pub_path = trusted_dir / "hpm_public.pem"
 
     if priv_path.exists():
-        log_warn(f"Una chiave privata esiste gia' in: {priv_path}")
-        ans = input("Vuoi sovrascriverla? (s/N): ")
-        if ans.lower() != 's':
+        log_warn(f"A private key already exists in: {priv_path}")
+        ans = input("Do you want to overwrite it? (y/N): ")
+        if ans.lower() != 'y':
             return False
 
-    log_info("Generazione coppia di chiavi Ed25519 in corso...")
+    log_info("Generating Ed25519 key pair...")
     private_key = ed25519.Ed25519PrivateKey.generate()
     public_key = private_key.public_key()
 
@@ -57,22 +57,22 @@ def generate_key_pair() -> bool:
     with open(pub_path, "wb") as f:
         f.write(pub_bytes)
 
-    log_info("Chiavi generate con successo!")
-    log_info(f"Privata: {priv_path}")
-    log_info(f"Pubblica: {pub_path}")
+    log_info("Keys generated successfully!")
+    log_info(f"Private: {priv_path}")
+    log_info(f"Public: {pub_path}")
     return True
 
 def sign_payload(payload_bytes: bytes) -> str:
     if not HAS_CRYPTO:
-        log_error("Cryptography non disponibile. Firma impossibile.")
+        log_error("Cryptography not available. Cannot sign.")
         return None
 
     priv_key_path = get_private_key_path()
     if not priv_key_path.exists():
-        log_error(f"Chiave privata non trovata in: {priv_key_path}")
+        log_error(f"Private key not found in: {priv_key_path}")
         return None
 
-    log_debug(f"Usando la chiave privata: {priv_key_path}")
+    log_debug(f"Using private key: {priv_key_path}")
     
     try:
         with open(priv_key_path, "rb") as key_file:
@@ -80,12 +80,12 @@ def sign_payload(payload_bytes: bytes) -> str:
         signature_bytes = private_key.sign(payload_bytes)
         return base64.b64encode(signature_bytes).decode('utf-8')
     except Exception as e:
-        log_error(f"Errore durante la firma: {e}")
+        log_error(f"Error signing: {e}")
         return None
 
 def verify_signature(payload_bytes: bytes, signature_b64: str) -> bool:
     if not HAS_CRYPTO:
-        log_error("Cryptography non disponibile. Impossibile verificare la firma.")
+        log_error("Cryptography not available. Cannot verify signature.")
         return False
 
     trusted_dir = get_trusted_keys_dir()
@@ -101,7 +101,7 @@ def verify_signature(payload_bytes: bytes, signature_b64: str) -> bool:
                 break
 
     if not pub_key_path:
-        log_error(f"Nessuna chiave pubblica trovata in {trusted_dir}")
+        log_error(f"No public key found in {trusted_dir}")
         return False
 
     try:
@@ -111,5 +111,5 @@ def verify_signature(payload_bytes: bytes, signature_b64: str) -> bool:
         public_key.verify(signature_bytes, payload_bytes)
         return True
     except Exception as e:
-        log_error(f"Firma non valida o errore di verifica: {e}")
+        log_error(f"Invalid signature or verification error: {e}")
         return False

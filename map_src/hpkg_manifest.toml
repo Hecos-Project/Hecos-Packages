@@ -27,8 +27,8 @@ widgets = [
 signature = "bmbGZPPIiNBkBHmmuRDTV9OxJQzjRy5sEZ5vqsjVDCvtL7f/M6b+STPifCyoMMuWw6KKeJ4KkFZx42q3/ehzCQ=="
 
 [commands]
-get_home_location = "Ottieni le coordinate lat/lon della posizione home dell'utente"
-geocode = "Geocodifica un indirizzo o città in coordinate lat/lon"
+get_home_location = "Get the lat/lon coordinates of the user's home location"
+geocode = "Geocode an address or city into lat/lon coordinates"
 
 [[tool_schema]]
 

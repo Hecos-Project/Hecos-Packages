@@ -31,16 +31,16 @@ icon = "📝"
 signature = "ustDz3+wSJFjLk5H6NUqvAzJlGmHHM8zQnvUlmaYCVVAH6Q+Fmj8nNglNT3nDGCG5arZhQx1mCRqRcogApQbAg=="
 
 [commands]
-create_list = "Crea una nuova lista vuota."
-list_lists = "Mostra tutte le liste attive con il conteggio degli elementi."
-show_list = "Mostra tutti gli elementi di una specifica lista."
-add_to_list = "Aggiunge uno o più elementi a una lista. Crea la lista se non esiste."
-check_item = "Segna un elemento come completato in una lista."
-uncheck_item = "Ripristina un elemento come da fare."
-remove_from_list = "Elimina definitivamente un elemento da una lista."
-clear_done = "Rimuove tutti gli elementi già completati da una lista."
-delete_list = "Elimina un'intera lista."
-archive_list = "Archivia una lista (la nasconde dalla visuale principale)."
+create_list = "Creates a new empty list."
+list_lists = "Shows all active lists with the count of items."
+show_list = "Shows all items of a specific list."
+add_to_list = "Adds one or more items to a list. Creates the list if it doesn't exist."
+check_item = "Marks an item as completed in a list."
+uncheck_item = "Restores an item as to-do."
+remove_from_list = "Permanently deletes an item from a list."
+clear_done = "Removes all completed items from a list."
+delete_list = "Deletes an entire list."
+archive_list = "Archives a list (hides it from the main view)."
 
 [[slash_commands]]
 id = "lists"
@@ -50,7 +50,7 @@ aliases = [
     "/lists",
     "/liste",
 ]
-description = "Mostra tutte le liste"
+description = "Shows all lists"
 usage = "/list"
 example = "/list"
 icon = "📋"
@@ -63,7 +63,7 @@ manifest_version = "1"
 aliases = [
     "/lista",
 ]
-description = "Mostra una lista"
+description = "Shows a list"
 usage = "/lista <nome>"
 example = "/lista Spesa"
 icon = "🔍"
@@ -77,7 +77,7 @@ aliases = [
     "/list add",
     "/lista aggiungi",
 ]
-description = "Aggiunge elemento"
+description = "Adds item"
 usage = "/list add <lista> <elemento>"
 example = "/list add Spesa Uova"
 icon = "➕"
@@ -91,7 +91,7 @@ aliases = [
     "/list done",
     "/lista spunta",
 ]
-description = "Spunta elemento"
+description = "Checks item"
 usage = "/list done <lista> <elemento>"
 example = "/list done Spesa Uova"
 icon = "✅"
