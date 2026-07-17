@@ -4,6 +4,7 @@ name = "Webcam Feed"
 version = "1.0.1"
 hecos_min_version = "0.35.0"
 type = "widget"
+lazy_load = true
 pip_isolation = "shared"
 author = "Antonio Meloni"
 description = "Displays a live webcam feed inside the Hecos Hub sidebar. Uses WebRTC for zero-latency streaming directly from the client device."
