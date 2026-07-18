@@ -1,7 +1,7 @@
 id = "image_gen"
 manifest_version = "1"
 name = "Image Generation"
-version = "1.0.8"
+version = "1.1.0"
 author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "AI Image Generation - Generates images from text prompts using multiple providers (Pollinations, Gemini, OpenAI DALL-E, Stability AI, HuggingFace). Fully autonomous package with its own TOML configuration. The easiest way to get started is to select Hugging Face as the provider and use one or more API keys, which you can obtain by logging in with an account."
@@ -23,6 +23,8 @@ pip_requirements = [
     "httpx==0.28.1",
     "openai==2.41.0",
     "tomli_w",
+    "huggingface_hub>=0.23.0",
+    "Pillow>=10.0.0",
 ]
 python_requires = ">=3.11"
 signature = "nyokjzzh85DDbfN+Lp7fNCfJuPXwOVaXFKZAYEs09FvetbYgZHUo12I0REta0piI8WytLaAqAtdfG8u0gaoXDg=="
