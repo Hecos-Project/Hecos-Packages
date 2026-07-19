@@ -1,7 +1,7 @@
 id = "image_gen"
 manifest_version = "1"
 name = "Image Generation"
-version = "1.1.0"
+version = "1.2.0"
 author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "AI Image Generation - Generates images from text prompts using multiple providers (Pollinations, Gemini, OpenAI DALL-E, Stability AI, HuggingFace). Fully autonomous package with its own TOML configuration. The easiest way to get started is to select Hugging Face as the provider and use one or more API keys, which you can obtain by logging in with an account."
@@ -62,6 +62,30 @@ required = [
 type = "string"
 description = "Detailed description of the image or photo to generate. Translate to English if needed."
 
+[tool_schema.parameters.properties.provider]
+type = "string"
+description = "Optional: override the configured provider for this call only. Values: 'huggingface', 'pollinations', 'gemini', 'openai', 'stability', 'airforce'."
+
+[tool_schema.parameters.properties.model]
+type = "string"
+description = "Optional: override the model for this call only. For HuggingFace use full repo IDs like 'black-forest-labs/FLUX.1-schnell'."
+
+[tool_schema.parameters.properties.hf_server]
+type = "string"
+description = "Optional: HuggingFace target server. Values: 'hf-inference', 'fal-ai', 'together', 'replicate', 'nebius', 'black-forest-labs'. Only used when provider is 'huggingface'."
+
+[[tool_schema]]
+name = "IMAGE_GEN__probe_providers"
+description = "Tests all image generation providers and HuggingFace servers to see which ones are working. Returns a diagnostic report. Use when the user asks to check, test or diagnose providers, or when image generation keeps failing."
+
+[tool_schema.parameters]
+type = "object"
+required = []
+
+[tool_schema.parameters.properties.api_key]
+type = "string"
+description = "Optional HuggingFace API key to use for the probe. Leave empty to use the one from configuration."
+
 [config_panel]
 tab_id = "igen"
 tab_label = "Image Gen"
@@ -77,6 +101,7 @@ config_api_post = "/hecos/api/plugins/image_gen/config"
 [capabilities]
 llm_tools = [
     "IMAGE_GEN__generate_image",
+    "IMAGE_GEN__probe_providers",
 ]
 slash_commands = [
     "/img",
@@ -89,7 +114,7 @@ has_config_panel = true
 has_api_routes = true
 has_system_calls = false
 syscall_notes = ""
-notes = "Supports multiple AI providers: Pollinations (free, default), Gemini, OpenAI DALL-E, Stability AI, HuggingFace. Requires network access. Provider and model are configurable."
+notes = "Supports multiple AI providers: Pollinations (free, default), Gemini, OpenAI DALL-E, Stability AI, HuggingFace (hf-inference, fal-ai, together, replicate, nebius, black-forest-labs). Requires network access. Provider and model are configurable."
 
 [file_hashes]
 "main.py" = "f7b5bec89f3e1e62eea6395cb98aee6e95dcaea33fa1e904e554acab024b5667"
