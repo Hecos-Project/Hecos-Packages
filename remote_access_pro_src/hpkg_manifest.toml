@@ -1,0 +1,31 @@
+id = "remote_access_pro"
+manifest_version = "1"
+name = "Remote Access Pro"
+version = "1.0.0"
+author = "Antonio Meloni"
+license = "GPL-3.0"
+description = "Controllo e monitoraggio remoto del server Hecos via Telegram. Risponde a comandi rapidi (/status, /ip, /cpu, /ram, /disco, /uptime) direttamente in chat, scavalcando l'AI per risposte istantanee."
+type = "plugin"
+pip_isolation = "shared"
+target_dir = "hpm"
+plugin_dir = "."
+hecos_min_version = "0.40.0"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+readme = "README.md"
+dependencies = [
+    "messenger",
+]
+optional_dependencies = []
+tag = "REMOTE_ACCESS_PRO"
+lazy_load = false
+is_class_based = true
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = false
+has_api_routes = false
+has_system_calls = true
+syscall_notes = "Legge CPU, RAM, disco e IP tramite psutil e urllib."
+notes = "Richiede il plugin 'messenger' con Telegram configurato."

@@ -19,7 +19,7 @@ dependencies = [
 ]
 optional_dependencies = []
 tag = "MESSENGER"
-lazy_load = true
+lazy_load = false
 is_class_based = true
 api_routes_file = "web/routes.py"
 
