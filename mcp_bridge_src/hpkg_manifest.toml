@@ -1,0 +1,44 @@
+id = "mcp_bridge"
+manifest_version = "1"
+name = "MCP Bridge"
+version = "1.0.0"
+author = "Antigravity"
+license = "GPL-3.0"
+description = "Bridge for Model Context Protocol (MCP) servers. Allows Hecos to use external tools from the MCP ecosystem. Supports both local stdio and remote HTTP servers via mcp-remote."
+icon = "🔌"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/.github/main/profile/Urania_9800_Logo.png"
+category = "MCP"
+plugin_tag = "MCP_BRIDGE"
+type = "core_module"
+target_dir = "modules"
+plugin_dir = "."
+lazy_load = false
+is_class_based = true
+readme = "README.md"
+dependencies = []
+pip_requirements = [
+    "tomli_w",
+]
+python_requires = ">=3.11"
+signature = ""
+
+[config_panel]
+tab_id = "mcp"
+tab_label = "MCP Bridge"
+category = "CONNETTIVITÀ"
+tab_icon = "<i class=\"fas fa-plug\"></i>"
+template_file = "web/templates/config_mcp.html"
+js_file = "web/static/js/mcp_panel.js"
+api_routes_file = "web/routes.py"
+config_api_get = "/api/mcp/config"
+config_api_post = "/api/mcp/config"
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = "Provides the /api/mcp endpoints and the MCP Bridge UI tab."

@@ -1,0 +1,36 @@
+id = "themes_pack"
+manifest_version = "1"
+name = "Themes Pack"
+version = "1.0.0"
+author = "Hecos Project"
+license = "GPL-3.0"
+description = "Gestisce i temi estetici e l'aspetto dell'interfaccia utente di Hecos."
+icon = "🎨"
+category = "MULTIMEDIA"
+plugin_tag = "THEMES"
+is_class_based = true
+type = "theme"
+pip_isolation = "shared"
+plugin_dir = "."
+lazy_load = false
+readme = "README.md"
+readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/themes_src/README.md"
+
+[config_panel]
+tab_id = "aesthetics"
+tab_label = "Aesthetic & Themes"
+category = "MULTIMEDIA"
+tab_icon = "<i class=\"fas fa-palette\"></i>"
+template_file = "web/templates/config_themes.html"
+css_file = "web/static/css/themes.css"
+api_routes_file = "web/routes.py"
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = ""
