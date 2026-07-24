@@ -242,7 +242,7 @@ def edit_manifest():
     Lets the user pick a package, then edit version, name, author, description, license.
     """
     src_dir = get_src_dir()
-    src_dirs = sorted([d for d in src_dir.iterdir() if d.is_dir() and d.name.endswith("_src")])
+    src_dirs = sorted([d for d in src_dir.rglob("*_src") if d.is_dir()])
 
     if not src_dirs:
         log_warn(f"No '*_src' folder found in {src_dir}")
@@ -250,6 +250,10 @@ def edit_manifest():
 
     print(f"{Fore.CYAN}Available packages:{Style.RESET_ALL}")
     for i, d in enumerate(src_dirs):
+        # Mostra la categoria
+        cat = d.parent.name
+        label = f"{cat}/{d.name}" if cat != src_dir.name else d.name
+        
         # Peek at version
         mpath = d / "hpkg_manifest.toml"
         version_hint = ""
@@ -259,7 +263,7 @@ def edit_manifest():
                 version_hint = f"  {Fore.LIGHTBLACK_EX}v{m.get('version', '?')}{Style.RESET_ALL}"
             except Exception:
                 pass
-        print(f"  {Fore.WHITE}{i+1}.{Style.RESET_ALL} {d.name}{version_hint}")
+        print(f"  {Fore.WHITE}{i+1}.{Style.RESET_ALL} {label}{version_hint}")
 
     choice = input(f"\n{Fore.YELLOW}Select the package to edit (0 to cancel):{Style.RESET_ALL} ").strip()
     try:

@@ -85,8 +85,8 @@ def auto_generate_capabilities(target_dir: Path) -> bool:
 def generate_all_capabilities():
     from modules.settings import get_src_dir
     src_root = get_src_dir()
-    src_dirs = sorted([d for d in src_root.iterdir()
-                       if d.is_dir() and d.name.endswith("_src")])
+    src_dirs = sorted([d for d in src_root.rglob("*_src")
+                       if d.is_dir()])
 
     if not src_dirs:
         log_warn(f"No '*_src' folder found in {src_root}")
@@ -109,8 +109,8 @@ def generate_all_capabilities():
 def generate_single_capabilities():
     from modules.settings import get_src_dir
     src_root = get_src_dir()
-    src_dirs = sorted([d for d in src_root.iterdir()
-                       if d.is_dir() and d.name.endswith("_src")])
+    src_dirs = sorted([d for d in src_root.rglob("*_src")
+                       if d.is_dir()])
 
     if not src_dirs:
         log_warn(f"No '*_src' folder found in {src_root}")
@@ -126,7 +126,9 @@ def generate_single_capabilities():
                 status = " [cap OK]" if "capabilities" in m else " [no cap]"
             except Exception:
                 status = " [TOML ERR]"
-        print(f"  {i+1}. {d.name}{status}")
+        cat = d.parent.name
+        label = f"{cat}/{d.name}" if cat != src_root.name else d.name
+        print(f"  {i+1}. {label}{status}")
 
     choice = input("\nSelect the package (0 to cancel): ").strip()
     try:
@@ -150,9 +152,9 @@ def show_package_sheet():
     src_root     = get_src_dir()
     packages_dir = get_packages_dir()
 
-    src_dirs   = sorted([d for d in src_root.iterdir()
-                         if d.is_dir() and d.name.endswith("_src")])
-    hpkg_files = sorted(packages_dir.glob("*.hpkg")) if packages_dir.exists() else []
+    src_dirs   = sorted([d for d in src_root.rglob("*_src")
+                         if d.is_dir()])
+    hpkg_files = sorted(packages_dir.rglob("*.hpkg")) if packages_dir.exists() else []
 
     options = [("src", d) for d in src_dirs] + [("hpkg", h) for h in hpkg_files]
 
@@ -162,8 +164,10 @@ def show_package_sheet():
 
     print("Choose package:\n")
     for i, (kind, path) in enumerate(options):
-        label = f"{Fore.GREEN}[SRC]{Style.RESET_ALL}  {path.name}" if kind == "src" else f"{Fore.MAGENTA}[HPKG]{Style.RESET_ALL} {path.name}"
-        print(f"  {Fore.CYAN}{i+1}.{Style.RESET_ALL} {label}")
+        cat = path.parent.name
+        label = f"{cat}/{path.name}" if cat != src_root.name and cat != packages_dir.name else path.name
+        formatted_label = f"{Fore.GREEN}[SRC]{Style.RESET_ALL}  {label}" if kind == "src" else f"{Fore.MAGENTA}[HPKG]{Style.RESET_ALL} {label}"
+        print(f"  {Fore.CYAN}{i+1}.{Style.RESET_ALL} {formatted_label}")
 
     choice = input(f"\n{Fore.YELLOW}Select (0 to cancel): {Style.RESET_ALL}").strip()
     try:
@@ -196,8 +200,8 @@ def show_all_package_sheets():
     from modules.settings import get_src_dir, get_packages_dir
     src_root     = get_src_dir()
     
-    src_dirs   = sorted([d for d in src_root.iterdir()
-                         if d.is_dir() and d.name.endswith("_src")])
+    src_dirs   = sorted([d for d in src_root.rglob("*_src")
+                         if d.is_dir()])
     
     if not src_dirs:
         log_warn("No source package found.")
@@ -214,9 +218,9 @@ def show_all_package_sheets():
     src_root     = get_src_dir()
     packages_dir = get_packages_dir()
 
-    src_dirs   = sorted([d for d in src_root.iterdir()
-                         if d.is_dir() and d.name.endswith("_src")])
-    hpkg_files = sorted(packages_dir.glob("*.hpkg")) if packages_dir.exists() else []
+    src_dirs   = sorted([d for d in src_root.rglob("*_src")
+                         if d.is_dir()])
+    hpkg_files = sorted(packages_dir.rglob("*.hpkg")) if packages_dir.exists() else []
 
     options = [("src", d) for d in src_dirs] + [("hpkg", h) for h in hpkg_files]
 

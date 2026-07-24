@@ -1,0 +1,221 @@
+<link rel="stylesheet" href="/ext/webcam_feed/webcam_feed.css">
+
+<div class="sidebar-card" id="webcam-feed-widget">
+
+    <!-- Header -->
+    <div class="wf-header sidebar-card-title" style="cursor:pointer; display:flex; align-items:center; gap:6px; margin-bottom:0; padding:0;" onclick="webcamFeed.toggleBody()">
+        <span class="wf-icon ql-icon"><i class="fas fa-video"></i></span>
+        <span class="wf-title ql-title">Webcam Feed</span>
+        <span class="wf-cog" onclick="event.stopPropagation(); webcamFeed.toggleSettings()" title="Settings">
+            <i class="fas fa-cog"></i>
+        </span>
+        <span class="wf-chevron ql-chevron" id="webcam-feed-chevron"><i class="fas fa-chevron-down"></i></span>
+    </div>
+
+    <div id="webcam-feed-body" class="ql-body" style="margin-top:10px;">
+
+        <!-- Settings Panel -->
+        <div id="webcam-feed-settings">
+            <div class="wf-settings-title">⚙ Settings</div>
+
+            <div>
+                <label>Video Device</label>
+                <select id="webcam-feed-device-select" onchange="webcamFeed.onDeviceChange()">
+                    <option value="">Searching...</option>
+                </select>
+            </div>
+
+            <label class="wf-autostart-row">
+                <input type="checkbox" id="webcam-feed-autostart" onchange="webcamFeed.saveAutostart()">
+                Start automatically on open
+            </label>
+        </div>
+
+        <!-- Video Stage -->
+        <div id="webcam-feed-stage">
+            <span id="webcam-feed-status-dot"></span>
+            <video id="webcam-feed-video" autoplay playsinline muted></video>
+            <div id="webcam-feed-placeholder">
+                <i class="fas fa-camera-slash"></i>
+                <span>Webcam disabled</span>
+            </div>
+        </div>
+
+        <!-- Toggle Button -->
+        <button id="webcam-feed-toggle-btn" onclick="webcamFeed.toggle()">
+            <i class="fas fa-power-off"></i>
+            <span id="webcam-feed-btn-label">Start</span>
+        </button>
+
+    </div>
+</div>
+
+<script>
+(function () {
+    // Guard: avoid re-init if widget is re-injected without page reload
+    if (window._webcamFeedInitDone) return;
+    window._webcamFeedInitDone = true;
+
+    const webcamFeed = {
+        stream: null,
+        isLive: false,
+
+        /* ── Keys per localStorage ── */
+        KEY_COLLAPSED: 'hecos_wf_collapsed',
+        KEY_AUTOSTART: 'hecos_wf_autostart',
+        KEY_DEVICE:    'hecos_wf_device',
+
+        /* ── DOM shortcuts ── */
+        $ (id) { return document.getElementById(id); },
+
+        /* ───────────────────────────── INIT ───────────────────────────── */
+        async init () {
+            // Restore collapse state
+            if (localStorage.getItem(this.KEY_COLLAPSED) === 'true') {
+                this.$('webcam-feed-body').style.display = 'none';
+                this.$('webcam-feed-chevron').style.transform = 'rotate(-90deg)';
+            }
+
+            // Restore autostart checkbox
+            const autostart = localStorage.getItem(this.KEY_AUTOSTART) === 'true';
+            this.$('webcam-feed-autostart').checked = autostart;
+
+            // Populate device list
+            await this.populateDevices();
+
+            // Autostart
+            if (autostart) this.start();
+        },
+
+        /* ───────────────────────── COLLAPSE ───────────────────────────── */
+        toggleBody () {
+            const body    = this.$('webcam-feed-body');
+            const chevron = this.$('webcam-feed-chevron');
+            const collapsed = body.style.display === 'none';
+            body.style.display    = collapsed ? 'block' : 'none';
+            chevron.style.transform = collapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
+            localStorage.setItem(this.KEY_COLLAPSED, collapsed ? 'false' : 'true');
+        },
+
+        toggleSettings () {
+            const panel = this.$('webcam-feed-settings');
+            panel.style.display = (panel.style.display === 'flex') ? 'none' : 'flex';
+        },
+
+        /* ──────────────────────── DEVICE LIST ─────────────────────────── */
+        async populateDevices () {
+            const select = this.$('webcam-feed-device-select');
+            try {
+                // getUserMedia first to unlock device labels in the browser
+                const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
+                tmp.getTracks().forEach(t => t.stop()); // release immediately
+
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const cameras = devices.filter(d => d.kind === 'videoinput');
+
+                select.innerHTML = '';
+                if (!cameras.length) {
+                    select.innerHTML = '<option value="">No camera found</option>';
+                    return;
+                }
+
+                cameras.forEach((cam, i) => {
+                    const opt = document.createElement('option');
+                    opt.value = cam.deviceId;
+                    opt.text  = cam.label || `Camera ${i + 1}`;
+                    select.appendChild(opt);
+                });
+
+                // Restore previously selected device
+                const saved = localStorage.getItem(this.KEY_DEVICE);
+                if (saved && [...select.options].some(o => o.value === saved)) {
+                    select.value = saved;
+                }
+            } catch (err) {
+                select.innerHTML = '<option value="">Permission denied</option>';
+                console.warn('[Webcam Feed] Errore accesso dispositivi:', err);
+            }
+        },
+
+        onDeviceChange () {
+            const deviceId = this.$('webcam-feed-device-select').value;
+            localStorage.setItem(this.KEY_DEVICE, deviceId);
+            if (this.isLive) this.start(); // restart with new device
+        },
+
+        saveAutostart () {
+            const v = this.$('webcam-feed-autostart').checked;
+            localStorage.setItem(this.KEY_AUTOSTART, v ? 'true' : 'false');
+        },
+
+        /* ─────────────────────── STREAM CONTROL ───────────────────────── */
+        async start () {
+            this.stop(false); // stop existing stream without updating UI yet
+
+            const deviceId = this.$('webcam-feed-device-select').value;
+            const constraints = { video: deviceId ? { deviceId: { exact: deviceId } } : true };
+
+            try {
+                this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                const video = this.$('webcam-feed-video');
+                video.srcObject = this.stream;
+                video.style.display = 'block';
+                this.$('webcam-feed-placeholder').style.display = 'none';
+                this.$('webcam-feed-status-dot').classList.add('live');
+                this.isLive = true;
+                this._setButtonLive(true);
+            } catch (err) {
+                console.error('[Webcam Feed] Errore avvio stream:', err);
+                this.stop();
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Webcam Feed: access denied — ' + err.message, 'error');
+                }
+            }
+        },
+
+        stop (updateUI = true) {
+            if (this.stream) {
+                this.stream.getTracks().forEach(t => t.stop());
+                this.stream = null;
+            }
+            if (updateUI) {
+                const video = this.$('webcam-feed-video');
+                video.srcObject = null;
+                video.style.display = 'none';
+                this.$('webcam-feed-placeholder').style.display = 'flex';
+                this.$('webcam-feed-status-dot').classList.remove('live');
+                this.isLive = false;
+                this._setButtonLive(false);
+            }
+        },
+
+        toggle () {
+            this.isLive ? this.stop() : this.start();
+        },
+
+        _setButtonLive (live) {
+            const btn   = this.$('webcam-feed-toggle-btn');
+            const label = this.$('webcam-feed-btn-label');
+            if (live) {
+                btn.classList.add('wf-live');
+                label.textContent = 'Stop';
+                btn.querySelector('i').className = 'fas fa-stop';
+            } else {
+                btn.classList.remove('wf-live');
+                label.textContent = 'Start';
+                btn.querySelector('i').className = 'fas fa-power-off';
+            }
+        },
+    };
+
+    // Expose globally so HTML onclick="" attributes work
+    window.webcamFeed = webcamFeed;
+
+    // Init as soon as possible
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => webcamFeed.init());
+    } else {
+        webcamFeed.init();
+    }
+})();
+</script>

@@ -14,23 +14,25 @@ except ImportError:
         print(f"{Fore.RED}Error: 'tomli' library is required to parse manifests.{Style.RESET_ALL}")
         sys.exit(1)
 
+from pathlib import Path
+
 def generate_store_catalog():
     print(f"\n{Fore.CYAN}--- Store Catalog Generator ---{Style.RESET_ALL}")
     
-    builder_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    packages_dir = os.path.join(builder_dir, "..", "packages")
-    website_store_dir = os.path.join(builder_dir, "..", "..", "Hecos-Website", "store")
+    builder_dir = Path(__file__).resolve().parent.parent
+    packages_dir = (builder_dir.parent / "packages").resolve()
+    website_store_dir = (builder_dir.parent.parent / "Hecos-Website" / "store").resolve()
     
-    if not os.path.exists(packages_dir):
+    if not packages_dir.exists():
         print(f"{Fore.RED}Packages folder not found: {packages_dir}{Style.RESET_ALL}")
         return
         
-    if not os.path.exists(website_store_dir):
+    if not website_store_dir.exists():
         print(f"{Fore.RED}Website store folder not found: {website_store_dir}{Style.RESET_ALL}")
         print(f"{Fore.YELLOW}The file will be saved in {packages_dir} instead.{Style.RESET_ALL}")
-        output_file = os.path.join(packages_dir, "index.json")
+        output_file = packages_dir / "index.json"
     else:
-        output_file = os.path.join(website_store_dir, "index.json")
+        output_file = website_store_dir / "index.json"
 
     catalog = {
         "version": "1",
@@ -39,17 +41,17 @@ def generate_store_catalog():
         "packages": []
     }
     
-    hpkg_files = [f for f in os.listdir(packages_dir) if f.endswith(".hpkg")]
+    hpkg_files = list(packages_dir.rglob("*.hpkg"))
     if not hpkg_files:
         print(f"{Fore.YELLOW}No .hpkg files found in {packages_dir}{Style.RESET_ALL}")
         return
 
-    for filename in hpkg_files:
-        filepath = os.path.join(packages_dir, filename)
+    for filepath in hpkg_files:
+        filename = filepath.name
         print(f"{Fore.LIGHTBLACK_EX}Analyzing {filename}...{Style.RESET_ALL}")
         
         # Hash e Size
-        size = os.path.getsize(filepath)
+        size = filepath.stat().st_size
         sha256 = hashlib.sha256()
         with open(filepath, "rb") as f:
             for chunk in iter(lambda: f.read(4096), b""):
@@ -160,7 +162,8 @@ def generate_store_catalog():
     try:
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(catalog, f, indent=2, ensure_ascii=False)
-        print(f"\n{Fore.GREEN}{Style.BRIGHT}Catalog generated successfully in:{Style.RESET_ALL} {output_file}")
-        print(f"Total packages: {len(catalog['packages'])}")
+        
+        print(f"{Fore.GREEN}Catalog generated successfully at {output_file}{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}Found {len(catalog['packages'])} valid packages.{Style.RESET_ALL}")
     except Exception as e:
         print(f"{Fore.RED}Error saving the catalog: {e}{Style.RESET_ALL}")

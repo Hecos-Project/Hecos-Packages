@@ -17,16 +17,20 @@ def _json_to_toml(d: dict) -> str:
     return tomli_w.dumps(d)
 
 def build_package():
+    src_dir = get_src_dir()
     packages_dir = get_packages_dir()
-    src_dirs = [d for d in packages_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
+    src_dirs = [d for d in src_dir.rglob("*_src") if d.is_dir()]
     
     if not src_dirs:
-        log_warn(f"No '*_src' folder found in {packages_dir}")
+        log_warn(f"No '*_src' folder found in {src_dir}")
         return
         
     print("Available packages:")
     for i, d in enumerate(src_dirs):
-        print(f"  {i+1}. {d.name}")
+        # Mostra la categoria se esiste (es. plugins/mail_src)
+        cat = d.parent.name
+        label = f"{cat}/{d.name}" if cat != src_dir.name else d.name
+        print(f"  {i+1}. {label}")
         
     choice = input("\nSelect the package to build (0 to cancel): ")
     try:
@@ -35,6 +39,8 @@ def build_package():
         target_dir = src_dirs[idx]
     except:
         return
+        
+    _build_single_package(target_dir, packages_dir)
 
 def _build_single_package(target_dir, packages_dir):
     manifest_path = target_dir / "hpkg_manifest.toml"
@@ -119,7 +125,16 @@ def _build_single_package(target_dir, packages_dir):
         final_toml = _json_to_toml(manifest).encode("utf-8")
 
     pkg_name = f"{manifest['id']}-{manifest['version']}.hpkg"
-    out_path = packages_dir / pkg_name
+    
+    # Determina la cartella di output in base alla categoria del sorgente
+    cat = target_dir.parent.name
+    # Se il genitore non è 'sources' (quindi è una categoria come 'plugins', 'libraries'), usa quella
+    out_dir = packages_dir
+    if cat != get_src_dir().name:
+        out_dir = packages_dir / cat
+        out_dir.mkdir(parents=True, exist_ok=True)
+        
+    out_path = out_dir / pkg_name
     
     log_info(f"Creating compressed archive {pkg_name}...")
     with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -131,33 +146,10 @@ def _build_single_package(target_dir, packages_dir):
     log_info(f"DONE -> {out_path} ({size_kb:.1f} KB)")
     return True
 
-def build_package():
-    src_dir = get_src_dir()
-    packages_dir = get_packages_dir()
-    src_dirs = [d for d in src_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
-    
-    if not src_dirs:
-        log_warn(f"No '*_src' folder found in {src_dir}")
-        return
-        
-    print("Available packages:")
-    for i, d in enumerate(src_dirs):
-        print(f"  {i+1}. {d.name}")
-        
-    choice = input("\nSelect the package to build (0 to cancel): ")
-    try:
-        idx = int(choice) - 1
-        if idx == -1: return
-        target_dir = src_dirs[idx]
-    except:
-        return
-
-    _build_single_package(target_dir, packages_dir)
-
 def build_all_packages():
     src_dir = get_src_dir()
     packages_dir = get_packages_dir()
-    src_dirs = [d for d in src_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
+    src_dirs = [d for d in src_dir.rglob("*_src") if d.is_dir()]
     
     if not src_dirs:
         log_warn(f"No '*_src' folder found in {src_dir}")
@@ -170,7 +162,7 @@ def build_all_packages():
 
 def get_available_hpkg():
     packages_dir = get_packages_dir()
-    hpkg_files = [f for f in packages_dir.glob("*.hpkg")]
+    hpkg_files = list(packages_dir.rglob("*.hpkg"))
     
     if not hpkg_files:
         log_warn(f"No .hpkg package found in {packages_dir}")
@@ -178,7 +170,9 @@ def get_available_hpkg():
         
     print("Available packages:")
     for i, f in enumerate(hpkg_files):
-        print(f"  {i+1}. {f.name}")
+        cat = f.parent.name
+        label = f"{cat}/{f.name}" if cat != packages_dir.name else f.name
+        print(f"  {i+1}. {label}")
         
     choice = input("\nSelect the package (0 to cancel): ")
     try:
@@ -245,8 +239,14 @@ def _unpack_single_package(pkg_path, ask_overwrite=True):
                 manifest = tomllib.loads(manifest_bytes.decode("utf-8"))
                 manifest_id = manifest.get('id', pkg_path.stem)
                 out_dir_name = f"{manifest_id}_src"
-
-            out_dir = pkg_path.parent / out_dir_name
+            
+            # Determina la cartella di destinazione corretta in sources/
+            from modules.settings import get_src_dir
+            cat = pkg_path.parent.name
+            if cat == get_packages_dir().name:
+                out_dir = get_src_dir() / out_dir_name
+            else:
+                out_dir = get_src_dir() / cat / out_dir_name
 
             if out_dir.exists():
                 if ask_overwrite:
@@ -270,7 +270,7 @@ def unpack_package():
 
 def unpack_all_packages():
     packages_dir = get_packages_dir()
-    hpkg_files = [f for f in packages_dir.glob("*.hpkg")]
+    hpkg_files = list(packages_dir.rglob("*.hpkg"))
     
     if not hpkg_files:
         log_warn(f"No .hpkg package found in {packages_dir}")

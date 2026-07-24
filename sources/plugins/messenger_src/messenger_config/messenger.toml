@@ -1,0 +1,25 @@
+[messenger.telegram]
+enabled = true
+
+[[messenger.telegram.bots]]
+name = "test"
+enabled = true
+bot_token = "123"
+default_chat_id = ""
+is_admin = false
+group_mode = "mention"
+group_keywords = ""
+
+[messenger.whatsapp]
+enabled = true
+phone_country_code = "+39"
+send_as_single_block = true
+use_template = false
+template_id = ""
+cdp_timeout = 30
+worker_timeout = 60
+
+[messenger.discord]
+enabled = false
+webhook_url = ""
+default_channel = ""

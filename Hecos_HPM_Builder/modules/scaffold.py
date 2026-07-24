@@ -28,9 +28,17 @@ def scaffold_package():
         return
 
     pkg_name = input("2. Enter human-readable name (e.g., My Awesome Plugin): ").strip()
-    pkg_type = input("3. Package type (plugin/module/theme) [plugin]: ").strip().lower() or "plugin"
+    pkg_type = input("3. Package type (plugin/widget/theme/library/core_module/app/persona/extension) [plugin]: ").strip().lower() or "plugin"
     
-    src_dir = packages_dir / f"{pkg_id}_src"
+    # Mappa il tipo alla categoria corretta
+    type_to_cat = {
+        "plugin": "plugins", "module": "plugins", "core_module": "core_modules",
+        "widget": "widgets", "theme": "themes", "library": "libraries",
+        "app": "apps", "persona": "personas", "extension": "extensions"
+    }
+    cat = type_to_cat.get(pkg_type, "plugins")
+    
+    src_dir = packages_dir / cat / f"{pkg_id}_src"
     if src_dir.exists():
         log_error(f"Folder {src_dir.name} already exists!")
         return

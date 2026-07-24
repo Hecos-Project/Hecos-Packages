@@ -17,7 +17,7 @@ def dev_sync_package():
         log_error(f"Live HPM folder not found: {hecos_hpm_dir}")
         return
         
-    src_dirs = [d for d in src_dir.iterdir() if d.is_dir() and d.name.endswith("_src")]
+    src_dirs = [d for d in src_dir.rglob("*_src") if d.is_dir()]
     
     if not src_dirs:
         log_warn(f"No '*_src' folder found in {src_dir}")
@@ -25,9 +25,12 @@ def dev_sync_package():
         
     print("\nPackages available for Development -> Live synchronization:")
     for i, d in enumerate(src_dirs):
-        print(f"  {i+1}. {d.name}")
+        # Mostra la categoria
+        cat = d.parent.name
+        label = f"{cat}/{d.name}" if cat != src_dir.name else d.name
+        print(f"  {i+1}. {label}")
         
-    choice = input("\nSelect the package to synchronize (0 to cancel): ")
+    choice = input("\nSelect the package to sync (0 to cancel): ")
     try:
         idx = int(choice) - 1
         if idx == -1: return

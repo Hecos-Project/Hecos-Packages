@@ -1,0 +1,3 @@
+"""
+Remote Triggers config subpackage.
+"""

@@ -1,0 +1,13 @@
+﻿{
+    "ext_media_player_desc":  "Control de reproducciÃ³n de audio y vÃ­deo a nivel del sistema operativo.",
+    "plugin_media_mute_desc":  "Activa o desactiva el silencio.",
+    "plugin_media_mute_off":  "Silencio desactivado.",
+    "plugin_media_vol_success":  "Volumen establecido en {level}%.",
+    "plugin_media_mute_on":  "Silencio activado.",
+    "plugin_media_error_interface":  "Error de hardware: interfaz de audio inalcanzable.",
+    "plugin_media_desc":  "Control de volumen y silencio por hardware.",
+    "plugin_media_error_internal":  "Error interno de MEDIOS: {error}",
+    "plugin_media_vol_desc":  "Ajusta el volumen maestro.",
+    "ext_media_player_title":  "Reproductor multimedia",
+    "plugin_media_cmd_unrecognized":  "Comando multimedia no reconocido."
+}

@@ -1,0 +1,14 @@
+{
+    "extension_id": "media_player_widget",
+    "parent_plugin": "WEB_UI",
+    "display_name": "Media Player",
+    "version": "1.1.0",
+    "description": "Compact media player widget for the Control Room and Sidebar.",
+    "sidebar_widget": true,
+    "visible": false,
+    "room_visible": true,
+    "room_span": 2,
+    "room_height": "300px",
+    "eager_load": false,
+    "required_plugin": "MEDIA_PLAYER"
+}

@@ -38,9 +38,9 @@ Every package must be **digitally signed** by your private key, and Hecos will v
 2. Select `2. [NEW] Scaffold New Package`.
 3. Enter the **Package ID** (all lowercase, no spaces, e.g.: `my_plugin`).
 4. Enter the **human-readable name** (e.g.: `My Awesome Plugin`).
-5. Choose the type: `plugin`, `module`, or `theme`.
+5. Choose the type: `plugin`, `module`, `library`, `widget`, `core_module`, etc.
 
-The script will automatically create the `my_plugin_src\` folder in `C:\Hecos-Packages\` with this structure:
+The script will automatically create the `my_plugin_src\` folder inside the appropriate category folder in `C:\Hecos-Packages\sources\`, for example `C:\Hecos-Packages\sources\plugins\my_plugin_src\`, with this structure:
 
 ```
 my_plugin_src/
@@ -78,7 +78,7 @@ The script will execute in order:
 2. **Validation** → Checks that the files declared in the manifest (HTML, JS, CSS) physically exist.
 3. **Hashing** → Calculates the SHA-256 checksum of each file and injects it into the manifest.
 4. **Signing** → Cryptographically signs the manifest with your Ed25519 private key.
-5. **Archive** → Creates the `.hpkg` file in `C:\Hecos-Packages\packages\`.
+5. **Archive** → Creates the `.hpkg` file directly inside the corresponding category folder in `C:\Hecos-Packages\packages\` (e.g. `packages/plugins/`).
 
 Expected output if everything goes well:
 
@@ -88,7 +88,7 @@ Expected output if everything goes well:
 [INFO] Generating payload for cryptographic signature...
 [INFO] Signature applied successfully.
 [INFO] Creating compressed archive voice_visualizer-1.0.0.hpkg...
-[INFO] DONE -> C:\Hecos-Packages\packages\voice_visualizer-1.0.0.hpkg (11.2 KB)
+[INFO] DONE -> C:\Hecos-Packages\packages\widgets\voice_visualizer-1.0.0.hpkg (11.2 KB)
 ```
 
 ---
@@ -96,8 +96,8 @@ Expected output if everything goes well:
 ## How to Install a Package in Hecos
 
 1. Open the browser at `https://localhost:7070/hecos/config/ui#packages`.
-2. In the **Packages** tab, click on **Install Package**.
-3. Select the newly created `.hpkg` file (it will be located in `C:\Hecos-Packages\packages\`).
+2. In the **Packages** tab, click on the **Install Package** icon (folder with arrow).
+3. Select the newly created `.hpkg` file (it will be located in `C:\Hecos-Packages\packages\<category>\`).
 4. Hecos verifies the signature, extracts the files, and reloads the UI.
 
 ---
@@ -110,6 +110,15 @@ HPM Builder offers many other advanced tools from the main menu:
 - **`C. [CAP] Auto-Generate Capabilities`**: Scans the code to extract LLM Tools, slash commands, and widgets, automatically inserting them into the manifest to let Antigravity understand what the package does.
 - **`I. [INFO]` / `A. [ALLI]`**: Prints handy "Package Info Sheets" on the screen, with all features and capabilities clearly summarized.
 - **`9. [CAT] Build Store Catalog`**: Creates the `index.json` file useful if you want to upload your packages to a repository or a custom online Store.
+
+---
+
+## Category Organization (Directory Structure)
+
+The builder now automatically manages category-based sorting for both source codes and final packages. Supported categories are: `core_modules`, `plugins`, `widgets`, `themes`, `libraries`, `apps`, `personas`, `extensions`.
+
+1. **Sources (`C:\Hecos-Packages\sources\`)**: When you create a package with Scaffold, its source code will be generated inside its respective subfolder, e.g., `sources/plugins/my_plugin_src`.
+2. **Output (`C:\Hecos-Packages\packages\`)**: When you run a build, the tool extracts the category from the parent source folder and automatically creates the `.hpkg` file in the same category under the `packages/` folder, keeping the repository tidy (e.g.: `packages/plugins/my_plugin-1.0.0.hpkg`).
 
 ---
 

@@ -1,0 +1,15 @@
+[calendar]
+calendar_locale = "it-IT"
+calendar_country = "IT"
+bg_color = ""
+bg_image = ""
+calendar_sync_urls = []
+day_colors = [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+]

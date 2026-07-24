@@ -1,12 +1,13 @@
 import os
 import re
+from pathlib import Path
 
-target_dir = r"C:\Hecos-Packages"
-src_dirs = [d for d in os.listdir(target_dir) if os.path.isdir(os.path.join(target_dir, d)) and d.endswith("_src")]
+target_dir = Path(r"C:\Hecos-Packages\sources")
+src_dirs = [d for d in target_dir.rglob("*_src") if d.is_dir()]
 
 for d in src_dirs:
-    manifest_path = os.path.join(target_dir, d, "hpkg_manifest.toml")
-    if not os.path.exists(manifest_path):
+    manifest_path = d / "hpkg_manifest.toml"
+    if not manifest_path.exists():
         continue
     
     with open(manifest_path, "r", encoding="utf-8") as f:

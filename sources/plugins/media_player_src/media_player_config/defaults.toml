@@ -1,0 +1,11 @@
+default_volume = 80
+auto_advance = true
+shuffle = false
+repeat = false
+default_playlist = ""
+media_root_dir = ""
+preferred_backend = "auto"
+drive_thumb_size = "small"
+autoplay_video = true
+autoplay_audio = false
+show_filmstrip = true

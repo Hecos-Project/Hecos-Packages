@@ -28,9 +28,9 @@ packages_path = "C:/Hecos-Packages/packages"
 # Il builder cerca qui le sottocartelle *_src (es. lists_src/, reminder_src/)
 # per i comandi "Build All", "Edit Manifest" e "Scaffold New Package".
 #
-#   OK :  C:/Hecos-Packages
+#   OK :  C:/Hecos-Packages/sources
 #   KO :  C:/Hecos-Packages/packages   (contiene .hpkg, non le src!)
-src_path = "C:/Hecos-Packages"
+src_path = "C:/Hecos-Packages/sources"
 
 
 # --- FIRMA CRITTOGRAFICA ------------------------------------------------------

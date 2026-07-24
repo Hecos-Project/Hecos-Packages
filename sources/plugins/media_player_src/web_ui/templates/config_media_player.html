@@ -1,0 +1,339 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     Hecos Media — Config Panel (Orchestrator)
+     Loaded via index.html under the "media" section tab.
+     Split into logical partials under templates/modules/media/
+     ══════════════════════════════════════════════════════════════════════════ -->
+
+{# 1. Translation bridge for media_panel.js #}
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     Media: Translation Bridge for media_panel.js
+     Exposes window.mpT so the static JS file can access Jinja2 strings.
+     ══════════════════════════════════════════════════════════════════════════ -->
+<script>
+window.mpT = {
+    noPlaylist      : {{ translations.get('webui_mp_no_playlist', 'No Playlist found') | tojson | safe }},
+    playing         : {{ translations.get('webui_mp_playing', 'Playing') | tojson | safe }},
+    paused          : {{ translations.get('webui_mp_paused', 'Paused') | tojson | safe }},
+    idle            : {{ translations.get('webui_mp_idle', 'Idle') | tojson | safe }},
+    tracks          : {{ translations.get('webui_mp_tracks', 'Tracks') | tojson | safe }},
+    noPlaylists     : {{ translations.get('webui_mp_no_playlists', 'No playlists available') | tojson | safe }},
+    showQueue       : {{ translations.get('webui_mp_show_queue', 'Show Queue') | tojson | safe }},
+    hideQueue       : {{ translations.get('webui_mp_hide_queue', 'Hide Queue') | tojson | safe }},
+    scanError       : {{ translations.get('webui_mp_scan_error', 'Scan Error') | tojson | safe }},
+    deleteConfirm   : {{ translations.get('webui_mp_delete_confirm', 'Are you sure you want to delete {name}?') | tojson | safe }},
+    deleteTrack     : {{ translations.get('webui_mp_delete_track_confirm', 'Remove {name} from playlist?') | tojson | safe }},
+    pickerMediaRoot : {{ translations.get('webui_mp_picker_media_root', 'Media Root Dir') | tojson | safe }},
+    pickerScan      : {{ translations.get('webui_mp_picker_scan', 'Scan for Playlists') | tojson | safe }},
+    filePickerMissing: {{ translations.get('webui_mp_file_picker_missing', 'File picker component not loaded.') | tojson | safe }}
+};
+</script>
+
+
+{# 2. Scoped CSS #}
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     Media: Scoped CSS Styles
+     ══════════════════════════════════════════════════════════════════════════ -->
+<style>
+  #tab-media input[type="text"],
+  #tab-media input[type="number"],
+  #tab-media select {
+    background: var(--bg3) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px;
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+    outline: none;
+  }
+
+  #tab-media .card {
+    background: var(--bg2);
+  }
+
+  .mp-playlists-container .playlist-row {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+    overflow: hidden;
+    background: var(--bg3);
+    transition: all 0.2s ease;
+  }
+  .mp-playlists-container .playlist-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    gap: 12px;
+    cursor: pointer;
+  }
+  .mp-playlists-container .playlist-header:hover {
+    background: rgba(var(--accent-rgb), 0.1);
+  }
+  .mp-playlists-container .playlist-title {
+    flex: 1;
+    font-weight: 500;
+    font-size: 14px;
+  }
+  .mp-playlists-container .playlist-meta {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--bg2);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .mp-playlists-container .playlist-items {
+    display: none;
+    padding: 0 12px 12px;
+    background: rgba(0,0,0,0.3);
+    border-top: 1px solid var(--border);
+  }
+  .mp-playlists-container .track-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    transition: background 0.2s;
+  }
+  .mp-playlists-container .track-row:hover {
+    background: rgba(255,255,255,0.08);
+  }
+  .mp-playlists-container .track-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+</style>
+
+
+{# 3. Panel content #}
+<div id="tab-media_player" class="panel">
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+     Media: Vault Card — open folder and clear all media actions
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="card" id="card-media-vault">
+  <div class="card-title"><i class="fas fa-music"></i> {{ t('webui_media_vault_title') }}</div>
+  <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">
+    {{ t('webui_media_vault_desc') }}
+  </p>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button class="btn btn-secondary" onclick="openMediaVault()">
+      <i class="fas fa-folder-open"></i> {{ t('webui_media_open_folder') }}
+    </button>
+    <button class="btn btn-danger" onclick="clearMediaVault()">
+      <i class="fas fa-trash-alt"></i> {{ t('webui_media_clear_all') }}
+    </button>
+  </div>
+</div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+     Media: Now Playing Card — player controls, progress bar, volume, queue
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="card" id="card-now-playing" style="position:relative; overflow:hidden;">
+  <div class="card-title"><i class="fas fa-music"></i> {{ t('webui_mp_nowplaying') }}</div>
+
+  <div class="mp-dashboard-player" style="background:rgba(0,0,0,0.15); border:1px solid var(--border); border-radius:var(--radius); padding:16px; position:relative;">
+
+    <!-- Track Header -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+      <div style="flex:1; overflow:hidden;">
+        <div id="mp-playlist-name" style="font-size:10px; color:var(--accent); text-transform:uppercase; font-weight:800; letter-spacing:1px; margin-bottom:2px; opacity:0.8;"></div>
+        <div id="mp-track-name" style="font-weight:600; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">—</div>
+      </div>
+      <div id="mp-status-badge" style="font-size:10px; padding:2px 6px; border-radius:4px; background:var(--bg2); color:var(--muted); font-weight:700;">OFF</div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div style="margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:4px;">
+        <span id="mp-time-current">0:00</span>
+        <span id="mp-time-total">0:00</span>
+      </div>
+      <div style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden; cursor:pointer;" onclick="mpSeek(event)">
+        <div id="mp-progress-fill" style="height:100%; background:var(--accent); width:0%; transition:width 0.3s ease;"></div>
+      </div>
+    </div>
+
+    <!-- Main Controls -->
+    <div style="display:flex; gap:12px; align-items:center; justify-content:center; margin-bottom:16px;">
+      <button class="btn btn-secondary btn-circle" onclick="mpControl('prev')" title="Previous" style="width:36px; height:36px; padding:0;"><i class="fas fa-step-backward"></i></button>
+      <button id="mp-btn-play" class="btn btn-primary btn-circle" onclick="mpTogglePlay()" style="width:44px; height:44px; padding:0; font-size:18px;"><i class="fas fa-play"></i></button>
+      <button class="btn btn-secondary btn-circle" onclick="mpControl('stop')" title="Stop" style="width:36px; height:36px; padding:0;"><i class="fas fa-stop"></i></button>
+      <button class="btn btn-secondary btn-circle" onclick="mpControl('next')" title="Next" style="width:36px; height:36px; padding:0;"><i class="fas fa-step-forward"></i></button>
+    </div>
+
+    <!-- Volume -->
+    <div style="display:flex; align-items:center; gap:12px; padding:8px 12px; background:rgba(0,0,0,0.2); border-radius:8px;">
+      <span style="font-size:14px; opacity:0.7;"><i class="fas fa-volume-up"></i></span>
+      <input type="range" id="mp-volume" min="0" max="100" value="80" style="flex:1; height:4px;" oninput="mpSetVolume(this.value)">
+      <span id="mp-volume-val" style="font-size:11px; color:var(--muted); min-width:24px; text-align:right;">80</span>
+    </div>
+
+    <!-- Shuffle / Repeat -->
+    <div style="display:flex; gap:10px; margin-top:12px; font-size:12px;">
+      <button id="mp-btn-shuffle" class="btn btn-secondary btn-sm" style="flex:1; opacity:0.5;" onclick="mpControl('shuffle')"><i class="fas fa-random"></i> Shuffle</button>
+      <button id="mp-btn-repeat"  class="btn btn-secondary btn-sm" style="flex:1; opacity:0.5;" onclick="mpControl('repeat')"><i class="fas fa-redo"></i> Repeat</button>
+    </div>
+
+    <!-- Queue Drawer -->
+    <div id="mp-queue-container" style="margin-top:16px; border-top:1px solid var(--border); padding-top:12px; display:none;">
+      <div style="font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:8px; display:flex; justify-content:space-between;">
+        <span>Queue / Playlist</span>
+        <span id="mp-queue-count">0 tracks</span>
+      </div>
+      <div id="mp-queue-list" style="max-height:180px; overflow-y:auto; font-size:12px;">
+        <!-- Queue items rendered by JS -->
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:8px;">
+      <button class="btn btn-ghost btn-xs" id="mp-toggle-queue" style="font-size:10px; color:var(--muted);" onclick="mpToggleQueueView()">{{ t('webui_mp_show_queue') }} ▼</button>
+    </div>
+  </div>
+</div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+     Media: Playlists Card — list, create, scan folder
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="card">
+  <div class="card-title"><i class="fas fa-music"></i> {{ t('webui_mp_playlists') }}</div>
+  <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+    <input type="text" id="mp-new-playlist" placeholder="{{ t('webui_mp_playlist_name_ph') }}" style="flex:1; min-width:150px;">
+    <button class="btn btn-secondary btn-sm" onclick="mpCreatePlaylist()">+ {{ t('webui_mp_create') }}</button>
+  </div>
+
+  <div id="mp-playlists-list" class="mp-playlists-container" style="min-height:30px;">
+    <span style="color:var(--muted); font-size:13px;">{{ t('webui_mp_no_playlists') }}</span>
+  </div>
+
+  <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+    <div style="font-size:13px; font-weight:600; margin-bottom:8px;">{{ t('webui_mp_scan_folder') }}</div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <div style="display:flex; gap:4px; flex:2; min-width:160px;">
+        <input type="text" id="mp-scan-folder" placeholder="{{ t('webui_mp_folder_ph') }}" style="flex:1;">
+        <button type="button" class="btn btn-secondary" onclick="mpBrowseScanFolder()" title="Browse folder"><i class="fas fa-folder-open"></i></button>
+      </div>
+      <input type="text" id="mp-scan-save-as" placeholder="{{ t('webui_mp_save_as_ph') }}" style="flex:1; min-width:130px;">
+      <button class="btn btn-secondary btn-sm" onclick="mpScanFolder()"><i class="fas fa-search"></i> {{ t('webui_mp_scan') }}</button>
+    </div>
+  </div>
+</div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+     Media: Settings Card — volume, backend, root dir, toggles
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="card">
+  <div class="card-title"><i class="fas fa-music"></i> {{ t('webui_mp_settings') }}</div>
+
+  <div class="grid-2">
+    <div class="field">
+      <label>{{ t('webui_mp_volume') }}</label>
+      <input type="number" id="mp-cfg-volume" min="0" max="100" step="1" value="80">
+    </div>
+    <div class="field">
+      <label>{{ t('webui_mp_backend') }}</label>
+      <select id="mp-cfg-backend">
+        <option value="auto">auto (VLC → mpv → system)</option>
+        <option value="vlc">VLC</option>
+        <option value="mpv">mpv</option>
+        <option value="system">System default</option>
+      </select>
+      <p style="font-size:11px; color:var(--muted); margin-top:4px;">{{ t('webui_mp_backend_hint') }}</p>
+    </div>
+    <div class="field" style="grid-column: 1 / -1;">
+      <label>{{ t('webui_mp_media_root') }}</label>
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="mp-cfg-root" placeholder="{{ t('webui_mp_media_root_ph') }}" style="flex:1;">
+        <button type="button" class="btn btn-secondary" onclick="mpBrowseRoot()" title="{{ t('webui_mp_media_root') }}"><i class="fas fa-folder-open"></i></button>
+      </div>
+      <p style="font-size:11px; color:var(--muted); margin-top:4px;">{{ t('webui_mp_media_root_hint') }}</p>
+    </div>
+    <div class="field">
+      <label>{{ t('webui_mp_default_playlist') }}</label>
+      <input type="text" id="mp-cfg-autoload" placeholder="{{ t('webui_mp_default_playlist_ph') }}">
+    </div>
+    <div class="field">
+      <label>{{ t('webui_mp_thumb') }}</label>
+      <select id="mp-cfg-thumb">
+        <option value="small">Small</option>
+        <option value="medium">Medium</option>
+        <option value="large">Large</option>
+      </select>
+    </div>
+  </div>
+
+  <div style="font-size:13px; font-weight:600; margin:12px 0 8px;">{{ t('webui_mp_options') }}</div>
+  <div class="toggle-row">
+    <div class="toggle-info">{{ t('webui_mp_auto_advance') }}</div>
+    <label class="switch"><input type="checkbox" id="mp-cfg-autoadvance" checked><span class="slider"></span></label>
+  </div>
+  <div class="toggle-row">
+    <div class="toggle-info">{{ t('webui_mp_shuffle') }}</div>
+    <label class="switch"><input type="checkbox" id="mp-cfg-shuffle"><span class="slider"></span></label>
+  </div>
+  <div class="toggle-row">
+    <div class="toggle-info">{{ t('webui_mp_repeat') }}</div>
+    <label class="switch"><input type="checkbox" id="mp-cfg-repeat"><span class="slider"></span></label>
+  </div>
+  <div class="toggle-row">
+    <div class="toggle-info">{{ t('webui_mp_autoplay_video') }}</div>
+    <label class="switch"><input type="checkbox" id="mp-cfg-autoplay-video"><span class="slider"></span></label>
+  </div>
+  <div class="toggle-row">
+    <div class="toggle-info">{{ t('webui_mp_autoplay_audio') }}</div>
+    <label class="switch"><input type="checkbox" id="mp-cfg-autoplay-audio"><span class="slider"></span></label>
+  </div>
+  <div class="toggle-row">
+    <div class="toggle-info">{{ t('webui_mp_filmstrip') }}</div>
+    <label class="switch"><input type="checkbox" id="mp-cfg-filmstrip" checked><span class="slider"></span></label>
+  </div>
+</div>
+
+</div>
+
+{# 4. JS logic (static file; reads translations from window.mpT) #}
+<script src="/static/js/media_panel.js"></script>
+
+<script>
+// Standalone HPM Config Loader/Saver
+document.addEventListener('DOMContentLoaded', () => {
+    // We must wait for the panel to be visible to initialize some things
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.attributeName === 'style' && document.getElementById('tab-media_player').style.display !== 'none') {
+                loadStandaloneMPConfig();
+            }
+        });
+    });
+    observer.observe(document.getElementById('tab-media_player'), { attributes: true });
+});
+
+async function loadStandaloneMPConfig() {
+    try {
+        const r = await fetch('/hecos/api/plugins/media_player/config');
+        if (r.ok) {
+            window.mediaConfig = { media_player: await r.json() };
+            if (typeof populateMPSettings === 'function') populateMPSettings();
+        }
+    } catch(e) { console.error('Error loading media player config', e); }
+}
+
+async function saveStandaloneMPConfig() {
+    if (typeof buildMPPayload !== 'function') return;
+    const payload = buildMPPayload();
+    try {
+        const r = await fetch('/hecos/api/plugins/media_player/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (r.ok) {
+            if (window.showToast) window.showToast('Config saved', 'success');
+        } else {
+            if (window.showToast) window.showToast('Error saving config', 'error');
+        }
+    } catch(e) { console.error(e); }
+}
+</script>

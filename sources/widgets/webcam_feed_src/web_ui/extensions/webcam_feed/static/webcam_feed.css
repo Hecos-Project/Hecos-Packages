@@ -1,0 +1,182 @@
+/* ── Webcam Feed Widget ── */
+#webcam-feed-widget {
+    padding: 0;
+    font-size: 12px !important;
+}
+
+/* Cascade the base font size to all children */
+#webcam-feed-widget * {
+    font-size: 12px;
+    box-sizing: border-box;
+}
+
+#webcam-feed-widget .wf-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    margin-bottom: 0;
+    padding: 0;
+}
+
+#webcam-feed-widget .wf-title {
+    font-size: 11px !important;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    flex: 1;
+}
+
+#webcam-feed-widget .wf-icon {
+    font-size: 11px !important;
+    opacity: 0.7;
+}
+
+#webcam-feed-widget .wf-cog {
+    font-size: 10px !important;
+    opacity: 0.5;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    padding: 2px 4px;
+}
+#webcam-feed-widget .wf-cog:hover { opacity: 0.9; }
+
+#webcam-feed-widget .wf-chevron {
+    font-size: 9px !important;
+    opacity: 0.5;
+    transition: transform 0.25s ease;
+}
+
+/* body */
+#webcam-feed-body {
+    margin-top: 8px;
+}
+
+/* settings panel */
+#webcam-feed-settings {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding: 7px 9px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 6px;
+}
+#webcam-feed-settings .wf-settings-title {
+    font-size: 10px !important;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    opacity: 0.7;
+    margin-bottom: 2px;
+}
+#webcam-feed-settings > div > label {
+    font-size: 10px !important;
+    color: var(--muted, #aaa);
+    margin-bottom: 2px;
+    display: block;
+}
+
+/* autostart row */
+.wf-autostart-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px !important;
+    color: var(--muted, #aaa);
+    cursor: pointer;
+    user-select: none;
+}
+.wf-autostart-row input[type="checkbox"] {
+    width: 12px !important;
+    height: 12px !important;
+    cursor: pointer;
+    accent-color: var(--accent, #4fc3f7);
+    flex-shrink: 0;
+}
+
+/* video stage */
+#webcam-feed-stage {
+    position: relative;
+    width: 100%;
+    border-radius: 7px;
+    overflow: hidden;
+    background: #0a0a0a;
+    min-height: 120px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 7px;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+#webcam-feed-video {
+    width: 100%;
+    max-height: 260px;
+    object-fit: cover;
+    display: none;
+}
+#webcam-feed-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    color: rgba(255,255,255,0.2);
+    font-size: 11px !important;
+    padding: 20px;
+    text-align: center;
+    user-select: none;
+}
+#webcam-feed-placeholder i {
+    font-size: 22px !important;
+}
+
+/* status dot */
+#webcam-feed-status-dot {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    display: none;
+}
+#webcam-feed-status-dot.live {
+    display: block;
+    background: #f44336;
+    box-shadow: 0 0 5px rgba(244,67,54,0.7);
+    animation: wf-blink 1.4s infinite;
+}
+@keyframes wf-blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.35; }
+}
+
+/* toggle button */
+#webcam-feed-toggle-btn {
+    width: 100%;
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 11px !important;
+    font-weight: 500;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    color: var(--text-color, #eee);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+#webcam-feed-toggle-btn:hover {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.25) !important;
+    color: var(--text-color, #eee) !important;
+}
+#webcam-feed-toggle-btn.wf-live {
+    border-color: rgba(244, 67, 54, 0.45) !important;
+    background: rgba(244, 67, 54, 0.1);
+    color: #ef9a9a !important;
+}

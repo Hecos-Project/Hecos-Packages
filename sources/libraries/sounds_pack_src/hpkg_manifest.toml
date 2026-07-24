@@ -1,0 +1,25 @@
+id = "sounds_pack"
+manifest_version = "1"
+name = "Sounds Pack"
+readme = "README.md"
+tag = "SOUNDS_PACK"
+type = "library"
+description = "Libreria audio con suoni, effetti e notifiche di sistema addizionali per Hecos."
+version = "1.0.0"
+author = "Antonio Meloni"
+license = "GPL-3.0"
+pip_isolation = "shared"
+target_dir = "hpm/libraries"
+plugin_dir = "."
+lazy_load = false
+is_class_based = false
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = false
+has_api_routes = false
+has_system_calls = false
+syscall_notes = ""
+notes = ""

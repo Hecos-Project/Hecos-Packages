@@ -1,0 +1,13 @@
+﻿{
+    "ext_media_player_desc":  "Controllo della riproduzione audio e video a livello di sistema.",
+    "plugin_media_mute_desc":  "Attiva o disattiva il silenzio.",
+    "plugin_media_mute_off":  "Mute disattivato.",
+    "plugin_media_vol_success":  "Volume impostato al {level}%.",
+    "plugin_media_mute_on":  "Mute attivato.",
+    "plugin_media_error_interface":  "Errore hardware: Interfaccia audio non raggiungibile.",
+    "plugin_media_desc":  "Controllo hardware volume e mute.",
+    "plugin_media_error_internal":  "Errore interno MEDIA: {error}",
+    "plugin_media_vol_desc":  "Regola volume master.",
+    "ext_media_player_title":  "Lettore Multimediale",
+    "plugin_media_cmd_unrecognized":  "Comando media non riconosciuto."
+}
