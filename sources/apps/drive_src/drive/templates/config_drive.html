@@ -1,0 +1,230 @@
+<!-- DRIVE CONFIG PANEL -->
+<div id="tab-drive" class="panel">
+  <div class="card">
+    <div class="card-title"><i class="fas fa-hdd"></i> {{ t('hub_mod_drive') }} — File Manager</div>
+    <p style="font-size:12px; color:#888; margin-bottom:16px;">
+      Configure the HTTP File Manager module. Accessible via <a href="/drive" target="_blank" style="color:#66fcf1;">/drive</a> (authenticated users only).
+    </p>
+
+    <div class="field">
+      <label>Root Directory</label>
+      <input type="text" id="drive-root-dir" placeholder="Empty = User Home (e.g. C:\Users\User or /home/user)">
+      <small style="color:#666; font-size:11px;">Navigation is restricted to this folder. It is not possible to go above the root.</small>
+    </div>
+
+    <div class="field">
+      <label>Maximum Upload Size (MB)</label>
+      <input type="number" id="drive-max-upload-mb" min="1" max="2048" value="100">
+    </div>
+
+    <div class="field">
+      <label>Allowed Upload Extensions</label>
+      <input type="text" id="drive-allowed-ext" placeholder="Empty = all (e.g. jpg,png,pdf,txt,mp3)">
+      <small style="color:#666; font-size:11px;">Comma-separated list. Leave empty to allow all file types.</small>
+    </div>
+
+    <div style="margin-top:18px; padding:12px; background:rgba(102,252,241,0.05); border:1px solid rgba(102,252,241,0.15); border-radius:8px;">
+      <div style="font-size:12px; color:#66fcf1; margin-bottom:8px;">Quick Access</div>
+      <a href="/drive" target="_blank" class="btn btn-secondary" style="text-decoration:none; font-size:12px;">Open Hecos Drive <i class="fas fa-external-link-alt"></i></a>
+    </div>
+  </div>
+<div class="card">
+    <div class="card-title">{{ t('hub_mod_editor') }} — Configuration</div>
+    <p style="color:var(--muted); font-size:13px; margin-bottom:20px;">
+      Integrated code and text editor for Hecos Drive. Supports syntax highlighting for 50+ languages, quick navigation, and live preview.
+    </p>
+
+    <!-- EDITOR BEHAVIOUR -->
+    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:12px;"><i class="fas fa-cog"></i> Behavior</div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">Auto-Save</div>
+      <label class="switch"><input type="checkbox" id="drive-editor-autosave"><span class="slider"></span></label>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Automatically save files while editing (every 30 seconds).</p>
+
+    <div class="field" style="margin-bottom:16px;">
+      <label>Auto-Save Interval (seconds)</label>
+      <input type="number" id="drive-editor-autosave-interval" min="5" max="300" value="30" style="width:120px;">
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">Confirm before closing with unsaved changes</div>
+      <label class="switch"><input type="checkbox" id="drive-editor-confirm-close" checked><span class="slider"></span></label>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">Warn if attempting to navigate away with pending changes.</p>
+
+    <div class="toggle-row">
+      <div class="toggle-info">Automatic backup before saving</div>
+      <label class="switch"><input type="checkbox" id="drive-editor-backup"><span class="slider"></span></label>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:200px;">Creates a <code>.bak</code> file in the same folder before overwriting.</p>
+
+    <!-- EDITOR DISPLAY -->
+    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:12px; border-top:1px solid var(--border); padding-top:16px;"><i class="fas fa-palette"></i> Editor View</div>
+
+    <div class="field">
+      <label>Editor Theme</label>
+      <select id="drive-editor-theme">
+        <option value="vs-dark">Dark (default)</option>
+        <option value="vs">Light</option>
+        <option value="hc-black">High Contrast Black</option>
+        <option value="dracula">Dracula</option>
+        <option value="monokai">Monokai</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Tab Size (spaces)</label>
+      <select id="drive-editor-tab-size">
+        <option value="2">2 spaces</option>
+        <option value="4" selected>4 spaces</option>
+        <option value="8">8 spaces</option>
+      </select>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">Show line numbers</div>
+      <label class="switch"><input type="checkbox" id="drive-editor-line-numbers" checked><span class="slider"></span></label>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:12px;"></p>
+
+    <div class="toggle-row">
+      <div class="toggle-info">Word Wrap (automatic wrap)</div>
+      <label class="switch"><input type="checkbox" id="drive-editor-word-wrap"><span class="slider"></span></label>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">If active, long lines will be visually broken without modifying the file.</p>
+
+    <div class="toggle-row">
+      <div class="toggle-info">Lateral Minimap</div>
+      <label class="switch"><input type="checkbox" id="drive-editor-minimap" checked><span class="slider"></span></label>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:20px;">Compact preview of the file on the right side of the editor.</p>
+
+    <!-- LIMITS -->
+    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:12px; border-top:1px solid var(--border); padding-top:16px;"><i class="fas fa-shield-alt"></i> Limits</div>
+
+    <div class="field">
+      <label>Maximum file size (MB)</label>
+      <input type="number" id="drive-editor-max-file-mb" min="1" max="50" value="10">
+      <small style="color:var(--muted); font-size:11px;">Larger files will be opened in read-only mode.</small>
+    </div>
+
+    <div class="field">
+      <label>Restricted extensions (read-only)</label>
+      <input type="text" id="drive-editor-readonly-ext" placeholder="e.g. exe,dll,zip,iso">
+      <small style="color:var(--muted); font-size:11px;">Comma-separated list. These files will only open in preview/read-only mode.</small>
+    </div>
+
+    <!-- INFO BOX -->
+    <div style="margin-top:20px; padding:14px; background:rgba(102,252,241,0.05); border:1px solid rgba(102,252,241,0.15); border-radius:8px;">
+      <div style="font-size:12px; color:#66fcf1; font-weight:600; margin-bottom:8px;"><i class="fas fa-info-circle"></i> Technical Notes</div>
+      <div style="font-size:11px; color:var(--muted); line-height:1.7;">
+        The editor uses <strong>Monaco Editor</strong> (the core of VS Code).<br>
+        Syntax highlighting is automatic based on the file extension.<br>
+        Files are saved via the Drive API (<code>POST /api/drive/save</code>).
+      </div>
+    </div>
+<div class="card">
+    <div class="card-title">Drive Media Viewer — Configuration</div>
+    <p style="color:var(--muted); font-size:13px; margin-bottom:20px;">
+      Integrated multimedia viewer for Hecos Drive. Supports images (JPG, PNG, WebP, GIF, SVG), video (MP4, WebM, MKV), and audio (MP3, OGG, WAV, FLAC).
+    </p>
+
+    <!-- IMAGE SETTINGS -->
+    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:12px;">🖼️ Images</div>
+
+    <div class="field">
+      <label>🔍 Default Zoom</label>
+      <select id="drive-viewer-default-zoom">
+        <option value="fit">Fit to window (default)</option>
+        <option value="100">100% (original size)</option>
+        <option value="50">50%</option>
+        <option value="200">200%</option>
+      </select>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">Show image metadata (EXIF)</div>
+      <label class="switch"><input type="checkbox" id="drive-viewer-show-exif"><span class="slider"></span></label>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Displays EXIF info: camera, date, GPS, etc.</p>
+
+    <div class="toggle-row">
+      <div class="toggle-info">Automatic Slideshow Mode</div>
+      <label class="switch"><input type="checkbox" id="drive-viewer-slideshow"><span class="slider"></span></label>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Starts the presentation automatically when entering an image folder.</p>
+
+    <div class="field" style="margin-bottom:20px;">
+      <label>⏱️ Slideshow Interval (seconds)</label>
+      <input type="number" id="drive-viewer-slideshow-interval" min="1" max="60" value="5" style="width:120px;">
+    </div>
+
+    <!-- VIDEO SETTINGS -->
+    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:12px; border-top:1px solid var(--border); padding-top:16px;">🎬 Video</div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">Autoplay video</div>
+      <label class="switch"><input type="checkbox" id="drive-viewer-video-autoplay"><span class="slider"></span></label>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Starts the video automatically upon opening (muted by browser policy).</p>
+
+    <div class="toggle-row">
+      <div class="toggle-info">Loop video</div>
+      <label class="switch"><input type="checkbox" id="drive-viewer-video-loop"><span class="slider"></span></label>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Repeats the video in loop when finished.</p>
+
+    <div class="toggle-row">
+      <div class="toggle-info">Show player controls</div>
+      <label class="switch"><input type="checkbox" id="drive-viewer-video-controls" checked><span class="slider"></span></label>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:20px;">Shows play/pause, progress bar, volume and fullscreen.</p>
+
+    <!-- AUDIO SETTINGS -->
+    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:12px; border-top:1px solid var(--border); padding-top:16px;">🎵 Audio</div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">Autoplay audio</div>
+      <label class="switch"><input type="checkbox" id="drive-viewer-audio-autoplay"><span class="slider"></span></label>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Starts audio files automatically upon opening.</p>
+
+    <div class="toggle-row">
+      <div class="toggle-info">Show waveform visualizer</div>
+      <label class="switch"><input type="checkbox" id="drive-viewer-audio-waveform" checked><span class="slider"></span></label>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:20px;">Shows animated waveform during audio playback.</p>
+
+    <!-- GENERAL -->
+    <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:12px; border-top:1px solid var(--border); padding-top:16px;">🔧 General</div>
+
+    <div class="field">
+      <label><i class="fas fa-folder-open"></i> Supported image extensions</label>
+      <input type="text" id="drive-viewer-image-ext" value="jpg,jpeg,png,gif,webp,svg,bmp,ico">
+      <small style="color:var(--muted); font-size:11px;">Files with these extensions will open in the image viewer. Comma-separated.</small>
+    </div>
+
+    <div class="field">
+      <label>🎬 Supported video extensions</label>
+      <input type="text" id="drive-viewer-video-ext" value="mp4,webm,mkv,avi,mov">
+      <small style="color:var(--muted); font-size:11px;">Files with these extensions will open in the video player.</small>
+    </div>
+
+    <div class="field">
+      <label>🎵 Supported audio extensions</label>
+      <input type="text" id="drive-viewer-audio-ext" value="mp3,ogg,wav,flac,aac,m4a">
+      <small style="color:var(--muted); font-size:11px;">Files with these extensions will open in the audio player.</small>
+    </div>
+
+    <!-- INFO BOX -->
+    <div style="margin-top:20px; padding:14px; background:rgba(102,252,241,0.05); border:1px solid rgba(102,252,241,0.15); border-radius:8px;">
+      <div style="font-size:12px; color:#66fcf1; font-weight:600; margin-bottom:8px;">ℹ️ Formats and Compatibility</div>
+      <div style="font-size:11px; color:var(--muted); line-height:1.7;">
+        Playback depends on browser capabilities. For MKV and AVI, consider converting to MP4/WebM.<br>
+        Media files are streamed from Drive (<code>GET /api/drive/stream/&lt;path&gt;</code>).
+      </div>
+    </div>
+</div>
+</div>

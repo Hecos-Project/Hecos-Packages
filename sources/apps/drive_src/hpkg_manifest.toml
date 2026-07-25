@@ -1,0 +1,40 @@
+id = "drive"
+manifest_version = "1"
+name = "Hecos Drive"
+version = "1.0.0"
+author = "Hecos Community"
+license = "GPL-3.0"
+description = "Native file manager and editor for Hecos. Provides Web UI interface to browse, upload, download, and edit files on the server."
+icon = "fas fa-hdd"
+icon_url = ""
+screenshots = []
+category = "SYSTEM"
+plugin_tag = "DRIVE"
+is_class_based = false
+type = "system_app"
+pip_isolation = "shared"
+plugin_dir = "drive"
+lazy_load = false
+readme = "README.md"
+readme_url = ""
+dependencies = []
+pip_requirements = []
+python_requires = ">=3.11"
+
+[config_panel]
+tab_id = "drive"
+tab_label = "Hecos Drive"
+tab_icon = "fas fa-hdd"
+template_file = "drive/templates/config_drive.html"
+js_file = "drive/static/config_mapper_drive.js"
+api_routes_file = "drive/routes.py"
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = ""
