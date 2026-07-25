@@ -84,7 +84,9 @@ def generate_store_catalog():
         #   3. Legacy single preview.png fallback
         #   4. Default Hecos placeholder image
         PREVIEW_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp")
-        BASE_RAW = f"https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/{pkg_id}_src"
+        # Determine the category from the package file location
+        pkg_category = filepath.parent.name  # e.g. 'apps', 'plugins', 'widgets'
+        BASE_RAW = f"https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/{pkg_category}/{pkg_id}_src"
 
         screenshots = manifest_data.get("screenshots", [])
         if not screenshots:
@@ -142,7 +144,7 @@ def generate_store_catalog():
             "author": manifest_data.get("author", "Unknown"),
             "description": manifest_data.get("description", ""),
             "tags": manifest_data.get("tags", []),
-            "download_url": f"https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/packages/{filename}",
+            "download_url": f"https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/packages/{pkg_category}/{filename}",
             "size_bytes": size,
             "sha256": file_hash,
             "screenshots": screenshots,
