@@ -1,0 +1,32 @@
+id = "motoko_kusanagi"
+manifest_version = "1"
+name = "Motoko Kusanagi"
+version = "1.0.0"
+author = "Antonio Meloni"
+license = "GPL-3.0"
+description = "Persona pack: Motoko Kusanagi"
+icon = "🤖"
+icon_url = ""
+screenshots = []
+category = "PERSONAS"
+plugin_tag = "PERSONA"
+is_class_based = false
+type = "persona"
+pip_isolation = "shared"
+plugin_dir = "Motoko_Kusanagi"
+lazy_load = false
+readme = "README.md"
+readme_url = ""
+dependencies = []
+pip_requirements = []
+python_requires = ">=3.11"
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = false
+has_api_routes = false
+has_system_calls = false
+syscall_notes = ""
+notes = ""

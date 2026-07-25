@@ -160,6 +160,70 @@ def build_all_packages():
         print(f"\n--- Building {target_dir.name} ---")
         _build_single_package(target_dir, packages_dir)
 
+def _pick_category(base_dir, prompt_label="category"):
+    """Discover subdirectories in base_dir and let the user pick one.
+    Returns the selected Path, or None if cancelled."""
+    cats = sorted([d for d in base_dir.iterdir() if d.is_dir()])
+    if not cats:
+        log_warn(f"No categories found in {base_dir}")
+        return None
+    print(f"\nAvailable {prompt_label} categories:")
+    for i, c in enumerate(cats):
+        count = len(list(c.rglob("*.hpkg"))) if prompt_label == "unpack" else len([d for d in c.rglob("*_src") if d.is_dir()])
+        print(f"  {i+1}. {c.name}  ({count} item{'s' if count != 1 else ''})")
+    choice = input(f"\nSelect a {prompt_label} category (0 to cancel): ").strip()
+    try:
+        idx = int(choice) - 1
+        if idx == -1:
+            return None
+        return cats[idx]
+    except (ValueError, IndexError):
+        return None
+
+def build_by_category():
+    """Build all packages belonging to a specific category (e.g. personas, plugins...)."""
+    src_dir = get_src_dir()
+    packages_dir = get_packages_dir()
+
+    cat_dir = _pick_category(src_dir, "build")
+    if not cat_dir:
+        return
+
+    src_dirs = [d for d in cat_dir.rglob("*_src") if d.is_dir()]
+    if not src_dirs:
+        log_warn(f"No '*_src' folders found in category '{cat_dir.name}'")
+        return
+
+    log_info(f"Building {len(src_dirs)} package(s) in category '{cat_dir.name}'...")
+    ok = failed = 0
+    for target_dir in src_dirs:
+        print(f"\n--- Building {target_dir.name} ---")
+        result = _build_single_package(target_dir, packages_dir)
+        if result:
+            ok += 1
+        else:
+            failed += 1
+    log_info(f"Category '{cat_dir.name}' — Done: {ok} succeeded, {failed} failed.")
+
+def unpack_by_category():
+    """Unpack all .hpkg packages belonging to a specific category."""
+    packages_dir = get_packages_dir()
+
+    cat_dir = _pick_category(packages_dir, "unpack")
+    if not cat_dir:
+        return
+
+    hpkg_files = list(cat_dir.rglob("*.hpkg"))
+    if not hpkg_files:
+        log_warn(f"No .hpkg files found in category '{cat_dir.name}'")
+        return
+
+    log_info(f"Unpacking {len(hpkg_files)} package(s) in category '{cat_dir.name}'...")
+    for pkg_path in hpkg_files:
+        print(f"\n--- Extracting {pkg_path.name} ---")
+        _unpack_single_package(pkg_path, ask_overwrite=False)
+    log_info(f"Category '{cat_dir.name}' — Unpack complete.")
+
 def get_available_hpkg():
     packages_dir = get_packages_dir()
     hpkg_files = list(packages_dir.rglob("*.hpkg"))

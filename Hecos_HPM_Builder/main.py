@@ -50,9 +50,11 @@ def main_menu():
         print(f"{Fore.GREEN}2. [NEW]{Style.RESET_ALL}  {Fore.WHITE}Scaffold New Package{Style.RESET_ALL} {Fore.LIGHTBLACK_EX}(Crea scheletro nuovo pacchetto){Style.RESET_ALL}")
         print(f"{Fore.GREEN}3. [BLD]{Style.RESET_ALL}  {Fore.WHITE}Validate & Build Package{Style.RESET_ALL} {Fore.LIGHTBLACK_EX}(Firma e impacchetta in .hpkg){Style.RESET_ALL}")
         print(f"{Fore.GREEN}4. [ALL]{Style.RESET_ALL}  {Fore.WHITE}Build All Packages{Style.RESET_ALL} {Fore.LIGHTBLACK_EX}(Compila tutti i sorgenti *_src){Style.RESET_ALL}")
+        print(f"{Fore.GREEN}4C.[ACT]{Style.RESET_ALL} {Fore.WHITE}Build by Category{Style.RESET_ALL} {Fore.LIGHTBLACK_EX}(Compila tutti i pacchetti di una categoria){Style.RESET_ALL}")
         print(f"{Fore.GREEN}5. [CHK]{Style.RESET_ALL}  {Fore.WHITE}Inspect & Validate Package{Style.RESET_ALL} {Fore.LIGHTBLACK_EX}(Verifica manifest, firma e file){Style.RESET_ALL}")
         print(f"{Fore.GREEN}6. [EXT]{Style.RESET_ALL}  {Fore.WHITE}Extract / Unpack Package{Style.RESET_ALL} {Fore.LIGHTBLACK_EX}(Decomprime pacchetto .hpkg){Style.RESET_ALL}")
         print(f"{Fore.GREEN}7. [UNP]{Style.RESET_ALL}  {Fore.WHITE}Unpack All Packages{Style.RESET_ALL} {Fore.LIGHTBLACK_EX}(Decomprime tutti i .hpkg in cartelle *_src){Style.RESET_ALL}")
+        print(f"{Fore.GREEN}7C.[UPC]{Style.RESET_ALL} {Fore.WHITE}Unpack by Category{Style.RESET_ALL} {Fore.LIGHTBLACK_EX}(Decomprime i .hpkg di una categoria scelta){Style.RESET_ALL}")
         print(f"{Fore.GREEN}8. [EDT]{Style.RESET_ALL}  {Fore.WHITE}Edit Manifest{Style.RESET_ALL} {Fore.LIGHTBLACK_EX}(Modifica versione, autore, nome...){Style.RESET_ALL}")
         print(f"{Fore.GREEN}9. [CAT]{Style.RESET_ALL}  {Fore.WHITE}Build Store Catalog{Style.RESET_ALL} {Fore.LIGHTBLACK_EX}(Genera index.json per lo Store online){Style.RESET_ALL}")
         print(f"{Fore.CYAN}D. [SYNC]{Style.RESET_ALL} {Fore.WHITE}Dev Sync{Style.RESET_ALL} {Fore.LIGHTBLACK_EX}(Sincronizza modifiche da *_src al sistema live){Style.RESET_ALL}")
@@ -83,6 +85,11 @@ def main_menu():
             from modules.builder import build_all_packages
             build_all_packages()
             input(f"\n{Fore.LIGHTBLACK_EX}Press Enter to return to the menu...{Style.RESET_ALL}")
+        elif choice.upper() == '4C':
+            print_header("Build by Category")
+            from modules.builder import build_by_category
+            build_by_category()
+            input(f"\n{Fore.LIGHTBLACK_EX}Press Enter to return to the menu...{Style.RESET_ALL}")
         elif choice == '5':
             print_header("Inspect & Validate Package")
             inspect_package()
@@ -95,6 +102,11 @@ def main_menu():
             print_header("Unpack All Packages")
             from modules.builder import unpack_all_packages
             unpack_all_packages()
+            input(f"\n{Fore.LIGHTBLACK_EX}Press Enter to return to the menu...{Style.RESET_ALL}")
+        elif choice.upper() == '7C':
+            print_header("Unpack by Category")
+            from modules.builder import unpack_by_category
+            unpack_by_category()
             input(f"\n{Fore.LIGHTBLACK_EX}Press Enter to return to the menu...{Style.RESET_ALL}")
         elif choice == '8':
             print_header("Edit Manifest")
