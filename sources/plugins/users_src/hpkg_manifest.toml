@@ -1,0 +1,72 @@
+id = "users"
+manifest_version = "1"
+name = "Users Profile Tools"
+version = "1.0.0"
+hecos_min_version = "0.34.0"
+type = "plugin"
+author = "Antonio Meloni"
+description = "User information and preferences management (LLM Tools)"
+target_dir = "hpm"
+plugin_dir = "."
+lazy_load = true
+is_class_based = true
+tag = "USERS"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+readme = "README.md"
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "USERS__get_profile"
+description = "Retrieves the full profile of a user, including contact details, biography, preferred language and personal information. Use this when you need to know who the user is."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.username]
+type = "string"
+description = "The username to retrieve (default: 'admin')."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "USERS__update_profile"
+description = "Updates one or more fields in the user's profile (display_name, email, phone, address, city, bio_notes, preferred_language, real_name, age, birthday, job_main, interests, etc.)."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.username]
+type = "string"
+description = "The username to update (default: 'admin')."
+
+[tool_schema.function.parameters.properties.display_name]
+type = "string"
+description = "User's display name."
+
+[tool_schema.function.parameters.properties.email]
+type = "string"
+description = "User's email address."
+
+[tool_schema.function.parameters.properties.bio_notes]
+type = "string"
+description = "Short biography or personal notes."
+
+[tool_schema.function.parameters.properties.preferred_language]
+type = "string"
+description = "User's preferred language (e.g. 'it', 'en', 'es')."
+
+[capabilities]
+llm_tools = [
+    "get_profile",
+    "update_profile",
+]
+slash_commands = []
+has_widget = false
+has_config_panel = false
+has_api_routes = false
+has_system_calls = false
+syscall_notes = ""
+notes = ""
