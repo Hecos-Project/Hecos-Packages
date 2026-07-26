@@ -1,0 +1,203 @@
+id = "contacts"
+manifest_version = "1"
+name = "Contacts"
+version = "1.0.0"
+hecos_min_version = "0.34.0"
+type = "plugin"
+author = "Antonio Meloni"
+description = "Address Book plugin for Hecos with rich metadata and WhatsApp integration."
+target_dir = "hpm"
+plugin_dir = "."
+lazy_load = true
+is_class_based = true
+on_load = true
+tag = "CONTACTS"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+readme = "README.md"
+
+[config_panel]
+tab_id = "contacts"
+tab_label = "Contacts"
+tab_icon = "fas fa-address-book"
+template_file = "web_ui/templates/config_contacts.html"
+api_routes_file = "api.py"
+category = "CONNETTIVITÀ"
+
+[capabilities]
+llm_tools = [
+    "find_contact",
+    "add_contact",
+    "update_contact",
+    "delete_contact",
+    "list_contacts",
+    "send_whatsapp_to_contact",
+]
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = ""
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "CONTACTS__find_contact"
+description = "Searches the address book and returns matching contacts. Use when the user asks 'chi è X?', 'find the number of Y', 'qual è il telefono di Z', 'cerca il contatto', 'who is...'."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.query]
+type = "string"
+description = "Name, phone number, email, company or tag to search for."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "CONTACTS__add_contact"
+description = "Creates a new contact in the address book. Use when the user says 'aggiungi contatto', 'salva questo numero', 'add a contact', 'registra il numero di X'."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.first_name]
+type = "string"
+description = "First name."
+
+[tool_schema.function.parameters.properties.last_name]
+type = "string"
+description = "Last name."
+
+[tool_schema.function.parameters.properties.display_name]
+type = "string"
+description = "Optional custom display name. Defaults to 'First Last'."
+
+[tool_schema.function.parameters.properties.company]
+type = "string"
+description = "Company or organization name."
+
+[tool_schema.function.parameters.properties.role]
+type = "string"
+description = "Job title or role."
+
+[tool_schema.function.parameters.properties.phone]
+type = "string"
+description = "Primary phone number."
+
+[tool_schema.function.parameters.properties.email]
+type = "string"
+description = "Primary email address."
+
+[tool_schema.function.parameters.properties.birthday]
+type = "string"
+description = "Birthday, preferably in DD/MM/YYYY or YYYY-MM-DD format."
+
+[tool_schema.function.parameters.properties.address]
+type = "string"
+description = "Physical address."
+
+[tool_schema.function.parameters.properties.notes]
+type = "string"
+description = "Additional notes."
+
+[tool_schema.function.parameters.properties.tags]
+type = "string"
+description = "Comma-separated tags (e.g. 'family, work, VIP')."
+
+[tool_schema.function.parameters.properties.label_color]
+type = "string"
+description = "Hex color for UI label (e.g. '#FF0000')."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "CONTACTS__update_contact"
+description = "Updates fields of an existing contact. IMPORTANT: ALWAYS use find_contact first to get the exact ID or display name before calling this."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.id_or_name]
+type = "string"
+description = "The Exact ID or Display Name of the contact to update."
+
+[tool_schema.function.parameters.properties.first_name]
+type = "string"
+
+[tool_schema.function.parameters.properties.last_name]
+type = "string"
+
+[tool_schema.function.parameters.properties.display_name]
+type = "string"
+
+[tool_schema.function.parameters.properties.company]
+type = "string"
+
+[tool_schema.function.parameters.properties.role]
+type = "string"
+
+[tool_schema.function.parameters.properties.birthday]
+type = "string"
+
+[tool_schema.function.parameters.properties.address]
+type = "string"
+
+[tool_schema.function.parameters.properties.notes]
+type = "string"
+
+[tool_schema.function.parameters.properties.label_color]
+type = "string"
+
+[tool_schema.function.parameters.properties.tags]
+type = "string"
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "CONTACTS__delete_contact"
+description = "Permanently deletes a contact."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.id_or_name]
+type = "string"
+description = "The Exact ID or Display Name of the contact to delete."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "CONTACTS__list_contacts"
+description = "Lists all contacts. Use 'query' to filter by a specific tag, name, or company."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.query]
+type = "string"
+description = "Optional filter string."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "CONTACTS__send_whatsapp_to_contact"
+description = "Sends a WhatsApp message to a specific contact from the address book. If the contact has no whatsapp number it will fallback to their mobile phone number."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.contact_id]
+type = "string"
+description = "The EXACT contact ID from the address book (get it via find_contact first!). Do NOT pass a phone number here."
+
+[tool_schema.function.parameters.properties.message]
+type = "string"
+description = "The content of the message to send."

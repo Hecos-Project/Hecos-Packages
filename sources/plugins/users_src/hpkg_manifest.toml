@@ -10,9 +10,22 @@ target_dir = "hpm"
 plugin_dir = "."
 lazy_load = true
 is_class_based = true
-tag = "USERS"
+tag = "USERS_TOOLS"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
 readme = "README.md"
+
+[capabilities]
+llm_tools = [
+    "USERS__get_profile",
+    "USERS__update_profile",
+]
+slash_commands = []
+has_widget = false
+has_config_panel = false
+has_api_routes = false
+has_system_calls = false
+syscall_notes = ""
+notes = ""
 
 [[tool_schema]]
 type = "function"
@@ -57,16 +70,3 @@ description = "Short biography or personal notes."
 [tool_schema.function.parameters.properties.preferred_language]
 type = "string"
 description = "User's preferred language (e.g. 'it', 'en', 'es')."
-
-[capabilities]
-llm_tools = [
-    "get_profile",
-    "update_profile",
-]
-slash_commands = []
-has_widget = false
-has_config_panel = false
-has_api_routes = false
-has_system_calls = false
-syscall_notes = ""
-notes = ""

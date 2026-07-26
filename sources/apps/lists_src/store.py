@@ -12,8 +12,8 @@ from datetime import datetime
 from hecos.core.logging import logger
 
 def _get_db_path() -> str:
-    _here = os.path.dirname(os.path.abspath(__file__))
-    _root = os.path.normpath(os.path.join(_here, "..", "..", "..")) # back to hecos/
+    import hecos
+    _root = os.path.dirname(os.path.abspath(hecos.__file__))
     mem_dir = os.path.join(_root, "memory")
     os.makedirs(mem_dir, exist_ok=True)
     return os.path.join(mem_dir, "lists.db")

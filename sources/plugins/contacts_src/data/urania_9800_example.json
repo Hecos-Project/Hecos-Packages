@@ -1,0 +1,35 @@
+{
+    "id": "3949561f-1ca6-41af-b0c3-6bc6eca0d89b",
+    "display_name": "Urania 9800",
+    "first_name": "Urania",
+    "last_name": "9800",
+    "company": "Hecos Corporation",
+    "role": "AI Assistant",
+    "birthday": "2023-01-01",
+    "address": "Cloud City, AI Realm",
+    "notes": "",
+    "label_color": "",
+    "tags": "ai, assistant, hecos",
+    "photo_path": null,
+    "created_at": "2026-05-24T09:12:24.183311",
+    "updated_at": "2026-05-24T09:41:15.610630",
+    "photo_url": null,
+    "fields": [
+        {
+            "id": "cb8d7739-3e7d-4ef8-9504-684ab1e769f6",
+            "contact_id": "3949561f-1ca6-41af-b0c3-6bc6eca0d89b",
+            "field_type": "phone",
+            "label": "mobile",
+            "value": "3331234567",
+            "is_primary": 1
+        },
+        {
+            "id": "80736187-0e9b-42d8-8873-a20b229a9c6b",
+            "contact_id": "3949561f-1ca6-41af-b0c3-6bc6eca0d89b",
+            "field_type": "email",
+            "label": "personal",
+            "value": "urania@hecos.ai",
+            "is_primary": 1
+        }
+    ]
+}
