@@ -27,7 +27,7 @@ tab_label = "Flows"
 tab_icon = "fas fa-project-diagram"
 template_file = "web_ui/templates/modules/config_flows.html"
 api_routes_file = "api.py"
-category = "SYSTEM"
+category = "SISTEMA"
 
 [capabilities]
 llm_tools = [

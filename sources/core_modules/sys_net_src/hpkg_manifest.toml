@@ -1,0 +1,37 @@
+id = "sys_net"
+manifest_version = "1"
+name = "Sys Net"
+version = "2.0.0"
+hecos_min_version = "0.42.0"
+type = "core_module"
+author = "Hecos Ecosystem"
+description = "Strumenti di rete avanzati: IP, Ping, Stato Proxy, Mappatura LAN e VPN/DNS."
+target_dir = "hpm"
+plugin_dir = "."
+lazy_load = true
+is_class_based = true
+tag = "HPM_SYS_NET"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+readme = "README.md"
+on_load = true
+
+[ui]
+main_panel = "sys_net_panel"
+
+[config_panel]
+tab_id = "sys_net_panel"
+tab_label = "Sys Net"
+tab_icon = "fas fa-globe-europe"
+template_file = "web_ui/templates/panel.html"
+js_file = "web_ui/assets/js/panel.js"
+category = "SISTEMA"
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = false
+has_system_calls = false
+syscall_notes = ""
+notes = ""
