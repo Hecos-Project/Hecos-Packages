@@ -85,6 +85,23 @@ BUILTIN_PRESETS: dict[str, dict[str, Any]] = {
         "_builtin": True,
         "_description": "Flux Schnell via HuggingFace. Very fast (4 steps). Requires HF API key.",
     },
+    "🌐 Stable Diffusion (AI Horde)": {
+        "provider": "horde",
+        "model": "stable_diffusion",
+        "aspect_ratio": "1:1",
+        "guidance_scale": 7.5,
+        "num_inference_steps": 30,
+        "seed": -1,
+        "sampler": "euler_a",
+        "scheduler": "simple",
+        "negative_prompt": "distorted, malformed, ugly, bad anatomy, bad proportions, bad perspective, blurry, low quality",
+        "enable_negative_prompt": True,
+        "auto_enrich": False,
+        "optimize_for_flux": False,
+        "style": "none",
+        "_builtin": True,
+        "_description": "Free crowdsourced cluster. No censorship. Anonymous or use Kudos via API key.",
+    },
 }
 
 

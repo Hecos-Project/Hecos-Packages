@@ -65,6 +65,7 @@ def _get_api_key(provider: str, pinned_key: str, configured_provider: str = "") 
         "openai":        "OPENAI_API_KEY",
         "stability":     "STABILITY_API_KEY",
         "huggingface":   "HUGGINGFACE_API_KEY",
+        "horde":         "HORDE_API_KEY",
     }
     env_var = _ENV_KEY_MAP.get(provider, "")
     if not env_var:
@@ -164,6 +165,11 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
         style               = cfg.get("style", "none")
         show_meta_chat      = cfg.get("show_metadata_in_chat", False)
 
+        # ── Horde-specific config ─────────────────────────────────────────────
+        horde_api_key         = cfg.get("horde_api_key", "").strip()
+        horde_nsfw            = cfg.get("horde_nsfw", True)
+        horde_worker_blacklist = cfg.get("horde_worker_blacklist", "")
+
         if provider_override or model_override or hf_server_override:
             logger.info(f"[GENERATOR] Override attivo — provider={provider}, model={model}, hf_provider={hf_provider}")
 
@@ -186,10 +192,14 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
         current_pinned = pinned_key
 
         for attempt in range(1, max_attempts + 1):
-            # Pass the globally configured provider so pinned_key is only used for that provider
-            api_key = _get_api_key(provider, current_pinned, configured_provider=cfg.get("provider", ""))
+            # Horde uses its own key (or anonymous), not the shared pool
+            if provider == "horde":
+                api_key = horde_api_key  # may be empty — HordeProvider handles anonymous fallback
+            else:
+                # Pass the globally configured provider so pinned_key is only used for that provider
+                api_key = _get_api_key(provider, current_pinned, configured_provider=cfg.get("provider", ""))
 
-            if not api_key and provider not in ("pollinations", "airforce"):
+            if not api_key and provider not in ("pollinations", "airforce", "horde"):
                 msg = (f"No API key available for '{provider}'. "
                        "Add at least one valid key in Key Manager or configuration.")
                 if last_error:
@@ -204,6 +214,8 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
                     negative_prompt=neg_prompt, guidance_scale=guidance,
                     num_inference_steps=steps, seed=seed, sampler=sampler, scheduler=scheduler,
                     hf_provider=hf_provider,
+                    horde_nsfw=horde_nsfw,
+                    horde_worker_blacklist=horde_worker_blacklist,
                 )
 
                 clean_prompt = final_prompt.strip()

@@ -142,6 +142,32 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
             logger.error(f"[ImageGen] get_models error: {exc}")
             return jsonify({"ok": False, "error": str(exc)}), 500
 
+    # --- 2b. Horde Account Status ---
+
+    @app.route("/hecos/api/plugins/image_gen/horde/status", methods=["GET"])
+    def get_horde_status():
+        """Return Horde account info (Kudos balance, username) for the configured key."""
+        try:
+            from plugin.providers.horde import HordeProvider
+            cfg = get_config().get("image_gen", {})
+            api_key = cfg.get("horde_api_key", "").strip()
+            info = HordeProvider.get_user_info(api_key)
+            return jsonify(info)
+        except Exception as exc:
+            logger.error(f"[ImageGen] Horde status error: {exc}")
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/horde/models", methods=["GET"])
+    def get_horde_models():
+        """Return live list of models currently available on the Horde cluster."""
+        try:
+            from plugin.providers.horde import HordeProvider
+            models = HordeProvider.get_models()
+            return jsonify({"ok": True, "models": models, "count": len(models)})
+        except Exception as exc:
+            logger.error(f"[ImageGen] Horde models error: {exc}")
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
     # --- 3. Prompt Refiner (Flux) ---
 
     @app.route("/hecos/api/plugins/image_gen/refine-prompt", methods=["POST"])

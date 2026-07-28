@@ -123,6 +123,65 @@ window._openIgenGallery = async function() {
     <p style="color:var(--muted); font-size:11px; margin-top:4px;">Some models require external GPU partners. HuggingFace acts as a bridge with your HF token.</p>
   </div>
 
+  <!-- AI Horde Settings Block -->
+  <div id="igen-horde-wrapper" style="display:none; margin-top:10px; padding:14px; background:var(--bg3); border:1px solid var(--border); border-radius:10px;">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+      <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,#6d28d9,#a78bfa); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+        <i class="fas fa-network-wired" style="color:#fff; font-size:12px;"></i>
+      </div>
+      <div>
+        <div style="font-weight:700; font-size:13px; color:var(--text);">AI Horde — Distributed GPU Cluster</div>
+        <div style="font-size:11px; color:var(--muted);">Free crowdsourced cluster · Hundreds of SD models · No censorship</div>
+      </div>
+      <!-- Kudos Badge -->
+      <div id="horde-kudos-badge" style="margin-left:auto; display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; background:rgba(109,40,217,0.15); border:1px solid rgba(167,139,250,0.3); font-size:12px; color:#a78bfa; font-weight:600;">
+        <i class="fas fa-bolt"></i>
+        <span id="horde-kudos-value">— Kudos</span>
+      </div>
+    </div>
+
+    <!-- NSFW Toggle -->
+    <div class="toggle-row" style="margin-bottom:12px;">
+      <div class="toggle-info">
+        <span style="font-weight:600;">Enable NSFW Content</span>
+        <span style="display:block; font-size:11px; color:var(--muted);">Allows uncensored images. Disable to enable the cluster's safety filter.</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="horde-nsfw" data-igen-managed checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- Horde API Key -->
+    <div class="field" style="margin-bottom:10px;">
+      <label>Horde API Key <small style="color:var(--muted); font-weight:400;">(opzionale — lascia vuoto per accesso anonimo)</small></label>
+      <div style="display:flex; gap:6px;">
+        <input type="password" id="horde-api-key" class="config-input" data-igen-managed placeholder="Lascia vuoto per usare la chiave anonima gratuita..." style="flex:1;">
+        <button type="button" onclick="saveKeyToEnv()" style="padding:6px 10px; font-size:11px; border-radius:6px; border:1px solid var(--accent); background:rgba(var(--accent-rgb), 0.1); color:var(--accent); cursor:pointer;" title="Salva questa chiave globalmente per non perderla agli aggiornamenti">Salva globale</button>
+        <button type="button" onclick="checkHordeAccount()" style="padding:6px 12px; font-size:12px; border-radius:6px; border:1px solid #6d28d9; background:rgba(109,40,217,0.1); color:#a78bfa; cursor:pointer; white-space:nowrap; font-weight:600;" title="Verifica account e saldo Kudos">
+          <i class="fas fa-user-check"></i> Verifica
+        </button>
+      </div>
+    </div>
+
+    <!-- Worker Blacklist -->
+    <div class="field" style="margin-bottom:10px;">
+      <label>Worker Blacklist <small style="color:var(--muted); font-weight:400;">(nomi separati da virgola)</small></label>
+      <input type="text" id="horde-worker-blacklist" class="config-input" data-igen-managed placeholder="worker1, worker2, ...">
+    </div>
+
+    <!-- Account Info Box -->
+    <div id="horde-account-info" style="display:none; padding:8px 12px; background:var(--bg2); border:1px solid var(--border); border-radius:8px; font-size:12px;">
+      <span id="horde-account-text" style="color:var(--muted);"></span>
+    </div>
+
+    <!-- Info note -->
+    <div style="margin-top:10px; padding:8px 10px; background:rgba(109,40,217,0.07); border-left:3px solid #6d28d9; border-radius:0 6px 6px 0; font-size:11px; color:var(--muted); line-height:1.5;">
+      <i class="fas fa-info-circle" style="color:#a78bfa; margin-right:4px;"></i>
+      Senza API key: priorità minima (anonima). Registrati su <b><a href="https://aihorde.net" target="_blank" style="color:#a78bfa;">aihorde.net</a></b> e contribuisci compute per guadagnare <b>Kudos</b> e scalare la coda. La generazione richiede 15–60 secondi a seconda del carico del cluster.
+    </div>
+  </div>
+
   <!-- API Key Injection Box -->
   <div class="field" style="margin-top:10px; padding:10px; background:var(--bg3); border:1px solid var(--border); border-radius:8px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -303,9 +362,19 @@ window._openIgenGallery = async function() {
     <label>Artistic Style</label>
     <select id="igen-style" class="config-input" data-igen-managed>
       <option value="none">None</option>
+      <option value="real_photo">Real Photo</option>
       <option value="cinematic">Cinematic</option>
       <option value="anime">Anime</option>
+      <option value="manga">Manga</option>
+      <option value="cartoon">Cartoon</option>
+      <option value="digital_art">Digital Art</option>
+      <option value="oil_painting">Oil Painting</option>
+      <option value="watercolor">Watercolor</option>
+      <option value="sketch">Sketch</option>
       <option value="3d_render">3D Render</option>
+      <option value="cyberpunk">Cyberpunk</option>
+      <option value="fantasy">Fantasy</option>
+      <option value="pixel_art">Pixel Art</option>
     </select>
   </div>
   <div class="toggle-row" style="margin-top:10px;">

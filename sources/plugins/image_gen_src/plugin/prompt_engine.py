@@ -23,6 +23,8 @@ STYLE_MAP = {
     "oil_painting":"oil painting, textured brushstrokes, classical art style, canvas",
     "sketch":      "pencil sketch, hand-drawn, graphite, artist study, white background",
     "3d_render":   "3D rendering, Octane Render, Unreal Engine 5, highly detailed, photorealistic",
+    "real_photo":  "realistic photo, ultra-realistic, highly detailed, sharp focus, 8k",
+
     "cyberpunk":   "cyberpunk style, neon lights, rainy streets, futuristic, high tech",
     "fantasy":     "fantasy art, magical, ethereal, epic scale, mythical",
     "watercolor":  "watercolor painting, soft washes, fluid strokes, pale tones",

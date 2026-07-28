@@ -77,6 +77,11 @@ class ImageGenConfig(BaseModel):
     # ── Custom Models ─────────────────────────────────────────────────────────
     custom_hf_models: list = Field(default_factory=list)
 
+    # ── AI Horde ──────────────────────────────────────────────────────────────
+    horde_api_key: str = ""              # Empty = anonymous (key 0000000000)
+    horde_nsfw: bool = True              # Enable NSFW content (main advantage of Horde)
+    horde_worker_blacklist: str = ""     # Comma-separated worker names to exclude
+
 
 _THIS_DIR = Path(__file__).parent.resolve()
 _CONFIG_FILE = _THIS_DIR / "image_gen.toml"

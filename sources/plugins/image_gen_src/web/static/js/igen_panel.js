@@ -84,7 +84,8 @@ window.onProviderChanged = async function(userTriggered = false, _attempt = 0) {
         { id: 'openai',         name: 'OpenAI DALL-E' },
         { id: 'stability',      name: 'Stability AI' },
         { id: 'airforce',       name: 'Airforce (Free)' },
-        { id: 'huggingface',    name: 'Hugging Face Inference API' }
+        { id: 'huggingface',    name: 'Hugging Face Inference API' },
+        { id: 'horde',          name: '🌐 AI Horde (Free / No Censorship)' }
     ];
 
     if (provSel.options.length === 0) {
@@ -103,6 +104,14 @@ window.onProviderChanged = async function(userTriggered = false, _attempt = 0) {
 
     const hfWrap = document.getElementById('igen-hf-explorer-wrapper');
     if (hfWrap) hfWrap.style.display = (provSel.value === 'huggingface') ? 'block' : 'none';
+
+    // Show/hide Horde-specific settings block
+    const hordeWrap = document.getElementById('igen-horde-wrapper');
+    if (hordeWrap) hordeWrap.style.display = (provSel.value === 'horde') ? 'block' : 'none';
+    // If switching to horde, auto-load kudos
+    if (provSel.value === 'horde' && userTriggered) {
+        setTimeout(() => window.checkHordeAccount(), 500);
+    }
 
     // Show a subtle loading state on the model dropdown
     const statusEl = document.getElementById('igen-model-status');
@@ -159,6 +168,12 @@ window._igenUpdateKeyStatus = async function(provider) {
     if (provider === 'pollinations' || provider === 'airforce') {
         stEl.textContent = 'Free provider (no key needed)';
         stEl.parentElement.style.color = 'var(--ok, #2ecc71)';
+        return;
+    }
+    if (provider === 'horde') {
+        const hasKey = (document.getElementById('horde-api-key')?.value || '').trim().length > 0;
+        stEl.textContent = hasKey ? 'Horde key configured' : 'Anonymous (no key)';
+        stEl.parentElement.style.color = hasKey ? 'var(--ok, #2ecc71)' : 'var(--muted)';
         return;
     }
     
@@ -256,9 +271,15 @@ window.saveIgenConfig = async function(silent = false) {
 };
 
 window.saveKeyToEnv = async function() {
-    const keyInput = document.getElementById('igen-api-key');
+    let keyInput = document.getElementById('igen-api-key');
     const provSel  = document.getElementById('igen-provider');
-    if (!keyInput || !provSel) return;
+    if (!provSel) return;
+
+    if (provSel.value === 'horde') {
+        keyInput = document.getElementById('horde-api-key');
+    }
+
+    if (!keyInput) return;
 
     const key = keyInput.value.trim();
     if (!key) { _igenAlert('Please enter a key to save globally.'); return; }
@@ -317,6 +338,9 @@ window.collectIgenConfig = function() {
         routing_override:       get('igen-routing-override', ''),
         enabled:                chk('igen-enabled', true),
         api_key:                get('igen-api-key', ''),
+        horde_api_key:          get('horde-api-key', ''),
+        horde_nsfw:             chk('horde-nsfw', true),
+        horde_worker_blacklist: get('horde-worker-blacklist', ''),
     };
 };
 
@@ -334,6 +358,9 @@ window.applyIgenConfig = function(cfg) {
     set('igen-sampler',     cfg.sampler     || 'euler');
     set('igen-scheduler',   cfg.scheduler   || 'simple');
     set('igen-api-key',     cfg.api_key     || '');
+    set('horde-api-key',    cfg.horde_api_key || '');
+    chk('horde-nsfw',       cfg.horde_nsfw !== undefined ? cfg.horde_nsfw : true);
+    set('horde-worker-blacklist', cfg.horde_worker_blacklist || '');
 
     const guidance = cfg.guidance_scale ?? 0.0;
     set('igen-guidance', guidance);
@@ -706,6 +733,39 @@ window.runIgenProbe = async function() {
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-stethoscope" style="color:var(--accent);"></i> Test Providers';
+    }
+};
+
+window.checkHordeAccount = async function() {
+    const kEl = document.getElementById('horde-kudos-value');
+    const iEl = document.getElementById('horde-account-info');
+    const tEl = document.getElementById('horde-account-text');
+    const btn = event?.currentTarget;
+    if (kEl) kEl.textContent = '... Kudos';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Attendere...'; }
+    try {
+        const res = await fetch('/hecos/api/plugins/image_gen/horde/status');
+        const data = await res.json();
+        if (data.ok) {
+            if (kEl) kEl.textContent = `${Math.floor(data.kudos).toLocaleString()} Kudos`;
+            if (iEl && tEl) {
+                iEl.style.display = 'block';
+                tEl.innerHTML = `Connesso come: <strong>${data.username}</strong> <span style="margin:0 6px;">|</span> Worker attivi: <strong>${data.worker_count}</strong>`;
+                if (data.is_anonymous) {
+                    tEl.innerHTML += `<br><span style="color:#e74c3c;"><i class="fas fa-exclamation-circle"></i> Account anonimo. La priorità di generazione è bassa.</span>`;
+                }
+            }
+        } else {
+            if (kEl) kEl.textContent = 'Errore API';
+            if (iEl && tEl) {
+                iEl.style.display = 'block';
+                tEl.innerHTML = `<span style="color:#e74c3c;"><i class="fas fa-times-circle"></i> ${data.error || 'Errore di connessione a AI Horde'}</span>`;
+            }
+        }
+    } catch(e) {
+        if (kEl) kEl.textContent = 'Offline';
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-check"></i> Verifica'; }
     }
 };
 

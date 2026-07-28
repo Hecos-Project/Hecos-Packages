@@ -19,6 +19,7 @@ from .openai import OpenAIProvider
 from .stability import StabilityProvider
 from .airforce import AirforceProvider
 from .huggingface import HuggingFaceProvider
+from .horde import HordeProvider
 
 PROVIDERS = {
     "pollinations":  PollinationsProvider,
@@ -28,6 +29,7 @@ PROVIDERS = {
     "stability":     StabilityProvider,
     "airforce":      AirforceProvider,
     "huggingface":   HuggingFaceProvider,
+    "horde":         HordeProvider,
 }
 
 
@@ -46,7 +48,9 @@ def generate_image(prompt: str, provider: str, model: str, width: int, height: i
                    num_inference_steps: int = 30, auto_enrich: bool = False,
                    enrich_keywords: str = "", style: str = "none",
                    seed: int = -1, sampler: str = "", scheduler: str = "",
-                   hf_provider: str = "hf-inference") -> str:
+                   hf_provider: str = "hf-inference",
+                   horde_nsfw: bool = True,
+                   horde_worker_blacklist: str = "") -> str:
     """
     Main entry point. Returns the filename of the saved image, raises Exception on failure.
     Note: prompt enrichment should be applied BEFORE calling this (via prompt_engine.py).
@@ -57,10 +61,13 @@ def generate_image(prompt: str, provider: str, model: str, width: int, height: i
 
     if cls:
         try:
-            # Pass hf_provider only to HuggingFace (other providers ignore it)
+            # Pass provider-specific extras only to the relevant provider
             extra_kwargs = {}
             if provider == "huggingface":
                 extra_kwargs["hf_provider"] = hf_provider
+            elif provider == "horde":
+                extra_kwargs["horde_nsfw"] = horde_nsfw
+                extra_kwargs["horde_worker_blacklist"] = horde_worker_blacklist
             filename = cls.generate(
                 prompt=prompt, width=width, height=height, model=model, api_key=api_key,
                 negative_prompt=negative_prompt, guidance_scale=guidance_scale,
