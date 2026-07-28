@@ -166,17 +166,32 @@ class HordeProvider:
         
         log_debug(f"[Horde] Submitting request. model={model} size={width}x{height} nsfw={horde_nsfw}")
 
-        # ── Submit ───────────────────────────────────────────────────────────
-        try:
-            resp = requests.post(
-                f"{_BASE_URL}/generate/async",
-                json=payload,
-                headers=headers,
-                timeout=30,
-                proxies=get_proxies("horde"),
-            )
-        except Exception as e:
-            raise Exception(f"Horde submit error: {e}")
+        # ── Submit (with retry for transient SSL/connection errors) ──────────
+        max_attempts = 3
+        last_error = None
+        resp = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                resp = requests.post(
+                    f"{_BASE_URL}/generate/async",
+                    json=payload,
+                    headers=headers,
+                    timeout=30,
+                    proxies=get_proxies("horde"),
+                )
+                break  # success
+            except Exception as e:
+                last_error = e
+                err_str = str(e).lower()
+                is_transient = any(k in err_str for k in ("ssl", "eof", "connection", "reset", "timed out", "timeout"))
+                if is_transient and attempt < max_attempts:
+                    log_debug(f"[Horde] Connection error (attempt {attempt}/{max_attempts}), retrying in 3s... {e}")
+                    time.sleep(3)
+                else:
+                    raise Exception(f"Horde submit error: {e}")
+        if resp is None:
+            raise Exception(f"Horde submit failed after {max_attempts} attempts: {last_error}")
+
 
         if resp.status_code == 401:
             raise Exception("Horde: API key non valida. Usa una key valida oppure lascia vuoto per accesso anonimo.")

@@ -88,7 +88,9 @@ BUILTIN_PRESETS: dict[str, dict[str, Any]] = {
     "🌐 Stable Diffusion (AI Horde)": {
         "provider": "horde",
         "model": "stable_diffusion",
-        "aspect_ratio": "1:1",
+        "aspect_ratio": "custom",
+        "width": 768,
+        "height": 768,
         "guidance_scale": 7.5,
         "num_inference_steps": 30,
         "seed": -1,

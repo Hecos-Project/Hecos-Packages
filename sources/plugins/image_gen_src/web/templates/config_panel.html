@@ -164,10 +164,10 @@ window._openIgenGallery = async function() {
       </div>
     </div>
 
-    <!-- Worker Blacklist -->
-    <div class="field" style="margin-bottom:10px;">
-      <label>Worker Blacklist <small style="color:var(--muted); font-weight:400;">(nomi separati da virgola)</small></label>
-      <input type="text" id="horde-worker-blacklist" class="config-input" data-igen-managed placeholder="worker1, worker2, ...">
+    <!-- Horde Worker Blacklist (Hidden because not supported correctly) -->
+    <div class="field" style="margin-bottom:10px; display:none;">
+      <label>Horde Worker Blacklist <small style="color:var(--muted); font-weight:400;">(ID dei worker da evitare separati da virgola)</small></label>
+      <input type="text" id="horde-worker-blacklist" class="config-input" data-igen-managed placeholder="es: worker_id_1, worker_id_2">
     </div>
 
     <!-- Account Info Box -->
