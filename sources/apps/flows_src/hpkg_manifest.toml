@@ -1,0 +1,88 @@
+id = "flows"
+manifest_version = "1"
+name = "Flows"
+version = "1.0.0"
+hecos_min_version = "0.42.0"
+type = "system_app"
+author = "Antonio Meloni"
+description = "Visual automation engine for Hecos. Build, schedule and run multi-step flows from a node-based canvas."
+target_dir = "hpm"
+plugin_dir = "."
+lazy_load = false
+is_class_based = false
+on_load = true
+tag = "FLOWS"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+readme = "README.md"
+
+[ui]
+pill_label = "Flows"
+pill_icon = "fas fa-project-diagram"
+pill_route = "/flows"
+pill_order = 40
+
+[config_panel]
+tab_id = "flows"
+tab_label = "Flows"
+tab_icon = "fas fa-project-diagram"
+template_file = "web_ui/templates/modules/config_flows.html"
+api_routes_file = "api.py"
+category = "SYSTEM"
+
+[capabilities]
+llm_tools = [
+    "list_flows",
+    "run_flow",
+    "create_flow",
+]
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = "Full visual automation system. Includes NLP-to-YAML compiler, scheduler, SSE live log streaming."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "FLOWS__list_flows"
+description = "Returns a list of all defined flows. Use when the user asks 'what flows do I have?', 'show my automations', 'lista flussi'."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties]
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "FLOWS__run_flow"
+description = "Starts execution of a flow by its ID or name. Use when the user says 'run flow X', 'esegui il flusso X', 'avvia X'."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.flow_id]
+type = "string"
+description = "The ID or name of the flow to execute."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "FLOWS__create_flow"
+description = "Creates a new flow from a natural language description. Use when the user says 'create a flow that...', 'crea un flusso che...'."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.description]
+type = "string"
+description = "Natural language description of what the flow should do."
+
+[tool_schema.function.parameters.properties.flow_name]
+type = "string"
+description = "Optional name for the new flow."
