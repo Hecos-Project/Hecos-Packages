@@ -13,7 +13,7 @@ def register_backup_routes(app):
     def reminders_backup():
         """Esporta tutti i promemoria come JSON."""
         try:
-            from .. import store
+            from hecos.hpm.reminder import store
             reminders = store.get_all()
             return jsonify({"ok": True, "count": len(reminders), "data": reminders})
         except Exception as e:
@@ -27,7 +27,7 @@ def register_backup_routes(app):
         Body: { data: [...], mode: "duplicate"|"replace" }
         """
         try:
-            from .. import store
+            from hecos.hpm.reminder import store
             body = request.get_json(force=True) or {}
             reminders = body.get("data", [])
             mode = body.get("mode", "duplicate")

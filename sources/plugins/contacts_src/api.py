@@ -23,16 +23,11 @@ import os, pathlib, uuid as _uuid
 contacts_bp = Blueprint("contacts", __name__, url_prefix="/api/contacts")
 
 
-def register_routes(app):
+def init_plugin_routes(app, cfg_mgr, hecos_root, log):
     """Registers the contacts blueprint on the Flask app (idempotent)."""
     if "contacts" not in app.blueprints:
         app.register_blueprint(contacts_bp)
         logger.debug("CONTACTS", "API blueprint registered at /api/contacts")
-
-
-def init_plugin_routes(app, cfg_mgr=None, hecos_root=None, log=None):
-    """HPM loader entry point — delegates to register_routes."""
-    register_routes(app)
 
 
 # ── Contact CRUD ───────────────────────────────────────────────────────────────

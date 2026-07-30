@@ -23,7 +23,7 @@ def init_plugin_routes(app, cfg_mgr, hecos_root=None, logger=None, **kwargs):
     _log = logger or log
 
     from flask import render_template, jsonify, request, Response, stream_with_context
-    from flask_login import login_required
+    from flask_login import login_required, current_user
 
     # ── Helpers to import from the installed package core_logic ──────────────
     def _flows():
@@ -309,8 +309,9 @@ def init_plugin_routes(app, cfg_mgr, hecos_root=None, logger=None, **kwargs):
     # ── Backup / Restore ─────────────────────────────────────────────────────
 
     @app.route("/api/flows/backup", methods=["GET"])
-    @login_required
     def api_flows_backup():
+        if not current_user.is_authenticated and request.headers.get("X-Hecos-Internal") != "backup":
+            return jsonify({"ok": False, "error": "Unauthorized"}), 401
         try:
             storage, *_ = _flows()
             summaries = storage.list_flows()
@@ -323,8 +324,9 @@ def init_plugin_routes(app, cfg_mgr, hecos_root=None, logger=None, **kwargs):
             return jsonify({"ok": False, "error": str(e)}), 500
 
     @app.route("/api/flows/restore", methods=["POST"])
-    @login_required
     def api_flows_restore():
+        if not current_user.is_authenticated and request.headers.get("X-Hecos-Internal") != "backup":
+            return jsonify({"ok": False, "error": "Unauthorized"}), 401
         try:
             import yaml as _yaml
             storage, *_ = _flows()

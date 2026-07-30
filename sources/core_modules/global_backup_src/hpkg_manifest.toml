@@ -1,0 +1,38 @@
+id = "global_backup"
+manifest_version = "1"
+name = "Global Backup"
+version = "1.3.1"
+hecos_min_version = "0.42.0"
+type = "core_module"
+author = "Hecos Ecosystem"
+description = "Global Backup Orchestrator per Hecos."
+target_dir = "hpm"
+plugin_dir = "."
+lazy_load = true
+is_class_based = false
+tag = "HPM_BACKUP"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+readme = "README.md"
+on_load = true
+
+[ui]
+main_panel = "backup_panel"
+
+[config_panel]
+tab_id = "backup_panel"
+tab_label = "Backup"
+tab_icon = "fas fa-save"
+template_file = "web_ui/templates/config_global_backup.html"
+js_file = "web_ui/assets/js/panel.js"
+category = "SISTEMA"
+api_routes_file = "core_logic/routes.py"
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = ""

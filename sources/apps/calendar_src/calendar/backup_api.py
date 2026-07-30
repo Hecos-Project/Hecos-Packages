@@ -15,7 +15,7 @@ def register_backup_routes(app):
     def calendar_backup():
         """Esporta tutti gli eventi del calendario come JSON."""
         try:
-            from .. import store
+            from hecos.hpm.calendar import store
             with store._get_conn() as conn:
                 rows = conn.execute(
                     "SELECT * FROM calendar_events ORDER BY start_iso ASC"
@@ -33,7 +33,7 @@ def register_backup_routes(app):
         Body: { data: [...], mode: "duplicate"|"replace" }
         """
         try:
-            from .. import store
+            from hecos.hpm.calendar import store
             
             body = request.get_json(force=True) or {}
             events = body.get("data", [])

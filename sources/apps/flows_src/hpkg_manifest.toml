@@ -15,6 +15,12 @@ tag = "FLOWS"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
 readme = "README.md"
 
+[backup]
+enabled = true
+backup_endpoint = "/api/flows/backup"
+restore_endpoint = "/api/flows/restore"
+icon = "fas fa-project-diagram"
+
 [ui]
 pill_label = "Flows"
 pill_icon = "fas fa-project-diagram"

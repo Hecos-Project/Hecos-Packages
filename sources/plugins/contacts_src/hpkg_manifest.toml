@@ -14,6 +14,13 @@ on_load = true
 tag = "CONTACTS"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
 readme = "README.md"
+signature = "pZd6lR1Tu4M/P5Oi/7LecgAIZaVtVUnRdXNN3JS42NPhpCJZWD+SA8uSWdzC+rd2TcdfRA0IVeduyVllADM9BQ=="
+
+[backup]
+enabled = true
+backup_endpoint = "/api/contacts/backup"
+restore_endpoint = "/api/contacts/restore"
+icon = "📒"
 
 [config_panel]
 tab_id = "contacts"

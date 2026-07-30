@@ -1,0 +1,49 @@
+[backup]
+enabled = false
+schedule_preset = "custom"
+schedule_cron = "11 08 30 * *"
+destination = "C:/backups"
+keep_last = 5
+last_backup = "2026-07-30T06:48:02.111325+00:00"
+last_result = "ok"
+modules = [
+    "calendar",
+    "chat",
+    "contacts",
+    "flows",
+    "lists",
+    "memory",
+    "reminder",
+    "system_config",
+    "users",
+]
+
+[backup.last_details]
+filename = "hecos_backup_2026-07-30_06-47-42.zip"
+
+[backup.last_details.modules.chat]
+ok = true
+
+[backup.last_details.modules.memory]
+ok = true
+
+[backup.last_details.modules.users]
+ok = true
+
+[backup.last_details.modules.system_config]
+ok = true
+
+[backup.last_details.modules.calendar]
+ok = true
+
+[backup.last_details.modules.contacts]
+ok = true
+
+[backup.last_details.modules.flows]
+ok = true
+
+[backup.last_details.modules.lists]
+ok = true
+
+[backup.last_details.modules.reminder]
+ok = true
