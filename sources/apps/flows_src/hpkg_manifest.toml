@@ -6,7 +6,6 @@ hecos_min_version = "0.42.0"
 type = "system_app"
 author = "Antonio Meloni"
 description = "Visual automation engine for Hecos. Build, schedule and run multi-step flows from a node-based canvas."
-target_dir = "hpm"
 plugin_dir = "."
 lazy_load = false
 is_class_based = false

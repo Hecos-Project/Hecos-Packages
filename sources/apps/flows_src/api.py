@@ -29,12 +29,12 @@ def init_plugin_routes(app, cfg_mgr, hecos_root=None, logger=None, **kwargs):
     def _flows():
         """Lazy import of the flows core_logic module."""
         try:
-            from hpm.flows.core_logic import storage, engine, validator, compiler, registry
+            from hecos.modules.flows.core_logic import storage, engine, validator, compiler, registry
             return storage, engine, validator, compiler, registry
         except ImportError:
             # Fallback: still-resident hecos.modules.flows (transition period)
             from hecos.modules import flows as _f_pkg
-            from hecos.modules.flows import storage, engine, validator, compiler, registry
+            from hecos.modules.flows.core_logic import storage, engine, validator, compiler, registry
             return storage, engine, validator, compiler, registry
 
     # ── Page ─────────────────────────────────────────────────────────────────

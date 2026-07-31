@@ -83,7 +83,7 @@ def register_module_backup_routes(app) -> None:
 
             with sqlite3.connect(db_path) as conn:
                 if mode == "replace":
-                    conn.execute("DELETE FROM messages")
+                    conn.execute("DELETE FROM history")
                     conn.execute("DELETE FROM sessions")
 
                 for s in sessions:
@@ -108,14 +108,14 @@ def register_module_backup_routes(app) -> None:
                         for msg in s.get("messages", []):
                             try:
                                 conn.execute(
-                                    """INSERT INTO messages
-                                       (session_id, timestamp, role, content)
+                                    """INSERT INTO history
+                                       (session_id, timestamp, role, message)
                                        VALUES (?,?,?,?)""",
                                     (
                                         new_sid,
                                         msg.get("timestamp") or now,
                                         msg.get("role", "user"),
-                                        msg.get("content") or msg.get("message", ""),
+                                        msg.get("message") or msg.get("content", ""),
                                     )
                                 )
                                 imported_messages += 1

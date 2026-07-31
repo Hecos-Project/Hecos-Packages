@@ -4,7 +4,7 @@ Hecos Flows — Action Registry
 Central catalog of all actions available inside a Flow pipeline.
 
 Usage:
-    from hpm.flows.core_logic.registry import register_action, get_catalog, execute_action
+    from hecos.modules.flows.core_logic.registry import register_action, get_catalog, execute_action
 
 To register an action from any module:
     @register_action(
@@ -225,8 +225,8 @@ _bootstrap_builtin_actions()
 
 def _flows_run_flow(flow_id: str, wait: bool = True, pass_context: bool = True, cascade_stop: bool = True, **kwargs):
     try:
-        from hpm.flows.core_logic.storage import get_flow
-        from hpm.flows.core_logic.engine import run_flow, is_run_aborted, register_child_run
+        from hecos.modules.flows.core_logic.storage import get_flow
+        from hecos.modules.flows.core_logic.engine import run_flow, is_run_aborted, register_child_run
         import time
         import uuid
 
@@ -303,7 +303,7 @@ def _user_ask_input(
     start_time = kwargs.get("_start_time", time.time())
 
     try:
-        from hpm.flows.core_logic.engine import (
+        from hecos.modules.flows.core_logic.engine import (
             register_pending_input,
             get_pending_input_value,
             is_run_aborted,
@@ -362,7 +362,7 @@ def _user_ask_input(
 
         # 5. If aborted during wait, raise
         if is_run_aborted(run_id):
-            from hpm.flows.core_logic.engine import FlowAbortException
+            from hecos.modules.flows.core_logic.engine import FlowAbortException
             raise FlowAbortException("Flow aborted while waiting for user input.")
 
         # 6. Retrieve the value
@@ -427,7 +427,7 @@ def _setup_audio_wrappers():
     def _audio_play_alarm(sound: str = "default", **kwargs):
         import os
         import time
-        from hpm.flows.core_logic.engine import is_run_aborted
+        from hecos.modules.flows.core_logic.engine import is_run_aborted
 
         run_id = kwargs.get("_run_id")
         timeout = kwargs.get("_timeout_seconds", 0)

@@ -1,5 +1,6 @@
 import shutil
 from pathlib import Path
+from colorama import Fore, Style
 from modules.logging_sys import log_info, log_error, log_warn
 from modules.settings import get_src_dir, get_hecos_root
 
@@ -28,7 +29,8 @@ def dev_sync_package():
         # Mostra la categoria
         cat = d.parent.name
         label = f"{cat}/{d.name}" if cat != src_dir.name else d.name
-        print(f"  {i+1}. {label}")
+        color = Fore.LIGHTCYAN_EX if i % 2 == 0 else Fore.WHITE
+        print(f"  {color}{i+1}. {label}{Style.RESET_ALL}")
         
     choice = input("\nSelect the package to sync (0 to cancel): ")
     try:

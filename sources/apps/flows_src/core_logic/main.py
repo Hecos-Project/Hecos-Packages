@@ -208,7 +208,7 @@ class FlowsEngine:
 
             flow_id = self._resolve_flow_id(flow_id)
             if not update_flow_field(flow_id, "enabled", True):
-                return f"[Flows] Flow '{flow_id}' not found. Available flows: " + ", ".join(f["id"] for f in __import__('hpm.flows.core_logic.storage', fromlist=['list_flows']).list_flows())
+                return f"[Flows] Flow '{flow_id}' not found. Available flows: " + ", ".join(f["id"] for f in __import__('hecos.modules.flows.core_logic.storage', fromlist=['list_flows']).list_flows())
 
             flow_data = get_flow(flow_id)
             if flow_data:

@@ -116,19 +116,20 @@ def generate_single_capabilities():
         log_warn(f"No '*_src' folder found in {src_root}")
         return
 
-    print("Available packages:\n")
+    print(f"{Fore.CYAN}Available packages:{Style.RESET_ALL}\n")
     for i, d in enumerate(src_dirs):
         mf = d / "hpkg_manifest.toml"
-        status = " [no manifest]"
+        status = f" {Fore.RED}[no manifest]{Style.RESET_ALL}"
         if mf.exists():
             try:
                 m = tomllib.loads(mf.read_bytes().decode("utf-8"))
-                status = " [cap OK]" if "capabilities" in m else " [no cap]"
+                status = f" {Fore.GREEN}[cap OK]{Style.RESET_ALL}" if "capabilities" in m else f" {Fore.YELLOW}[no cap]{Style.RESET_ALL}"
             except Exception:
-                status = " [TOML ERR]"
+                status = f" {Fore.RED}[TOML ERR]{Style.RESET_ALL}"
         cat = d.parent.name
         label = f"{cat}/{d.name}" if cat != src_root.name else d.name
-        print(f"  {i+1}. {label}{status}")
+        color = Fore.LIGHTCYAN_EX if i % 2 == 0 else Fore.WHITE
+        print(f"  {color}{i+1}. {label}{Style.RESET_ALL}{status}")
 
     choice = input("\nSelect the package (0 to cancel): ").strip()
     try:

@@ -26,21 +26,35 @@ def build_package():
         return
         
     print("Available packages:")
+    from colorama import Fore, Style
     for i, d in enumerate(src_dirs):
-        # Mostra la categoria se esiste (es. plugins/mail_src)
         cat = d.parent.name
         label = f"{cat}/{d.name}" if cat != src_dir.name else d.name
-        print(f"  {i+1}. {label}")
+        color = Fore.LIGHTCYAN_EX if i % 2 == 0 else Fore.WHITE
+        print(f"  {color}{i+1}. {label}{Style.RESET_ALL}")
         
-    choice = input("\nSelect the package to build (0 to cancel): ")
-    try:
-        idx = int(choice) - 1
-        if idx == -1: return
-        target_dir = src_dirs[idx]
-    except:
+    choice = input("\nSelect the package(s) to build (e.g. 1,6,7 or 0 to cancel): ")
+    
+    parts = [p.strip() for p in choice.split(",") if p.strip()]
+    if not parts or parts == ["0"]:
         return
-        
-    _build_single_package(target_dir, packages_dir)
+
+    targets = []
+    for part in parts:
+        try:
+            idx = int(part) - 1
+            if 0 <= idx < len(src_dirs):
+                targets.append(src_dirs[idx])
+            else:
+                from modules.utils import log_warn
+                log_warn(f"Invalid selection: {part}")
+        except ValueError:
+            from modules.utils import log_warn
+            log_warn(f"Invalid input format: {part}")
+
+    for target_dir in targets:
+        print(f"\n--- Building {target_dir.name} ---")
+        _build_single_package(target_dir, packages_dir)
 
 def _build_single_package(target_dir, packages_dir):
     manifest_path = target_dir / "hpkg_manifest.toml"
@@ -233,10 +247,12 @@ def get_available_hpkg():
         return None
         
     print("Available packages:")
+    from colorama import Fore, Style
     for i, f in enumerate(hpkg_files):
+        color = Fore.LIGHTCYAN_EX if i % 2 == 0 else Fore.WHITE
         cat = f.parent.name
         label = f"{cat}/{f.name}" if cat != packages_dir.name else f.name
-        print(f"  {i+1}. {label}")
+        print(f"  {color}{i+1}. {label}{Style.RESET_ALL}")
         
     choice = input("\nSelect the package (0 to cancel): ")
     try:

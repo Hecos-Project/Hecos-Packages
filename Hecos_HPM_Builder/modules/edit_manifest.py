@@ -253,6 +253,7 @@ def edit_manifest():
         # Mostra la categoria
         cat = d.parent.name
         label = f"{cat}/{d.name}" if cat != src_dir.name else d.name
+        color = Fore.LIGHTCYAN_EX if i % 2 == 0 else Fore.WHITE
         
         # Peek at version
         mpath = d / "hpkg_manifest.toml"
@@ -263,7 +264,7 @@ def edit_manifest():
                 version_hint = f"  {Fore.LIGHTBLACK_EX}v{m.get('version', '?')}{Style.RESET_ALL}"
             except Exception:
                 pass
-        print(f"  {Fore.WHITE}{i+1}.{Style.RESET_ALL} {label}{version_hint}")
+        print(f"  {color}{i+1}. {label}{version_hint}{Style.RESET_ALL}")
 
     choice = input(f"\n{Fore.YELLOW}Select the package to edit (0 to cancel):{Style.RESET_ALL} ").strip()
     try:
