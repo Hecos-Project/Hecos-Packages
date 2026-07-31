@@ -192,12 +192,8 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
         current_pinned = pinned_key
 
         for attempt in range(1, max_attempts + 1):
-            # Horde uses its own key (or anonymous), not the shared pool
-            if provider == "horde":
-                api_key = horde_api_key  # may be empty — HordeProvider handles anonymous fallback
-            else:
-                # Pass the globally configured provider so pinned_key is only used for that provider
-                api_key = _get_api_key(provider, current_pinned, configured_provider=cfg.get("provider", ""))
+            # Pass the globally configured provider so pinned_key is only used for that provider
+            api_key = _get_api_key(provider, current_pinned, configured_provider=cfg.get("provider", ""))
 
             if not api_key and provider not in ("pollinations", "airforce", "horde"):
                 msg = (f"No API key available for '{provider}'. "

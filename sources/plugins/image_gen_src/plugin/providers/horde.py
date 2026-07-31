@@ -6,7 +6,7 @@ API is asynchronous: submit → poll → retrieve.
 """
 import time
 import base64
-from .utils import log_debug, save_image_bytes, get_proxies
+from .utils import logger, save_image_bytes, get_proxies
 
 _BASE_URL = "https://aihorde.net/api/v2"
 _ANON_KEY = "0000000000"
@@ -55,7 +55,7 @@ class HordeProvider:
                     # Return model names sorted by worker count (most popular first)
                     return [m["name"] for m in data if m.get("name")]
         except Exception as e:
-            log_debug(f"[Horde] Model list fetch failed: {e}")
+            logger.info(f"[Horde] Model list fetch failed: {e}")
         return _FALLBACK_MODELS
 
     @staticmethod
@@ -164,7 +164,7 @@ class HordeProvider:
         # The "workers" array is actually a strict whitelist. If an invalid ID like "admin" is used, it fails.
         # We will ignore the UI blacklist field for now to prevent breaking generations.
         
-        log_debug(f"[Horde] Submitting request. model={model} size={width}x{height} nsfw={horde_nsfw}")
+        logger.info(f"[Horde] Submitting request. model={model} size={width}x{height} nsfw={horde_nsfw}")
 
         # ── Submit (with retry for transient SSL/connection errors) ──────────
         max_attempts = 3
@@ -185,7 +185,7 @@ class HordeProvider:
                 err_str = str(e).lower()
                 is_transient = any(k in err_str for k in ("ssl", "eof", "connection", "reset", "timed out", "timeout"))
                 if is_transient and attempt < max_attempts:
-                    log_debug(f"[Horde] Connection error (attempt {attempt}/{max_attempts}), retrying in 3s... {e}")
+                    logger.info(f"[Horde] Connection error (attempt {attempt}/{max_attempts}), retrying in 3s... {e}")
                     time.sleep(3)
                 else:
                     raise Exception(f"Horde submit error: {e}")
@@ -204,14 +204,14 @@ class HordeProvider:
         if not job_id:
             raise Exception(f"Horde: nessun job ID ricevuto. Risposta: {resp.text[:200]}")
 
-        log_debug(f"[Horde] Job submitted. id={job_id}")
+        logger.info(f"[Horde] Job submitted. id={job_id}")
 
         # ── Poll ─────────────────────────────────────────────────────────────
         poll_url = f"{_BASE_URL}/generate/status/{job_id}"
-        max_wait = 120   # seconds
+        max_wait = 300   # seconds
         interval = 3     # seconds between checks
         elapsed  = 0
-
+        
         while elapsed < max_wait:
             time.sleep(interval)
             elapsed += interval
@@ -224,11 +224,11 @@ class HordeProvider:
                     proxies=get_proxies("horde"),
                 )
             except Exception as e:
-                log_debug(f"[Horde] Poll error: {e}, retrying...")
+                logger.info(f"[Horde] Poll error: {e}, retrying...")
                 continue
 
             if status_resp.status_code != 200:
-                log_debug(f"[Horde] Poll HTTP {status_resp.status_code}, retrying...")
+                logger.info(f"[Horde] Poll HTTP {status_resp.status_code}, retrying...")
                 continue
 
             status = status_resp.json()
@@ -237,7 +237,7 @@ class HordeProvider:
             wait_time = status.get("wait_time", "?")
             queue_pos  = status.get("queue_position", "?")
 
-            log_debug(f"[Horde] done={done} faulted={faulted} wait={wait_time}s queue_pos={queue_pos} elapsed={elapsed}s")
+            logger.info(f"[Horde] done={done} faulted={faulted} wait={wait_time}s queue_pos={queue_pos} elapsed={elapsed}s")
 
             if faulted:
                 raise Exception("Horde: la generazione è fallita lato worker. Riprova o cambia modello.")
@@ -259,7 +259,7 @@ class HordeProvider:
                         if dl.status_code == 200:
                             img_bytes = dl.content
                     except Exception as e:
-                        log_debug(f"[Horde] URL download failed: {e}, trying base64...")
+                        logger.info(f"[Horde] URL download failed: {e}, trying base64...")
 
                 if img_bytes is None and img_b64:
                     try:
@@ -272,7 +272,7 @@ class HordeProvider:
 
                 worker_name = gen.get("worker_name", "unknown")
                 horde_model = gen.get("model", model)
-                log_debug(f"[Horde] Image ready. worker={worker_name} model={horde_model} size={len(img_bytes)} bytes")
+                logger.info(f"[Horde] Image ready. worker={worker_name} model={horde_model} size={len(img_bytes)} bytes")
 
                 return save_image_bytes(img_bytes, "png", prompt=prompt, params={
                     "provider":         "horde",
