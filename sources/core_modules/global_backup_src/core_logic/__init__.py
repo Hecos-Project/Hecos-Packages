@@ -1,5 +1,5 @@
 """
-hecos.modules.global_backup.core_logic
+hecos.hpm.global_backup.core_logic
 ─────────────────────────────────────
 Global Backup Orchestrator for Hecos (HPM Module).
 

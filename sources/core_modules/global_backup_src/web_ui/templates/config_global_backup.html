@@ -526,7 +526,8 @@ select.backup-form-control { cursor: pointer; }
                 {# Time of day row (daily / weekly / monthly) #}
                 <div class="sched-row" id="sched-row-time" style="display:none;">
                     <span class="sched-label">At time</span>
-                    <input type="time" id="sched-time" class="sched-time-input" value="02:00"
+                    <input type="text" id="sched-time" class="sched-time-input" value="02:00" readonly style="cursor:pointer;text-align:center;"
+                           onclick="openBackupTimePicker()"
                            onchange="schedUpdateSummary(); backupSaveConfig();">
                 </div>
 

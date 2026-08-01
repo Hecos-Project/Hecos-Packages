@@ -19,8 +19,8 @@ _backup_lock = threading.Lock()
 def register_routes(app) -> None:
     """Register all backup API routes on the Flask app."""
 
-    from hecos.modules.global_backup.core_logic import store as bstore
-    from hecos.modules.global_backup.core_logic import scheduler as bscheduler
+    from hecos.hpm.global_backup.core_logic import store as bstore
+    from hecos.hpm.global_backup.core_logic import scheduler as bscheduler
 
     # ── GET /hecos/api/backup/config ─────────────────────────────────────────
     @app.route("/hecos/api/backup/config", methods=["GET"])
@@ -30,7 +30,7 @@ def register_routes(app) -> None:
             cfg = bstore.load()
             cfg["presets"] = bstore.SCHEDULE_PRESETS
 
-            from hecos.modules.global_backup.core_logic.orchestrator import get_backup_metadata
+            from hecos.hpm.global_backup.core_logic.orchestrator import get_backup_metadata
             modules_meta = get_backup_metadata()
 
             status = bscheduler.get_status()
@@ -103,7 +103,7 @@ def register_routes(app) -> None:
         def _do_backup():
             global _backup_in_progress
             try:
-                from hecos.modules.global_backup.core_logic.orchestrator import run_full_backup
+                from hecos.hpm.global_backup.core_logic.orchestrator import run_full_backup
                 cfg = bstore.load()
                 dest = cfg.get("destination", "").strip()
                 if not dest:
@@ -114,7 +114,7 @@ def register_routes(app) -> None:
                 # Normalize: TOML stores modules as a list of enabled module names,
                 # but run_full_backup expects a dict {module_name: bool}
                 if isinstance(modules_raw, list):
-                    from hecos.modules.global_backup.core_logic.orchestrator import get_backup_fns
+                    from hecos.hpm.global_backup.core_logic.orchestrator import get_backup_fns
                     all_mods = get_backup_fns().keys()
                     modules_enabled = {mod: (mod in modules_raw) for mod in all_mods}
                 else:
@@ -138,7 +138,7 @@ def register_routes(app) -> None:
     def backup_run_module(module_name: str):
         """Trigger backup of a single module. Returns ZIP download."""
         try:
-            from hecos.modules.global_backup.core_logic.orchestrator import backup_single_module
+            from hecos.hpm.global_backup.core_logic.orchestrator import backup_single_module
             data = backup_single_module(app, module_name)
             if not data or data.get("ok") is False:
                 return jsonify({"ok": False, "error": data.get("error", "Backup failed")}), 500
@@ -226,7 +226,7 @@ def register_routes(app) -> None:
             to restore from history (by filename in dest folder)
         """
         try:
-            from hecos.modules.global_backup.core_logic.orchestrator import restore_from_zip
+            from hecos.hpm.global_backup.core_logic.orchestrator import restore_from_zip
             cfg = bstore.load()
 
             # Determine source of ZIP bytes

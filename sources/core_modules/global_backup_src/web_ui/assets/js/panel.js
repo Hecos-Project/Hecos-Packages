@@ -312,11 +312,25 @@ async function backupDelete(filename) {
     } catch (e) { backupLog('Network error: ' + e.message, 'error'); }
 }
 
-// ── Restore Modal ─────────────────────────────────────────────────────────────
+// ── Restore Modal & Logic ─────────────────────────────────────────────────────────────
 
-async function backupOpenRestoreModal(filename) {
+let pendingRestoreFilename = null;
+let pendingRestoreFile = null;
+
+async function backupOpenRestoreModal(filename, isUpload = false) {
     const overlay = document.getElementById('backup-restore-modal');
     if (!overlay) return;
+
+    if (isUpload) {
+        pendingRestoreFilename = null;
+        pendingRestoreFile = filename; // passing the File object
+    } else {
+        pendingRestoreFilename = filename;
+        pendingRestoreFile = null;
+    }
+
+    let displayTitle = isUpload ? `Upload: ${pendingRestoreFile.name}` : filename;
+
     let modOptions = '';
     try {
         const res = await fetch('/hecos/api/backup/config');
@@ -335,16 +349,16 @@ async function backupOpenRestoreModal(filename) {
             <div class="backup-modal-header"><i class="fas fa-undo"></i> Restore Backup</div>
             <div class="backup-modal-body">
                 <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">
-                    Select modules to restore from <strong>${filename}</strong>.
+                    Select modules to restore from <strong>${displayTitle}</strong>.
                 </p>
                 <div class="backup-modules-grid">${modOptions}</div>
                 <label class="backup-select-all-row">
-                    <input type="checkbox" onchange="backupSelectAll(this)"> Select all
+                    <input type="checkbox" onchange="backupSelectAll(this)" checked> Select all
                 </label>
             </div>
             <div class="backup-modal-footer">
                 <button class="btn btn-secondary" onclick="backupCloseModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="backupConfirmRestore('${filename}')">
+                <button class="btn btn-primary" onclick="backupConfirmRestore()">
                     <i class="fas fa-undo"></i> Restore
                 </button>
             </div>
@@ -361,25 +375,36 @@ function backupSelectAll(cb) {
     document.querySelectorAll('input[name="restore-mod"]').forEach(el => el.checked = cb.checked);
 }
 
-async function backupConfirmRestore(filename) {
+async function backupConfirmRestore() {
     const mods = [...document.querySelectorAll('input[name="restore-mod"]:checked')].map(el => el.value);
     if (mods.length === 0) { backupShowToast('Select at least one module.', 'error'); return; }
     backupCloseModal();
     
     backupClearLog();
-    backupLog('Starting restore from ' + filename + '...', 'info');
+    const targetName = pendingRestoreFilename || (pendingRestoreFile ? pendingRestoreFile.name : 'unknown');
+    backupLog('Starting restore from ' + targetName + '...', 'info');
     document.getElementById('backup-log-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     
     try {
-        const res = await fetch('/hecos/api/backup/restore', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename, modules: mods }),
-        });
+        let res;
+        if (pendingRestoreFile) {
+            const formData = new FormData();
+            formData.append('file', pendingRestoreFile);
+            mods.forEach(m => formData.append('modules', m));
+            res = await fetch('/hecos/api/backup/restore', { method: 'POST', body: formData });
+        } else {
+            res = await fetch('/hecos/api/backup/restore', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: pendingRestoreFilename, modules: mods }),
+            });
+        }
+
         const data = await res.json();
         
         if (data.ok) {
             backupLog('Restore process finished with success flag.', 'success');
+            if (pendingRestoreFile) await backupLoadHistory();
         } else {
             backupLog('Restore finished with errors or failures.', 'error');
             if (data.error) backupLog('Error details: ' + data.error, 'error');
@@ -413,49 +438,11 @@ async function backupConfirmRestore(filename) {
 
 async function backupHandleRestoreUpload(input) {
     if (!input.files.length) return;
-    const formData = new FormData();
-    formData.append('file', input.files[0]);
-    
-    backupClearLog();
-    backupLog('Starting restore from uploaded ZIP...', 'info');
-    document.getElementById('backup-log-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
-    try {
-        const res = await fetch('/hecos/api/backup/restore', { method: 'POST', body: formData });
-        const data = await res.json();
-        
-        if (data.ok) {
-            backupLog('Uploaded restore process finished with success flag.', 'success');
-            await backupLoadHistory();
-        } else {
-            backupLog('Uploaded restore finished with errors.', 'error');
-            if (data.error) backupLog('Error details: ' + data.error, 'error');
-        }
-        
-        if (data.results) {
-            let successCount = 0;
-            let failCount = 0;
-            for (const [mod, r] of Object.entries(data.results)) {
-                if (r.skipped) continue;
-                if (r.ok) {
-                    let fName = mod === 'system_config' ? '(multiple files)' : `${mod}.json`;
-                    backupLog(`Module '${mod}' restored correctly. <-- ${fName}`, 'success');
-                    successCount++;
-                } else {
-                    backupLog(`Module '${mod}' failed to restore: ${r.error || 'Unknown error'}`, 'error');
-                    failCount++;
-                }
-            }
-            backupLog(`--- Summary: ${successCount} modules restored successfully. ---`, 'info');
-            if (failCount > 0) backupLog(`--- Summary: ${failCount} modules failed. ---`, 'warn');
-        }
-        
-        backupLog('For further details, please consult the system logs.', 'info');
-    } catch (e) { 
-        backupLog('Network error: ' + e.message, 'error'); 
-    }
-    input.value = '';
+    const file = input.files[0];
+    input.value = ''; // Reset input to allow re-uploading the same file
+    backupOpenRestoreModal(file, true);
 }
+
 
 // ── Schedule Builder Helpers ──────────────────────────────────────────
 
@@ -470,6 +457,35 @@ function schedOnFreqChange() {
 
 function schedGetActiveDays() {
     return [...document.querySelectorAll('.sched-day-btn.active')].map(el => parseInt(el.dataset.day));
+}
+
+function openBackupTimePicker() {
+    if (typeof HecosWheelPicker === 'undefined') {
+        console.warn('HecosWheelPicker is not available.');
+        return;
+    }
+    const inp = document.getElementById('sched-time');
+    if (!inp) return;
+    
+    // Create a dummy ISO date using today's date and the current input time
+    const today = new Date();
+    const parts = (inp.value || '00:00').split(':');
+    const hh = parts[0] || '00';
+    const mm = parts[1] || '00';
+    const iso = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}T${hh}:${mm}:00`;
+
+    HecosWheelPicker.open({
+        mode: 'time',
+        initial: iso,
+        onConfirm: (resIso) => {
+            const dateObj = new Date(resIso);
+            const h = String(dateObj.getHours()).padStart(2, '0');
+            const m = String(dateObj.getMinutes()).padStart(2, '0');
+            inp.value = `${h}:${m}`;
+            // Trigger the onchange manually to save and update summary
+            inp.dispatchEvent(new Event('change'));
+        }
+    });
 }
 
 function schedToggleDay(el) {

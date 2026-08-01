@@ -31,28 +31,59 @@ def register_module_backup_routes(app) -> None:
 
     @app.route("/hecos/api/history/backup", methods=["GET"], endpoint="mbkp_history_backup")
     def history_backup():
-        """Esporta tutte le sessioni chat e i relativi messaggi come JSON."""
+        """Esporta tutte le sessioni chat e i relativi messaggi come JSON.
+        IMPORTANTE: le sessioni sono in chat_history.db ma i messaggi sono
+        nei vault per-utente in memory/users/*/history.db — li leggiamo separatamente.
+        """
         try:
             from hecos.memory import session_manager
-            import sqlite3
+            from hecos.memory import brain_interface
+            import sqlite3, os, glob
 
             db_path = session_manager.PATH_DB
-            if not __import__("os").path.exists(db_path):
+            if not os.path.exists(db_path):
                 return jsonify({"ok": True, "count": 0, "data": []})
 
+            # 1. Leggi tutte le sessioni da chat_history.db
             with sqlite3.connect(db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 sessions = [dict(r) for r in conn.execute(
                     "SELECT * FROM sessions ORDER BY created_at ASC"
                 ).fetchall()]
 
-                # Attach messages to each session
-                for s in sessions:
-                    msgs = conn.execute(
-                        "SELECT * FROM history WHERE session_id = ? ORDER BY id ASC",
-                        (s["id"],)
-                    ).fetchall()
-                    s["messages"] = [dict(m) for m in msgs]
+            # 2. Raccogli messaggi da TUTTI i vault utente, indicizzati per session_id
+            session_msgs = {}   # { session_id: {"user_id": uid, "messages": [...]} }
+            users_pattern = os.path.join(brain_interface._USERS_DIR, "*", "history.db")
+            for vault_db in glob.glob(users_pattern):
+                uid = os.path.basename(os.path.dirname(vault_db))
+                try:
+                    with sqlite3.connect(vault_db) as vc:
+                        vc.row_factory = sqlite3.Row
+                        rows = vc.execute(
+                            "SELECT id, timestamp, role, message, persona_name, session_id "
+                            "FROM history ORDER BY id ASC"
+                        ).fetchall()
+                    for r in rows:
+                        sid = r["session_id"]
+                        if not sid:
+                            continue
+                        if sid not in session_msgs:
+                            session_msgs[sid] = {"user_id": uid, "messages": []}
+                        session_msgs[sid]["messages"].append({
+                            "id":          r["id"],
+                            "timestamp":   r["timestamp"],
+                            "role":        r["role"],
+                            "message":     r["message"],
+                            "persona_name": r["persona_name"],
+                        })
+                except Exception as ve:
+                    logger.warning(f"[BACKUP] vault read error {vault_db}: {ve}")
+
+            # 3. Unisci messaggi alle sessioni
+            for s in sessions:
+                vault_data = session_msgs.get(s["id"], {"user_id": "unknown", "messages": []})
+                s["messages"] = vault_data["messages"]
+                s["user_id"]  = vault_data["user_id"]
 
             return jsonify({"ok": True, "count": len(sessions), "data": sessions})
         except Exception as e:
@@ -77,52 +108,76 @@ def register_module_backup_routes(app) -> None:
             if not isinstance(sessions, list):
                 return jsonify({"ok": False, "error": "data must be a list"}), 400
 
+            from hecos.memory import brain_interface
+            import os
+
             db_path = session_manager.PATH_DB
             imported_sessions = 0
             imported_messages = 0
 
-            with sqlite3.connect(db_path) as conn:
-                if mode == "replace":
-                    conn.execute("DELETE FROM history")
+            if mode == "replace":
+                # Pulisci sessioni e vault utenti
+                with sqlite3.connect(db_path) as conn:
                     conn.execute("DELETE FROM sessions")
-
-                for s in sessions:
+                import glob
+                users_pattern = os.path.join(brain_interface._USERS_DIR, "*", "history.db")
+                for vdb in glob.glob(users_pattern):
                     try:
-                        new_sid = str(_uuid.uuid4())
-                        now = _dt.now().isoformat()
+                        with sqlite3.connect(vdb) as vc:
+                            vc.execute("DELETE FROM history")
+                    except Exception:
+                        pass
+
+            for s in sessions:
+                try:
+                    new_sid = str(_uuid.uuid4())
+                    now = _dt.now().isoformat()
+
+                    # Inserisci sessione in chat_history.db
+                    with sqlite3.connect(db_path) as conn:
                         conn.execute(
                             """INSERT OR IGNORE INTO sessions
-                               (id, title, created_at, updated_at, privacy_mode, is_incognito)
-                               VALUES (?,?,?,?,?,?)""",
+                               (id, title, created_at, updated_at, privacy_mode, is_incognito, is_archived)
+                               VALUES (?,?,?,?,?,?,?)""",
                             (
                                 new_sid,
                                 s.get("title", "Imported Chat"),
                                 s.get("created_at") or now,
                                 s.get("updated_at") or now,
                                 s.get("privacy_mode", "normal"),
-                                int(s.get("is_incognito", 0))
+                                int(s.get("is_incognito", 0)),
+                                int(s.get("is_archived", 0)),
                             )
                         )
-                        imported_sessions += 1
+                    imported_sessions += 1
 
+                    # Inserisci messaggi nel vault utente corretto
+                    uid = s.get("user_id", "admin")
+                    vault_path = brain_interface._db_path(uid)
+                    if not os.path.exists(vault_path):
+                        # Crea vault se mancante
+                        brain_interface.initialize_user_vault(uid)
+
+                    with sqlite3.connect(vault_path) as vc:
                         for msg in s.get("messages", []):
                             try:
-                                conn.execute(
+                                vc.execute(
                                     """INSERT INTO history
-                                       (session_id, timestamp, role, message)
-                                       VALUES (?,?,?,?)""",
+                                       (session_id, timestamp, role, message, persona_name)
+                                       VALUES (?,?,?,?,?)""",
                                     (
                                         new_sid,
                                         msg.get("timestamp") or now,
                                         msg.get("role", "user"),
                                         msg.get("message") or msg.get("content", ""),
+                                        msg.get("persona_name"),
                                     )
                                 )
                                 imported_messages += 1
                             except Exception as msg_e:
                                 logger.error(f"[BACKUP] history msg error: {msg_e}")
-                    except Exception as se:
-                        logger.error(f"[BACKUP] history session error: {se}")
+                except Exception as se:
+                    logger.error(f"[BACKUP] history session error: {se}")
 
             return jsonify({
                 "ok": True,

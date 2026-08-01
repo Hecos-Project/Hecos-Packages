@@ -8,7 +8,7 @@ DESCRIPTION: APScheduler BackgroundScheduler wrapper for the Global Backup Orche
 import threading
 from datetime import datetime, timezone
 from hecos.core.logging import logger
-from hecos.modules.global_backup.core_logic import store as backup_store
+from hecos.hpm.global_backup.core_logic import store as backup_store
 
 # ── APScheduler import (graceful fallback) ────────────────────────────────────
 try:
@@ -39,14 +39,14 @@ def _run_backup_job() -> None:
         dest = cfg.get("destination", "")
         modules_raw = cfg.get("modules", {})
         if isinstance(modules_raw, list):
-            from hecos.modules.global_backup.core_logic.orchestrator import get_backup_fns
+            from hecos.hpm.global_backup.core_logic.orchestrator import get_backup_fns
             all_mods = get_backup_fns().keys()
             modules_enabled = {mod: (mod in modules_raw) for mod in all_mods}
         else:
             modules_enabled = modules_raw or {}
 
         logger.info("[BACKUP] ⏰ Scheduled backup started.")
-        from hecos.modules.global_backup.core_logic.orchestrator import run_full_backup
+        from hecos.hpm.global_backup.core_logic.orchestrator import run_full_backup
         result = run_full_backup(_app_ref, dest, modules_enabled)
         ts = datetime.now(timezone.utc).isoformat()
         outcome = "ok" if result.get("ok") else "error"

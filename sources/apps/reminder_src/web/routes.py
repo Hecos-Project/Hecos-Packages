@@ -1,4 +1,4 @@
-﻿"""
+"""
 Autonomous API routes for the Reminder package.
 Handles config persistence and ringtone listing.
 Mapped via 'api_routes_file' in hpkg_manifest.toml.
@@ -76,8 +76,8 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
     def reminder_clear_history():
         from hecos.hpm.reminder.main import tools
         store = getattr(tools, "_store", None)  # Fallback logic if needed, but normally store is in hecos.hpm.reminder.store
-        from hecos.hpm.reminder.store import ReminderStore
-        ok = ReminderStore().clear_history()
+        from hecos.hpm.reminder import store as reminder_store
+        ok = reminder_store.clear_history()
         return jsonify({"ok": ok})
 
     # -- POST /api/ext/reminder/<id>/snooze � snooze ---------------------------
@@ -102,12 +102,12 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
     @app.route("/api/ext/reminder/<reminder_id>/interactive", methods=["POST"])
     @login_required
     def reminder_set_interactive(reminder_id):
-        from hecos.hpm.reminder.store import ReminderStore
+        from hecos.hpm.reminder import store as reminder_store
         body = request.get_json(silent=True) or {}
         interactive = body.get("interactive")
         if interactive is None:
             return jsonify({"ok": False, "error": "Missing 'interactive' field"}), 400
-        ok = ReminderStore().update_interactive(reminder_id, bool(interactive))
+        ok = reminder_store.update_interactive(reminder_id, bool(interactive))
         return jsonify({"ok": ok})
 
     # -- GET /hecos/api/ext/sounds/<filename> � stream sound file for browser preview --

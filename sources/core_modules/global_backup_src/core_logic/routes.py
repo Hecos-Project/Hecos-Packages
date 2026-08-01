@@ -1,6 +1,6 @@
-from hecos.modules.global_backup.core_logic.api import register_routes as init_backup_api
-from hecos.modules.global_backup.core_logic.routes_modules import register_module_backup_routes
-from hecos.modules.global_backup.core_logic import scheduler as backup_scheduler
+from hecos.hpm.global_backup.core_logic.api import register_routes as init_backup_api
+from hecos.hpm.global_backup.core_logic.routes_modules import register_module_backup_routes
+from hecos.hpm.global_backup.core_logic import scheduler as backup_scheduler
 from hecos.core.logging import logger
 
 def init_plugin_routes(app, cfg_mgr=None, hecos_root=None, log=None):

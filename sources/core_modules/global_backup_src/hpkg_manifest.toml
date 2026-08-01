@@ -14,6 +14,7 @@ tag = "HPM_BACKUP"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
 readme = "README.md"
 on_load = true
+signature = "ZrqyVgagWmQWsTYhvQ4SQ7ExkRuKPY1sW/u43qcaVUzgaHb2GIiFaxNs1byhz4EA9cme2fkkU5CE+kjpH3fDDA=="
 
 [ui]
 main_panel = "backup_panel"
@@ -36,3 +37,28 @@ has_api_routes = true
 has_system_calls = false
 syscall_notes = ""
 notes = ""
+
+[file_hashes]
+"README.md" = "b15fee871513bd918862c90901197152811aafb413e80c37965f0b7598929b2a"
+"__init__.py" = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+"core_logic/api.py" = "40341ead0879a7a50daab72ea189496ac52cbfd2d5436a4734a936462573a1d2"
+"core_logic/orchestrator.py" = "4ca4ead50b1dacd0de8ae6c85e3fbbc6f6dff18672a7527e0a7f9f6ef3e7c010"
+"core_logic/routes.py" = "90b987b2dd11022905591a07633413370ae829ecad280a2ff13d3b5d4045a403"
+"core_logic/routes_modules.py" = "9a94abc1b7ed70954a922e76073ddbedba0e19de823fb793449a02c14d44ac9f"
+"core_logic/scheduler.py" = "13ca93e363b299e53e770d07e46c4917502ba5ed2ed2928ba7ad4845030c83d9"
+"core_logic/store.py" = "923dd63155fc0877f63c9f50b4c22977ec3bff9ac575c78f7576a6b94fd857d3"
+"core_logic/__init__.py" = "3702d6260141edc310e501f95728918db03e310c7ced2f2360c0301aebe8d586"
+"global_backup/manifest.json" = "2ae6f0d95f1574dac827ec116c14cb94cc513ade3c343ed7bd8f8f150915921d"
+"global_backup/README.md" = "b15fee871513bd918862c90901197152811aafb413e80c37965f0b7598929b2a"
+"global_backup/core_logic/api.py" = "5c552196333d1e5d9685881b4cb61d273cc7aace0491c16d4aeac42015470cf4"
+"global_backup/core_logic/backup_config.toml" = "6296f4ef26f11dd518fd39d5cac7c4c79d6a6986ba1105dc20aaed201fc2aa3a"
+"global_backup/core_logic/orchestrator.py" = "b87b2fd3bd1dc4eaf11f46dbb6916a097e9ae30ef3ab90c009bd22626c8c9f67"
+"global_backup/core_logic/routes.py" = "f52c2ab7f2c05e0d79c5ec3bc56db39f2c4d9fef4e2e244d08bd3a57d24c1396"
+"global_backup/core_logic/routes_modules.py" = "379d639fae834da06e5a61a9b04dc3bdf16274dcad3fa10ae396554cbedfe409"
+"global_backup/core_logic/scheduler.py" = "3b129c0d9b294f071a6c556a6172c71b8353892f44a26ac74472b9f1908f62e6"
+"global_backup/core_logic/store.py" = "1cf69c8c9b35bc253bc9ca815bb19bf2e1afff095d886f777edb55a89104d939"
+"global_backup/core_logic/__init__.py" = "aef3f0082c469f658efa94e149a77fe95d3d5db5206e2b9ed3fd3f4925d30687"
+"global_backup/web_ui/assets/js/panel.js" = "154330101ff43a97d58ccb6bacae06e539a0331c58dcdeed0d6dbad1f716feb9"
+"global_backup/web_ui/templates/config_global_backup.html" = "72b3108871e677b3c04c9fc4dd5404b7f9094ee5b311461a869c908fe55d8fb7"
+"web_ui/assets/js/panel.js" = "d163a5cdca4f13e0c85cfc10e4efa62714e21b361716cf6bd9f07e9d3d08c458"
+"web_ui/templates/config_global_backup.html" = "72b3108871e677b3c04c9fc4dd5404b7f9094ee5b311461a869c908fe55d8fb7"
