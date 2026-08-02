@@ -1,0 +1,107 @@
+﻿{
+  "name": "Hecos MCP Store",
+  "version": "1.0.0",
+  "description": "Official catalog of MCP servers compatible with Hecos mcp_bridge.",
+  "mcp_servers": [
+    {
+      "id": "filesystem",
+      "name": "Filesystem",
+      "description": "Read and write files on the local filesystem. Gives Hecos access to any directory you specify.",
+      "runtime": "npx",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"],
+      "env": {},
+      "homepage": "https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem"
+    },
+    {
+      "id": "fetch",
+      "name": "Fetch (Web Access)",
+      "description": "Lets Hecos fetch URLs and read web pages. Essential for web research.",
+      "runtime": "npx",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"],
+      "env": {},
+      "homepage": "https://github.com/modelcontextprotocol/servers/tree/main/src/fetch"
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "description": "Browse repositories, issues, pull requests, and code on GitHub via the API.",
+      "runtime": "npx",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": ""},
+      "homepage": "https://github.com/modelcontextprotocol/servers/tree/main/src/github"
+    },
+    {
+      "id": "sqlite",
+      "name": "SQLite",
+      "description": "Query and manipulate a local SQLite database.",
+      "runtime": "uvx",
+      "command": "uvx",
+      "args": ["mcp-server-sqlite", "--db-path", "/path/to/database.db"],
+      "env": {},
+      "homepage": "https://github.com/modelcontextprotocol/servers/tree/main/src/sqlite"
+    },
+    {
+      "id": "brave-search",
+      "name": "Brave Search",
+      "description": "Perform web searches using the Brave Search API. Requires a free Brave API key.",
+      "runtime": "npx",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {"BRAVE_API_KEY": ""},
+      "homepage": "https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search"
+    },
+    {
+      "id": "google-drive",
+      "name": "Google Drive",
+      "description": "Access and search Google Drive files. Requires Google OAuth credentials.",
+      "runtime": "npx",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-gdrive"],
+      "env": {},
+      "homepage": "https://github.com/modelcontextprotocol/servers/tree/main/src/gdrive"
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "description": "Read channels and send messages on Slack. Requires a Slack Bot Token.",
+      "runtime": "npx",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": {"SLACK_BOT_TOKEN": "", "SLACK_TEAM_ID": ""},
+      "homepage": "https://github.com/modelcontextprotocol/servers/tree/main/src/slack"
+    },
+    {
+      "id": "memory",
+      "name": "Memory (Knowledge Graph)",
+      "description": "A persistent knowledge graph. Lets Hecos remember facts about entities and their relationships.",
+      "runtime": "npx",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {},
+      "homepage": "https://github.com/modelcontextprotocol/servers/tree/main/src/memory"
+    },
+    {
+      "id": "puppeteer",
+      "name": "Puppeteer (Browser Automation)",
+      "description": "Control a real Chrome/Chromium browser. Hecos can take screenshots, navigate pages, and fill forms.",
+      "runtime": "npx",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
+      "env": {},
+      "homepage": "https://github.com/modelcontextprotocol/servers/tree/main/src/puppeteer"
+    },
+    {
+      "id": "postgres",
+      "name": "PostgreSQL",
+      "description": "Connect to a PostgreSQL database and run SQL queries.",
+      "runtime": "npx",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost/mydb"],
+      "env": {},
+      "homepage": "https://github.com/modelcontextprotocol/servers/tree/main/src/postgres"
+    }
+  ]
+}

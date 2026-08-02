@@ -51,6 +51,7 @@ class MCPBridgeConfig(BaseModel):
     """Root configuration for the MCP Bridge package."""
     enabled: bool = True
     lazy_load: bool = False
+    stores: List[str] = Field(default_factory=lambda: ["https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/mcp_store.json"])
     servers: Dict[str, MCPServerConfig] = Field(default_factory=dict)
 
 
