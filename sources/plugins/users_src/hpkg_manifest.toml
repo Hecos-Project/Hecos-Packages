@@ -10,14 +10,14 @@ target_dir = "hpm"
 plugin_dir = "."
 lazy_load = true
 is_class_based = true
-tag = "USERS_TOOLS"
+tag = "USERS"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
 readme = "README.md"
 
 [capabilities]
 llm_tools = [
-    "USERS__get_profile",
-    "USERS__update_profile",
+    "get_profile",
+    "update_profile",
 ]
 slash_commands = []
 has_widget = false

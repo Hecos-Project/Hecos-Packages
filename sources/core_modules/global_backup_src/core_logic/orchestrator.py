@@ -78,7 +78,7 @@ def backup_flows(app) -> dict | None:
 
 def backup_users(app) -> dict | None:
     """Export all users (no passwords)."""
-    return _call_internal(app, "GET", "/hecos/api/backup_module/users/backup")
+    return _call_internal(app, "GET", "/hecos/api/users/backup")
 
 
 def backup_lists(app) -> dict | None:
@@ -124,7 +124,7 @@ def restore_flows(app, data: dict) -> dict:
 
 
 def restore_users(app, data: dict) -> dict:
-    resp = _call_internal(app, "POST", "/hecos/api/backup_module/users/restore", data)
+    resp = _call_internal(app, "POST", "/hecos/api/users/restore", data)
     return resp or {"ok": False, "error": "No response from users restore"}
 
 
