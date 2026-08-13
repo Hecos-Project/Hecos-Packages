@@ -1,149 +1,6 @@
 // ── Flows API Calls ───────────────────────────────────────────────
+let _allFlows = [];
 
-// ── Sidebar order persistence ─────────────────────────────────────
-const FLOWS_ORDER_KEY = 'hecos_flows_order';
-
-function getSavedOrder() {
-  try { return JSON.parse(localStorage.getItem(FLOWS_ORDER_KEY)) || []; }
-  catch { return []; }
-}
-
-function saveOrder(ids) {
-  localStorage.setItem(FLOWS_ORDER_KEY, JSON.stringify(ids));
-}
-
-function sortFlowsByOrder(flows) {
-  const order = getSavedOrder();
-  if (!order.length) return flows;
-  const ranked = [];
-  const remaining = [...flows];
-  order.forEach(id => {
-    const idx = remaining.findIndex(f => f.id === id);
-    if (idx !== -1) ranked.push(remaining.splice(idx, 1)[0]);
-  });
-  return [...ranked, ...remaining]; // unseen flows go to end
-}
-
-async function loadFlowsList() {
-  try {
-    const res = await fetch('/api/flows/list');
-    const d = await res.json();
-    if (!d.ok) throw new Error(d.error);
-    renderSidebar(d.flows);
-  } catch(e) { toast('error','Could not load flows: '+e.message); }
-}
-
-function renderSidebar(flows) {
-  const list = document.getElementById('flows-list');
-  const empty = document.getElementById('flows-sidebar-empty');
-  if(!list) return;
-  
-  // Rimuove solo i flow-item per non distruggere l'elemento "empty" dal DOM
-  list.querySelectorAll('.flow-item').forEach(el => el.remove());
-
-  if (!flows.length) {
-    if(empty) empty.style.display='flex';
-    return;
-  }
-  if(empty) empty.style.display = 'none';
-
-  // Apply saved order
-  const sorted = sortFlowsByOrder(flows);
-
-  sorted.forEach(f => {
-    const el = document.createElement('div');
-    el.className = 'flow-item' + (f.id === currentFlowId ? ' active' : '');
-    el.dataset.id = f.id;
-    el.dataset.enabled = f.enabled ? 'true' : 'false';
-    el.draggable = true;
-    el.innerHTML = `
-      <span class="flow-drag-handle" title="${window.t('flows_drag_to_reorder')}">⠿</span>
-      <div class="flow-item-name">
-        <span class="flow-status-indicator ${f.enabled ? 'enabled' : 'disabled'}" title="${f.enabled ? 'Enabled' : 'Disabled'}"></span>
-        ${f.name}
-      </div>
-      <div class="flow-item-meta">
-        <span><i class="fas fa-bolt" style="font-size:.6rem"></i> ${f.trigger_type}${f.trigger_expr?' ('+f.trigger_expr+')':''}</span>
-        <span>${f.step_count} steps</span>
-        <button class="flow-item-del" title="${window.t('flows_delete_flow')}" data-flow-id="${f.id}"><i class="fas fa-trash"></i></button>
-      </div>`;
-    el.querySelector('.flow-item-del').addEventListener('click', e => {
-      e.stopPropagation();
-      deleteFlowById(f.id, f.name);
-    });
-    el.addEventListener('click', e => {
-      if (e.target.closest('.flow-drag-handle') || e.target.closest('.flow-item-del')) return;
-      selectFlow(f.id);
-    });
-    list.appendChild(el);
-  });
-
-  // Re-apply current running state on the new DOM
-  _applyRunningBadges(_lastKnownRunning);
-
-  initSidebarDragSort();
-}
-
-// ── Sidebar drag-to-reorder ───────────────────────────────────────
-function initSidebarDragSort() {
-  const list = document.getElementById('flows-list');
-  if (!list) return;
-
-  let dragSrc = null;
-
-  list.querySelectorAll('.flow-item[draggable]').forEach(item => {
-    item.addEventListener('dragstart', e => {
-      dragSrc = item;
-      item.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', item.dataset.id);
-    });
-
-    item.addEventListener('dragend', () => {
-      item.classList.remove('dragging');
-      list.querySelectorAll('.flow-item').forEach(el => {
-        el.classList.remove('drag-over-top', 'drag-over-bottom');
-      });
-      dragSrc = null;
-      // Save the new order
-      const ids = [...list.querySelectorAll('.flow-item[data-id]')].map(el => el.dataset.id);
-      saveOrder(ids);
-    });
-
-    item.addEventListener('dragover', e => {
-      e.preventDefault();
-      if (!dragSrc || dragSrc === item) return;
-      e.dataTransfer.dropEffect = 'move';
-      list.querySelectorAll('.flow-item').forEach(el => {
-        el.classList.remove('drag-over-top', 'drag-over-bottom');
-      });
-      const rect = item.getBoundingClientRect();
-      const mid  = rect.top + rect.height / 2;
-      if (e.clientY < mid) {
-        item.classList.add('drag-over-top');
-      } else {
-        item.classList.add('drag-over-bottom');
-      }
-    });
-
-    item.addEventListener('dragleave', () => {
-      item.classList.remove('drag-over-top', 'drag-over-bottom');
-    });
-
-    item.addEventListener('drop', e => {
-      e.preventDefault();
-      if (!dragSrc || dragSrc === item) return;
-      const rect = item.getBoundingClientRect();
-      const mid  = rect.top + rect.height / 2;
-      if (e.clientY < mid) {
-        list.insertBefore(dragSrc, item);
-      } else {
-        item.after(dragSrc);
-      }
-      item.classList.remove('drag-over-top', 'drag-over-bottom');
-    });
-  });
-}
 
 async function selectFlow(flowId) {
   try {
@@ -165,7 +22,7 @@ async function selectFlow(flowId) {
       tlInput.title = `ID: ${flowId}`;
     }
 
-    ['btn-run','btn-save','btn-delete','btn-palette','btn-export'].forEach(id => {
+    ['btn-run','btn-save','btn-delete','btn-palette','btn-export','btn-flow-settings'].forEach(id => {
       const btn = document.getElementById(id);
       if (btn) btn.disabled = false;
     });
@@ -183,7 +40,10 @@ async function selectFlow(flowId) {
     try {
       const sres = await fetch(`/api/flows/${flowId}/status`);
       const sd = await sres.json();
-      if (sd.ok && sd.running) setRunningState(true, sd.run_id);
+      if (sd.ok && sd.running) {
+        setRunningState(true, sd.run_id);
+        if (typeof startLogStream === 'function') startLogStream(sd.run_id, () => setRunningState(false));
+      }
       else setRunningState(false);
     } catch { setRunningState(false); }
 
@@ -251,191 +111,6 @@ async function saveCurrentFlow(silent = false) {
   } catch(e) { 
     if (!silent) toast('error','Save failed: '+e.message); 
   }
-}
-
-// ── Sidebar running-state badges ──────────────────────────────────
-
-/** Last known running map: { flow_id: run_id } – shared across polling & setRunningState */
-let _lastKnownRunning = {};
-
-/**
- * Update the sidebar spinner badges based on a running-map snapshot.
- * Does NOT modify _lastKnownRunning — call this purely for DOM sync.
- */
-function _applyRunningBadges(runningMap) {
-  const list = document.getElementById('flows-list');
-  if (!list) return;
-  list.querySelectorAll('.flow-item[data-id]').forEach(el => {
-    const flowId = el.dataset.id;
-    const isRunning = !!runningMap[flowId];
-    el.classList.toggle('is-running', isRunning);
-    const indicator = el.querySelector('.flow-status-indicator');
-    if (!indicator) return;
-    if (isRunning) {
-      indicator.className = 'flow-status-indicator running';
-      indicator.title = 'Running';
-    } else {
-      // Restore original enabled/disabled state from the item's data
-      // We peek at whether the dot was enabled before running started
-      const wasEnabled = el.dataset.enabled !== 'false';
-      indicator.className = 'flow-status-indicator ' + (wasEnabled ? 'enabled' : 'disabled');
-      indicator.title = wasEnabled ? 'Enabled' : 'Disabled';
-    }
-  });
-}
-
-// ── Status polling ────────────────────────────────────────────────
-let _statusPollTimer = null;
-
-async function _pollRunningFlows() {
-  try {
-    const res = await fetch('/api/flows/running');
-    if (!res.ok) return;
-    const d = await res.json();
-    if (!d.ok) return;
-    _lastKnownRunning = d.running || {};
-    _applyRunningBadges(_lastKnownRunning);
-
-    // If we are viewing a flow that is no longer running, sync the Run/Stop button
-    if (currentFlowId && !_lastKnownRunning[currentFlowId] && _currentRunId) {
-      setRunningState(false);
-    }
-
-    // Stop polling automatically when nothing is running
-    if (Object.keys(_lastKnownRunning).length === 0) {
-      stopStatusPolling();
-    }
-  } catch { /* network hiccup – stay silent */ }
-}
-
-function startStatusPolling() {
-  if (_statusPollTimer) return; // Already polling
-  _statusPollTimer = setInterval(_pollRunningFlows, 2000);
-  _pollRunningFlows(); // Immediate first tick
-}
-
-function stopStatusPolling() {
-  if (_statusPollTimer) {
-    clearInterval(_statusPollTimer);
-    _statusPollTimer = null;
-  }
-}
-
-// ── Run state helpers ────────────────────────────────────────────
-let _currentRunId = null;
-
-function setRunningState(running, runId) {
-  _currentRunId = running ? runId : null;
-  const btn = document.getElementById('btn-run');
-  if (!btn) return;
-  if (running) {
-    btn.classList.add('running');
-    btn.innerHTML = '<i class="fas fa-stop-circle"></i> Stop';
-    btn.title = 'Click to stop the running flow';
-    // Start global polling so all sidebar items light up correctly
-    startStatusPolling();
-  } else {
-    btn.classList.remove('running');
-    btn.innerHTML = '<i class="fas fa-play"></i> Run';
-    btn.title = 'Execute this flow';
-    // Trigger one last poll to clear badges, then polling auto-stops when idle
-    _pollRunningFlows();
-  }
-}
-
-async function runCurrentFlow() {
-  if (!currentFlowId) return;
-  await saveCurrentFlow(true); // Ensure latest changes are saved before running
-
-  // If already running — act as STOP
-  if (_currentRunId) {
-    try {
-      const res = await fetch(`/api/flows/${currentFlowId}/stop`, { method: 'POST' });
-      const d = await res.json();
-      if (d.ok) {
-        toast('info', '⏹ Stop signal sent — flow will halt after current step.');
-      } else {
-        toast('error', 'Could not stop: ' + (d.error || 'unknown'));
-      }
-    } catch(e) { toast('error', 'Stop failed: ' + e.message); }
-    return;
-  }
-
-  try {
-    const res = await fetch(`/api/flows/${currentFlowId}/run`, { method: 'POST' });
-    const d = await res.json();
-
-    // 409 = already running
-    if (res.status === 409) {
-      toast('info', '⚠️ Flow is already running (run: ' + d.run_id + ')');
-      // Reconnect to existing stream
-      setRunningState(true, d.run_id);
-      const logTabBtn = document.querySelector('.tab-btn[data-tab="log"]');
-      if (logTabBtn) logTabBtn.click();
-      if (typeof startLogStream === 'function') startLogStream(d.run_id);
-      return;
-    }
-
-    if (!d.ok) throw new Error(d.error);
-
-    setRunningState(true, d.run_id);
-    toast('info', `▶ Flow started (run: ${d.run_id})`);
-
-    // Switch to log tab
-    const logTabBtn = document.querySelector('.tab-btn[data-tab="log"]');
-    if (logTabBtn) logTabBtn.click();
-
-    if (typeof startLogStream === 'function') startLogStream(d.run_id, () => setRunningState(false));
-  } catch(e) { toast('error', 'Run failed: ' + e.message); }
-}
-
-async function deleteCurrentFlow() {
-  if (!currentFlowId) { toast('info', window.t('flows_select_first')); return; }
-  await deleteFlowById(currentFlowId, currentFlowData?.name || currentFlowId);
-}
-
-async function deleteFlowById(flowId, flowName) {
-  const bg = document.getElementById('confirm-modal-bg');
-  const text = document.getElementById('confirm-modal-text');
-  const yesBtn = document.getElementById('confirm-modal-yes');
-  
-  if(bg && text && yesBtn) {
-    text.innerText = window.t('flows_confirm_delete_text').replace('{name}', flowName);
-    bg.style.display = 'flex';
-    yesBtn.onclick = async () => {
-      bg.style.display = 'none';
-      await _doDeleteFlowById(flowId);
-    };
-  } else {
-    if (!confirm(window.t('flows_confirm_delete_text').replace('{name}', flowName))) return;
-    await _doDeleteFlowById(flowId);
-  }
-}
-
-async function _doDeleteFlowById(flowId) {
-  try {
-    const res = await fetch(`/api/flows/${flowId}`, {method:'DELETE'});
-    const d = await res.json();
-    if (!d.ok) throw new Error(d.error);
-
-    if (currentFlowId === flowId) {
-      currentFlowId = null;
-      currentFlowData = null;
-      if (cmEditor) cmEditor.setValue('');
-      // Clear ReactFlow canvas via bridge
-      if (typeof renderCanvasFromFlow === 'function') renderCanvasFromFlow({ pipeline: [] });
-      const tlInput = document.getElementById('flow-title');
-      if (tlInput) tlInput.value='';
-      ['btn-run','btn-save','btn-delete','btn-export'].forEach(id => {
-        const btn = document.getElementById(id);
-        if (btn) btn.disabled=true;
-      });
-      if (typeof renderTimeline === 'function') renderTimeline(null);
-    }
-
-    toast('ok', window.t('flows_deleted_toast'));
-    loadFlowsList();
-  } catch(e) { toast('error', window.t('flows_delete_failed_toast').replace('{error}', e.message)); }
 }
 
 // ── Export / Import ──────────────────────────────────────────────
@@ -666,34 +341,59 @@ function newEmptyCanvas() {
 // ── Autosave Interval ─────────────────────────────────────────────
 let autosaveTimer = null;
 
+// ── Keyboard Shortcuts (Hotkeys) ──────────────────────────────────
+function initHotkeys() {
+  document.addEventListener('keydown', function(e) {
+    const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+    
+    if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      saveCurrentFlow();
+    }
+    
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      runCurrentFlow();
+    }
+    
+    if (e.key === 'Tab') {
+      if (!isInput || e.target.id === 'flows-search-input') {
+        e.preventDefault();
+        togglePalette();
+      }
+    }
+    
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (!isInput) {
+        if (typeof deleteSelectedNodes === 'function') {
+           deleteSelectedNodes();
+        }
+      }
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initHotkeys);
+
+// ── Autosave ──────────────────────────────────────────────────────
 async function initFlowsAutosave() {
   try {
     const res = await fetch('/hecos/config');
     const cfg = await res.json();
     const flowsCfg = cfg?.plugins?.FLOWS || {};
-    // Default: autosave enabled every 1 minute unless config says otherwise
-    const enabled = flowsCfg.autosave_enabled !== false; // true by default
+    const enabled = flowsCfg.autosave_enabled !== false;
     const intervalMinutes = flowsCfg.autosave_interval_minutes || 1;
     if (enabled) {
       const ms = intervalMinutes * 60000;
       autosaveTimer = setInterval(() => {
         const saveBtn = document.getElementById('btn-save');
-        if (currentFlowId && saveBtn && !saveBtn.disabled) {
-          saveCurrentFlow(true);
-        }
+        if (currentFlowId && saveBtn && !saveBtn.disabled) saveCurrentFlow(true);
       }, ms);
-      console.log(`[Flows] Autosave enabled: every ${intervalMinutes} min`);
-    } else {
-      console.log('[Flows] Autosave disabled by config.');
     }
   } catch(e) {
-    console.warn('[Flows] Could not init autosave', e);
-    // Fallback: enable autosave every 1 min even if config fetch fails
     autosaveTimer = setInterval(() => {
       const saveBtn = document.getElementById('btn-save');
-      if (currentFlowId && saveBtn && !saveBtn.disabled) {
-        saveCurrentFlow(true);
-      }
+      if (currentFlowId && saveBtn && !saveBtn.disabled) saveCurrentFlow(true);
     }, 60000);
   }
 }
@@ -701,3 +401,4 @@ async function initFlowsAutosave() {
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(initFlowsAutosave, 1000);
 });
+

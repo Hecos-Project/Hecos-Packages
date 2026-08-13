@@ -11,7 +11,7 @@ export default defineConfig({
       fileName: 'flows_canvas',
       formats: ['iife'],
     },
-    outDir: resolve(__dirname, '../dist'),
+    outDir: resolve(__dirname, '../../dist'),
     emptyOutDir: false,
     rollupOptions: {
       output: {

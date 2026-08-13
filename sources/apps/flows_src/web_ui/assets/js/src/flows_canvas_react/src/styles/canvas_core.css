@@ -1,0 +1,120 @@
+/* ── Hecos Flows — Canvas & Core Styles ─────────────────────────────────── */
+
+:root {
+  --rf-bg:           #0a0a14;
+  --rf-dot:          #1a1a2e;
+  --rf-grid:         #111128;
+
+  --node-shadow:     0 4px 24px rgba(0,0,0,0.6);
+  --node-radius:     10px;
+  --node-border:     1.5px solid rgba(255,255,255,0.08);
+
+  /* Category colors */
+  --c-trigger:       #4c1d95;
+  --c-trigger-glow:  #7c3aed;
+  --c-action:        #0c4a6e;
+  --c-action-glow:   #0ea5e9;
+  --c-logic:         #78350f;
+  --c-logic-glow:    #f59e0b;
+  --c-ai:            #581c87;
+  --c-ai-glow:       #c026d3;
+  --c-http:          #134e4a;
+  --c-http-glow:     #14b8a6;
+  --c-delay:         #1e1b4b;
+  --c-delay-glow:    #818cf8;
+  --c-var:           #14532d;
+  --c-var-glow:      #22c55e;
+
+  /* Execution states */
+  --state-running:   #22c55e;
+  --state-done:      #6b7280;
+  --state-error:     #ef4444;
+}
+
+/* ── ReactFlow canvas background ────────────────────────────────────────── */
+.react-flow {
+  background-color: var(--rf-bg) !important;
+}
+.react-flow__background {
+  opacity: 0.6;
+}
+
+/* Cursor overrides for modes */
+.rf-mode-select .react-flow__pane {
+  cursor: crosshair !important;
+}
+.rf-mode-hand .react-flow__pane {
+  cursor: grab !important;
+}
+.rf-mode-hand .react-flow__pane:active {
+  cursor: grabbing !important;
+}
+
+/* ── Handles ─────────────────────────────────────────────────────────────── */
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  background: #1a1a2e;
+  transition: background 0.15s, border-color 0.15s;
+}
+.react-flow__handle:hover {
+  background: #00d4ff66;
+  border-color: #00d4ff;
+}
+.react-flow__handle-right { right: -5px; }
+.react-flow__handle-left  { left: -5px; }
+
+/* ── Edges / connections ─────────────────────────────────────────────────── */
+.react-flow__edge-path {
+  stroke: rgba(0,212,255,0.35) !important;
+  stroke-width: 2 !important;
+}
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: rgba(0,212,255,0.8) !important;
+}
+
+/* ── MiniMap ─────────────────────────────────────────────────────────────── */
+.react-flow__minimap {
+  background: rgba(10,10,20,0.9) !important;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.react-flow__minimap-mask {
+  fill: rgba(0, 0, 0, 0.6) !important;
+  stroke: rgba(0, 212, 255, 0.5) !important;
+  stroke-width: 1.5px !important;
+}
+
+/* ── Controls ────────────────────────────────────────────────────────────── */
+.react-flow__controls {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.react-flow__controls-button {
+  background: rgba(10,10,20,0.9) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  fill: rgba(255,255,255,0.5) !important;
+}
+.react-flow__controls-button:hover {
+  background: rgba(30,30,60,0.95) !important;
+  fill: #fff !important;
+}
+
+/* ── Empty canvas hint ───────────────────────────────────────────────────── */
+.rf-empty-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: rgba(255,255,255,0.2);
+  font-family: 'Inter', sans-serif;
+  gap: 10px;
+  width: 100%;
+  text-align: center;
+}
+.rf-empty-hint i { font-size: 2.5rem; }
+.rf-empty-hint p { font-size: 0.85rem; text-align: center; line-height: 1.6; }

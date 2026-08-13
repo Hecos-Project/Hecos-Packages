@@ -1,0 +1,343 @@
+/* ════════════════════════════════════════════════════════════════
+   Hecos Flows — Timeline (Video-Editor Style)
+   Applies to:
+     - Tab timeline (#tab-timeline / #timeline-wrap)
+     - Canvas overlay bottom (#canvas-timeline-panel)
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Overlay container overrides for bottom timeline ─────────── */
+#canvas-timeline-panel {
+  left: 15px; right: 15px; bottom: 15px;
+  height: 220px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#canvas-timeline-panel.closed {
+  transform: translateY(calc(100% + 20px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Tab timeline wrapper ─────────────────────────────────────── */
+#timeline-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Header info bar ──────────────────────────────────────────── */
+.tl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--flows-border);
+  background: rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+  gap: 10px;
+  font-size: 0.72rem;
+}
+.tl-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: rgba(255,255,255,0.55);
+  font-family: 'JetBrains Mono', monospace;
+  overflow: hidden;
+}
+.tl-header-left > i { color: var(--flows-accent); font-size: 0.9rem; flex-shrink: 0; }
+.tl-header-title {
+  font-weight: 700;
+  color: var(--flows-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+.tl-header-sep {
+  color: rgba(255,255,255,0.2);
+  flex-shrink: 0;
+}
+.tl-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255,255,255,0.6);
+  white-space: nowrap;
+}
+.tl-stat i { font-size: 0.65rem; color: var(--flows-accent2); }
+
+/* ── Time ruler ───────────────────────────────────────────────── */
+.tl-ruler {
+  height: 30px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+.tl-ruler-tick {
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  pointer-events: none;
+  transform: translateX(-50%);
+  gap: 3px;
+}
+.tl-ruler-tick-major .tl-ruler-line { height: 10px; background: rgba(255,255,255,0.4); width: 1px; }
+.tl-ruler-tick-minor .tl-ruler-line { height: 5px; background: rgba(255,255,255,0.15); width: 1px; }
+.tl-ruler-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.5);
+  white-space: nowrap;
+}
+/* Playhead (current execution position) */
+.tl-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--flows-accent);
+  box-shadow: 0 0 8px var(--flows-accent);
+  z-index: 10;
+  left: 0;
+  transition: left 0.3s ease;
+  pointer-events: none;
+}
+.tl-playhead::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -4px;
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 8px solid var(--flows-accent);
+}
+
+/* ── Track wrapper (scrollable) ───────────────────────────────── */
+.tl-track-wrap {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  scroll-behavior: smooth;
+}
+.tl-track-wrap::-webkit-scrollbar { height: 5px; }
+.tl-track-wrap::-webkit-scrollbar-track { background: transparent; }
+.tl-track-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+
+/* ── Track row (holds node cards + connectors) ────────────────── */
+.tl-track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: max-content;
+  height: 100%;
+}
+
+/* ── Node card ────────────────────────────────────────────────── */
+.tl-node-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 160px;
+  min-height: 100px;
+  background: rgba(15, 20, 35, 0.9);
+  border: 1.5px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 10px 11px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  flex-shrink: 0;
+  user-select: none;
+  overflow: hidden;
+}
+.tl-node-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9px;
+  background: transparent;
+  transition: background 0.2s;
+  pointer-events: none;
+}
+.tl-node-card:hover {
+  border-color: rgba(255,255,255,0.2);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  transform: translateY(-2px);
+}
+.tl-node-card:hover::before { background: rgba(255,255,255,0.03); }
+
+/* Category accent line at top */
+.tl-node-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 12px; right: 12px;
+  height: 2px;
+  border-radius: 0 0 3px 3px;
+  background: var(--tl-cat-color, rgba(255,255,255,0.2));
+  transition: background 0.2s;
+}
+
+/* ── Execution states ─────────────────────────────────────────── */
+.tl-node-card.running {
+  border-color: var(--flows-accent) !important;
+  box-shadow: 0 0 20px rgba(0,212,255,0.4), 0 4px 20px rgba(0,0,0,0.4) !important;
+  animation: tl-pulse-running 1s ease-in-out infinite alternate;
+  transform: translateY(-3px);
+}
+@keyframes tl-pulse-running {
+  from { box-shadow: 0 0 10px rgba(0,212,255,0.2), 0 4px 20px rgba(0,0,0,0.4); }
+  to   { box-shadow: 0 0 28px rgba(0,212,255,0.6), 0 4px 20px rgba(0,0,0,0.4); }
+}
+.tl-node-card.done {
+  border-color: var(--flows-success) !important;
+  box-shadow: 0 0 12px rgba(34,197,94,0.2) !important;
+}
+.tl-node-card.error {
+  border-color: var(--flows-danger) !important;
+  box-shadow: 0 0 12px rgba(239,68,68,0.2) !important;
+}
+
+/* ── Category colors ──────────────────────────────────────────── */
+.tl-node-card[data-cat="trigger"] { --tl-cat-color: #7c3aed; }
+.tl-node-card[data-cat="logic"]   { --tl-cat-color: #b45309; }
+.tl-node-card[data-cat="audio"]   { --tl-cat-color: #0e7490; }
+.tl-node-card[data-cat="action"]  { --tl-cat-color: #0284c7; }
+.tl-node-card[data-cat="http"]    { --tl-cat-color: #14b8a6; }
+.tl-node-card[data-cat="var"]     { --tl-cat-color: #22c55e; }
+
+/* ── Node card inner content ──────────────────────────────────── */
+.tl-card-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.tl-card-icon {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  background: var(--tl-cat-color, rgba(255,255,255,0.1));
+  opacity: 0.85;
+  color: #fff;
+}
+.tl-card-meta {
+  display: flex; flex-direction: column; gap: 2px;
+  overflow: hidden; min-width: 0;
+}
+.tl-card-num {
+  font-size: 0.55rem;
+  color: rgba(255,255,255,0.3);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+}
+.tl-card-action {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tl-card-id {
+  font-size: 0.58rem;
+  color: rgba(255,255,255,0.35);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tl-card-params {
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.4);
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.5;
+  margin-top: 2px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tl-card-output {
+  font-size: 0.58rem;
+  color: rgba(0,212,255,0.6);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tl-card-note {
+  font-size: 0.58rem;
+  color: rgba(255,200,0,0.5);
+  font-style: italic;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tl-card-timing {
+  font-size: 0.58rem;
+  color: rgba(255,255,255,0.25);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: auto;
+  padding-top: 4px;
+}
+.tl-card-timing.active { color: var(--flows-accent); }
+
+/* ── Connector arrow between nodes ───────────────────────────── */
+.tl-connector {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  color: rgba(0,212,255,0.3);
+  font-size: 1rem;
+  justify-content: center;
+  position: relative;
+}
+.tl-connector::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 1.5px;
+  background: rgba(0,212,255,0.2);
+  top: 50%;
+  transform: translateY(-50%);
+}
+.tl-connector i {
+  position: relative;
+  z-index: 1;
+  background: var(--flows-bg, #080d14);
+  padding: 0 2px;
+  font-size: 0.55rem;
+  color: rgba(0,212,255,0.5);
+}
+
+/* ── Empty state ─────────────────────────────────────────────── */
+.timeline-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--flows-muted);
+  font-size: .85rem;
+  padding: 2rem;
+  text-align: center;
+}

@@ -26,12 +26,20 @@ const bridge = {
     if (this._api) this._api.setNodeState(stepId, state);
   },
 
+  setNodeAudioState(stepId, isPlaying) {
+    if (this._api) this._api.setNodeAudioState(stepId, isPlaying);
+  },
+
   resetNodeStates() {
     if (this._api) this._api.resetNodeStates();
   },
 
   deleteSelectedNodes() {
     if (this._api) this._api.deleteSelectedNodes();
+  },
+
+  setInteractionMode(mode) {
+    if (this._api) this._api.setInteractionMode(mode);
   },
 
   /** Called by flows_editor.js to be notified when canvas graph changes */

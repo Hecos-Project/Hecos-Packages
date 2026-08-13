@@ -9,6 +9,8 @@ import os
 import re
 import yaml
 import datetime
+import sqlite3
+import json
 from typing import Optional, Dict, List, Any
 
 from hecos.core.logging import logger
@@ -33,6 +35,155 @@ def _get_flows_dir() -> str:
         flows_dir = os.path.join(os.getcwd(), "workspace", "flows")
     os.makedirs(flows_dir, exist_ok=True)
     return flows_dir
+
+
+# ── Global Variables DB (KV Store) ──────────────────────────────────────────────
+
+def _get_globals_db_path() -> str:
+    return os.path.join(_get_flows_dir(), "flows_globals.db")
+
+def _init_globals_db():
+    db_path = _get_globals_db_path()
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS global_vars (
+            key TEXT PRIMARY KEY,
+            value TEXT,
+            updated_at TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def set_global_variable(key: str, value: Any) -> bool:
+    """Save a global variable (auto-serialized to JSON)."""
+    _init_globals_db()
+    try:
+        val_str = json.dumps(value)
+        now = datetime.datetime.now().isoformat()
+        conn = sqlite3.connect(_get_globals_db_path())
+        c = conn.cursor()
+        c.execute('''
+            INSERT INTO global_vars (key, value, updated_at) 
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
+        ''', (key, val_str, now))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        log.error(f"Failed to set global variable '{key}': {e}")
+        return False
+
+def get_global_variable(key: str, default: Any = None) -> Any:
+    """Retrieve a global variable."""
+    _init_globals_db()
+    try:
+        conn = sqlite3.connect(_get_globals_db_path())
+        c = conn.cursor()
+        c.execute('SELECT value FROM global_vars WHERE key = ?', (key,))
+        row = c.fetchone()
+        conn.close()
+        if row:
+            return json.loads(row[0])
+    except Exception as e:
+        log.error(f"Failed to get global variable '{key}': {e}")
+    return default
+
+
+# ── Log Archive DB ──────────────────────────────────────────────────────────────
+
+def _get_archive_db_path() -> str:
+    return os.path.join(_get_flows_dir(), "flows_archive.db")
+
+def _init_archive_db():
+    db_path = _get_archive_db_path()
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS log_archive (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id TEXT NOT NULL,
+            flow_id TEXT NOT NULL,
+            flow_name TEXT,
+            started_at TEXT NOT NULL,
+            ended_at TEXT,
+            outcome TEXT,
+            events TEXT,
+            step_count INTEGER,
+            error_msg TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def save_run_to_archive(run_id: str, flow_id: str, flow_name: str, started_at: str, ended_at: str, outcome: str, events: list, step_count: int, error_msg: str):
+    """Save a run to the archive, keeping only the last 500 runs."""
+    _init_archive_db()
+    try:
+        events_str = json.dumps(events)
+        conn = sqlite3.connect(_get_archive_db_path())
+        c = conn.cursor()
+        c.execute('''
+            INSERT INTO log_archive (run_id, flow_id, flow_name, started_at, ended_at, outcome, events, step_count, error_msg)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (run_id, flow_id, flow_name, started_at, ended_at, outcome, events_str, step_count, error_msg))
+        
+        # Enforce max 500 retention
+        c.execute('''
+            DELETE FROM log_archive 
+            WHERE id NOT IN (
+                SELECT id FROM log_archive ORDER BY id DESC LIMIT 500
+            )
+        ''')
+        
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        log.error(f"Failed to save run '{run_id}' to archive: {e}")
+
+def list_archived_runs(limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+    """List archived runs, sorted by newest first."""
+    _init_archive_db()
+    try:
+        conn = sqlite3.connect(_get_archive_db_path())
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute('''
+            SELECT id, run_id, flow_id, flow_name, started_at, ended_at, outcome, step_count, error_msg 
+            FROM log_archive 
+            ORDER BY id DESC LIMIT ? OFFSET ?
+        ''', (limit, offset))
+        rows = c.fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        log.error(f"Failed to list archived runs: {e}")
+        return []
+
+def get_archived_run(run_id: str) -> Optional[Dict[str, Any]]:
+    """Get full details (including events) for a specific run."""
+    _init_archive_db()
+    try:
+        conn = sqlite3.connect(_get_archive_db_path())
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute('SELECT * FROM log_archive WHERE run_id = ?', (run_id,))
+        row = c.fetchone()
+        conn.close()
+        if row:
+            res = dict(row)
+            if res.get("events"):
+                try:
+                    res["events"] = json.loads(res["events"])
+                except Exception:
+                    res["events"] = []
+            return res
+    except Exception as e:
+        log.error(f"Failed to get archived run '{run_id}': {e}")
+    return None
+
 
 
 # ── Slug utilities ─────────────────────────────────────────────────────────────
@@ -75,6 +226,9 @@ def list_flows() -> List[Dict[str, Any]]:
                 "version":      data.get("version", 1),
                 "last_run":     data.get("_meta", {}).get("last_run", None),
                 "created_at":   data.get("_meta", {}).get("created_at", None),
+                "updated_at":   data.get("_meta", {}).get("updated_at", None),
+                "tags":         data.get("tags", []),
+                "group":        data.get("group", "General"),
             })
         except Exception as e:
             log.warning(f"[Flows.Storage] Could not read {fname}: {e}")

@@ -1,7 +1,7 @@
 id = "flows"
 manifest_version = "1"
 name = "Flows"
-version = "1.0.0"
+version = "1.5.1"
 hecos_min_version = "0.42.0"
 type = "system_app"
 author = "Antonio Meloni"

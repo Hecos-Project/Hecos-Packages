@@ -92,6 +92,35 @@ function SoundField({ label, value, onChange }) {
   );
 }
 
+function FlowPickerField({ label, value, onChange }) {
+  const [flows, setFlows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/flows/list')
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok && data.flows) {
+          setFlows(data.flows.sort((a, b) => a.name.localeCompare(b.name)));
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="hc-field">
+      <label>{label}</label>
+      <select value={value || ''} onChange={e => onChange(e.target.value)}>
+        <option value="">-- Select a flow --</option>
+        {loading && <option disabled>Loading...</option>}
+        {flows.map(f => <option key={f.id} value={f.id}>{f.name} ({f.id})</option>)}
+        {value && !flows.find(f => f.id === value) && <option value={value}>{value} (Not found)</option>}
+      </select>
+    </div>
+  );
+}
+
 function LogicBuilderField({ label, value, onChange, allVariables }) {
   const [v1, setV1] = useState('');
   const [op, setOp] = useState('==');
@@ -237,9 +266,11 @@ export default function NodeEditPanel({ node, catalog, allNodeIds, allVariables,
       return <SoundField key={key} label={label} value={val} onChange={(v) => setParam(key, v)} />;
     }
 
-    if (action === 'LOGIC__if_else' && key === 'condition') {
-      return <LogicBuilderField key={key} label={label} value={val} onChange={(v) => setParam(key, v)} allVariables={allVariables} />;
+    if (action === 'FLOWS__run_flow' && key === 'flow_id') {
+      return <FlowPickerField key={key} label={label} value={val} onChange={(v) => setParam(key, v)} />;
     }
+
+
 
     if (t.includes('select:')) {
       const optionsStr = t.split('select:')[1].split(' ')[0];
@@ -365,19 +396,57 @@ export default function NodeEditPanel({ node, catalog, allNodeIds, allVariables,
         </div>
 
         {/* Dynamic param fields */}
-        {actionDef && Object.keys(actionDef.params || {}).length > 0 && (
+        {action === 'LOGIC__if_else' ? (
           <>
             <hr className="hc-divider" />
-            {Object.entries(actionDef.params).map(([key, typeDesc]) =>
-              renderParamField(key, typeDesc)
-            )}
+            <div className="hc-field">
+              <label>Branches (If / Elif)</label>
+              {(Array.isArray(params.branches) ? params.branches : []).map((branchCond, i) => (
+                <div key={i} style={{ border: '1px solid rgba(255,255,255,0.1)', padding: 10, borderRadius: 6, marginBottom: 10, background: 'rgba(0,0,0,0.2)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <strong style={{ color: '#00d4ff', fontSize: '0.8rem' }}>{i === 0 ? 'IF' : `ELIF ${i}`}</strong>
+                    <button type="button" onClick={() => {
+                      const newBranches = [...(Array.isArray(params.branches) ? params.branches : [])];
+                      newBranches.splice(i, 1);
+                      setParam('branches', newBranches);
+                    }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><i className="fas fa-trash"></i></button>
+                  </div>
+                  <LogicBuilderField 
+                    label="Condition" 
+                    value={branchCond} 
+                    onChange={(v) => {
+                      const newBranches = [...(Array.isArray(params.branches) ? params.branches : [])];
+                      newBranches[i] = v;
+                      setParam('branches', newBranches);
+                    }} 
+                    allVariables={allVariables} 
+                  />
+                </div>
+              ))}
+              <button type="button" className="hc-btn secondary" onClick={() => {
+                const newBranches = [...(Array.isArray(params.branches) ? params.branches : [])];
+                newBranches.push('');
+                setParam('branches', newBranches);
+              }} style={{ width: '100%' }}>
+                <i className="fas fa-plus" style={{ marginRight: 5 }}></i> Add Branch
+              </button>
+            </div>
           </>
+        ) : (
+          actionDef && Object.keys(actionDef.params || {}).length > 0 && (
+            <>
+              <hr className="hc-divider" />
+              {Object.entries(actionDef.params).map(([key, typeDesc]) =>
+                renderParamField(key, typeDesc)
+              )}
+            </>
+          )
         )}
 
         <hr className="hc-divider" />
 
         {/* Output As */}
-        {action !== 'LOGIC__set_variable' && action !== 'CONTROL__start' && action !== 'FLOWS__run_flow' && (
+        {action !== 'LOGIC__set_variable' && action !== 'CONTROL__start' && (
           <div className="hc-field">
             <label>Output As (variable)</label>
             <input

@@ -1,0 +1,83 @@
+/* ── Log tab ── */
+#log-wrap { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+#log-toolbar { display:flex; gap:.5rem; padding:.5rem .75rem; border-bottom:1px solid var(--flows-border); flex-shrink:0; }
+#log-output {
+  flex:1; overflow-y:auto; padding:.75rem 1rem;
+  font-family:'JetBrains Mono',monospace; font-size:.75rem; line-height:1.8;
+  background:rgba(0,0,0,.25);
+}
+#log-output::-webkit-scrollbar { width:4px; }
+#log-output::-webkit-scrollbar-track { background:transparent; }
+#log-output::-webkit-scrollbar-thumb { background:var(--flows-border); border-radius:2px; }
+.log-line { display:flex; gap:.75rem; align-items:baseline; }
+.log-line .ts  { color:var(--flows-muted); white-space:nowrap; }
+.log-line .evt { }
+.log-line.start  .evt { color:var(--flows-accent); }
+.log-line.ok     .evt { color:var(--flows-success); }
+.log-line.error  .evt { color:var(--flows-danger); }
+.log-line.info   .evt { color:var(--flows-muted); }
+.log-empty { display:flex; align-items:center; justify-content:center; height:100%; color:var(--flows-muted); font-size:.82rem; }
+
+/* ── Abort log line ── */
+.log-line.abort .evt { color: #a855f7; }
+
+/* ── Log Overlay overrides ── */
+#canvas-log-panel {
+  top: 15px; bottom: 15px; right: 15px;
+  width: 450px;
+  border-radius: 12px;
+}
+#canvas-log-panel.closed {
+  transform: translateX(calc(100% + 20px));
+  opacity: 0;
+  pointer-events: none;
+}
+/* -- Subflow Banner -- */
+.log-subflow-banner {
+  margin: 12px 0;
+  padding: 8px 12px;
+  background: rgba(14, 165, 233, 0.1);
+  border-left: 3px solid #0ea5e9;
+  border-radius: 4px;
+  font-family: 'Inter', sans-serif;
+}
+.log-subflow-banner .banner-top {
+  color: #0ea5e9;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: 2px;
+}
+.log-subflow-banner .banner-bot {
+  color: rgba(255,255,255,0.4);
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+/* -- Archive Tab -- */
+#archive-wrap { display:flex; height:100%; overflow:hidden; }
+#archive-sidebar { width:300px; border-right:1px solid var(--flows-border); display:flex; flex-direction:column; background:rgba(0,0,0,0.1); }
+.archive-header { display:flex; justify-content:space-between; align-items:center; padding:12px 15px; border-bottom:1px solid var(--flows-border); }
+.archive-header h3 { margin:0; font-size:0.9rem; font-weight:600; color:var(--flows-text); display:flex; align-items:center; gap:8px; }
+#archive-list { flex:1; overflow-y:auto; padding:10px; }
+#archive-list::-webkit-scrollbar { width:4px; }
+#archive-list::-webkit-scrollbar-thumb { background:var(--flows-border); border-radius:2px; }
+
+.archive-group { margin-bottom:15px; }
+.archive-group-title { font-size:0.7rem; font-weight:700; color:var(--flows-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:6px; }
+
+.archive-item { display:flex; gap:10px; padding:10px; border-radius:6px; cursor:pointer; transition:background 0.2s; margin-bottom:4px; }
+.archive-item:hover { background:rgba(255,255,255,0.05); }
+.archive-item.active { background:rgba(0,212,255,0.1); outline:1px solid rgba(0,212,255,0.3); }
+.archive-item-icon { margin-top:2px; font-size:0.9rem; }
+.archive-item-content { flex:1; overflow:hidden; }
+.archive-item-title { font-size:0.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#fff; }
+.archive-item-meta { font-size:0.65rem; color:var(--flows-muted); margin-top:3px; }
+
+#archive-details { flex:1; display:flex; flex-direction:column; background:rgba(0,0,0,0.25); }
+#archive-details-header { padding:15px 20px; border-bottom:1px solid var(--flows-border); background:rgba(0,0,0,0.2); }
+#archive-details-header h3 { margin:0 0 5px 0; font-size:1.1rem; color:#fff; }
+.ad-meta { font-size:0.75rem; color:var(--flows-muted); font-family:'JetBrains Mono', monospace; }
+
+#archive-details-logs { flex:1; overflow-y:auto; padding:15px 20px; font-family:'JetBrains Mono',monospace; font-size:0.75rem; line-height:1.8; }
+#archive-details-logs::-webkit-scrollbar { width:4px; }
+#archive-details-logs::-webkit-scrollbar-thumb { background:var(--flows-border); border-radius:2px; }

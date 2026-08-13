@@ -10,9 +10,14 @@ import {
   BackgroundVariant,
   Panel,
   MarkerType,
+  SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import './styles/flow.css';
+import './styles/canvas_core.css';
+import './styles/nodes.css';
+import './styles/audio_controls.css';
+import './styles/palette.css';
+import './styles/edit_panel.css';
 
 import bridge from './bridge.js';
 import { nodeTypes } from './nodes/index.jsx';
@@ -40,6 +45,7 @@ export default function FlowsApp() {
   const reactFlowWrapper = useRef(null);
   const [rfInstance, setRfInstance] = useState(null);
   const [menu, setMenu] = useState(null);
+  const [interactionMode, setInteractionMode] = useState('hand');
   const execStateRef = useRef({});
 
   // ── Undo/Redo history ────────────────────────────────────────────────────
@@ -180,12 +186,15 @@ export default function FlowsApp() {
   const onNodeContextMenu = useCallback(
     (event, node) => {
       event.preventDefault();
+      event.stopPropagation();
       const rect = reactFlowWrapper.current.getBoundingClientRect();
+      const selectedCount = nodesRef.current.filter(n => n.selected && n.type !== 'areaNode').length;
       setMenu({
         node,
         type: 'node',
         top: event.clientY - rect.top,
         left: event.clientX - rect.left,
+        selectedCount,
       });
     },
     [reactFlowWrapper]
@@ -208,11 +217,14 @@ export default function FlowsApp() {
   const onPaneContextMenu = useCallback(
     (event) => {
       event.preventDefault();
+      event.stopPropagation();
       const rect = reactFlowWrapper.current.getBoundingClientRect();
+      const selectedCount = nodesRef.current.filter(n => n.selected && n.type !== 'areaNode').length;
       setMenu({
         type: 'pane',
         top: event.clientY - rect.top,
         left: event.clientX - rect.left,
+        selectedCount,
       });
     },
     [reactFlowWrapper]
@@ -297,6 +309,132 @@ export default function FlowsApp() {
         notifyChange(up, undefined);
         pushHistory(up, edgesRef.current);
         return up;
+      });
+    } else if (action === 'GROUP_SELECTED') {
+      setNodes(nds => {
+        const selectedNodes = nds.filter(n => n.selected && n.type !== 'areaNode' && n.type !== 'groupNode');
+        if (selectedNodes.length < 2) return nds;
+
+        const childrenIds = selectedNodes.map(n => n.id);
+        const minX = Math.min(...selectedNodes.map(n => n.position.x));
+        const minY = Math.min(...selectedNodes.map(n => n.position.y));
+        const maxX = Math.max(...selectedNodes.map(n => n.position.x + (n.width || 250)));
+        const maxY = Math.max(...selectedNodes.map(n => n.position.y + (n.height || 100)));
+
+        const centerX = minX + (maxX - minX) / 2 - 125;
+        const centerY = minY + (maxY - minY) / 2 - 40;
+
+        const groupId = 'group_' + Math.random().toString(36).substr(2, 9);
+        const groupNode = {
+          id: groupId,
+          type: 'groupNode',
+          position: { x: centerX, y: centerY },
+          data: {
+            label: 'New Group',
+            color: '#0c4a6e',
+            collapsed: true,
+            children: childrenIds,
+          }
+        };
+
+        const upNodes = nds.map(n => childrenIds.includes(n.id) ? { ...n, hidden: true, selected: false } : n);
+        upNodes.push(groupNode);
+
+        setEdges(eds => {
+          const upEdges = eds.map(e => {
+            const sourceInGroup = childrenIds.includes(e.source);
+            const targetInGroup = childrenIds.includes(e.target);
+            
+            if (sourceInGroup && !targetInGroup) {
+              return { ...e, source: groupId, data: { ...e.data, originalSource: e.source } };
+            }
+            if (!sourceInGroup && targetInGroup) {
+              return { ...e, target: groupId, data: { ...e.data, originalTarget: e.target } };
+            }
+            return e;
+          });
+          notifyChange(upNodes, upEdges);
+          pushHistory(upNodes, upEdges);
+          return upEdges;
+        });
+
+        return upNodes;
+      });
+    } else if (action === 'UNGROUP') {
+      if (!payload || payload.type !== 'groupNode') return;
+      const childrenIds = payload.data.children || [];
+      const groupId = payload.id;
+      
+      setNodes(nds => {
+        const upNodes = nds.filter(n => n.id !== groupId).map(n => {
+          if (childrenIds.includes(n.id)) return { ...n, hidden: false, selected: true };
+          return n;
+        });
+
+        setEdges(eds => {
+          const upEdges = eds.map(e => {
+            if (e.source === groupId && e.data?.originalSource) {
+              return { ...e, source: e.data.originalSource };
+            }
+            if (e.target === groupId && e.data?.originalTarget) {
+              return { ...e, target: e.data.originalTarget };
+            }
+            return e;
+          });
+          notifyChange(upNodes, upEdges);
+          pushHistory(upNodes, upEdges);
+          return upEdges;
+        });
+
+        return upNodes;
+      });
+    } else if (action === 'TOGGLE_GROUP') {
+      const groupId = payload.id;
+      setNodes(nds => {
+        const groupNode = nds.find(n => n.id === groupId);
+        if (!groupNode) return nds;
+        
+        const isCollapsed = groupNode.data.collapsed !== false;
+        const newCollapsed = !isCollapsed;
+        const childrenIds = groupNode.data.children || [];
+        
+        const upNodes = nds.map(n => {
+          if (n.id === groupId) return { ...n, data: { ...n.data, collapsed: newCollapsed } };
+          if (childrenIds.includes(n.id)) return { ...n, hidden: newCollapsed };
+          return n;
+        });
+
+        setEdges(eds => {
+          const upEdges = eds.map(e => {
+            // When expanding (collapsed = false), we restore original endpoints so we see connections going to inner nodes.
+            // When collapsing (collapsed = true), we repoint endpoints to the group node.
+            
+            // Edges where source is the child
+            if (childrenIds.includes(e.source) && !childrenIds.includes(e.target)) {
+              if (newCollapsed) return { ...e, source: groupId, data: { ...e.data, originalSource: e.source } };
+              else if (e.data?.originalSource) return { ...e, source: e.data.originalSource };
+            }
+            
+            // Edges where target is the child
+            if (!childrenIds.includes(e.source) && childrenIds.includes(e.target)) {
+              if (newCollapsed) return { ...e, target: groupId, data: { ...e.data, originalTarget: e.target } };
+              else if (e.data?.originalTarget) return { ...e, target: e.data.originalTarget };
+            }
+            
+            // If the edge was currently pointing to the group node, we need to check if we are expanding
+            if (!newCollapsed) {
+              if (e.source === groupId && e.data?.originalSource) return { ...e, source: e.data.originalSource };
+              if (e.target === groupId && e.data?.originalTarget) return { ...e, target: e.data.originalTarget };
+            }
+
+            return e;
+          });
+          notifyChange(upNodes, upEdges);
+          pushHistory(upNodes, upEdges);
+          return upEdges;
+        });
+
+        return upNodes;
       });
     }
     setMenu(null);
@@ -411,9 +549,48 @@ export default function FlowsApp() {
         });
       }
     };
+
+    const handleToggleMute = (e) => {
+      const stepId = e.detail?.id;
+      if (!stepId) return;
+      setNodes(nds => {
+        const up = nds.map(n => n.id === stepId ? { ...n, data: { ...n.data, muted: !n.data.muted } } : n);
+        notifyChange(up, undefined);
+        pushHistory(up, edgesRef.current);
+        return up;
+      });
+    };
+
     window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [deleteSelected, setNodes, notifyChange, performUndo, performRedo, pushHistory]);
+    window.addEventListener('hecos-node-toggle-mute', handleToggleMute);
+
+    // Fallback: catch contextmenu on the whole wrapper (handles drag-selection right-click)
+    const wrapperEl = reactFlowWrapper.current;
+    const handleWrapperContextMenu = (e) => {
+      // Only handle if not on a node (node's own handler takes priority)
+      const isOnNode = e.target.closest('.react-flow__node');
+      const isOnEdge = e.target.closest('.react-flow__edge');
+      const isOnMenu = e.target.closest('[class*="hc-cm"]');
+      if (isOnNode || isOnEdge || isOnMenu) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = wrapperEl.getBoundingClientRect();
+      const selectedCount = nodesRef.current.filter(n => n.selected && n.type !== 'areaNode').length;
+      setMenu({
+        type: 'pane',
+        top: e.clientY - rect.top,
+        left: e.clientX - rect.left,
+        selectedCount,
+      });
+    };
+    if (wrapperEl) wrapperEl.addEventListener('contextmenu', handleWrapperContextMenu);
+
+    return () => {
+      window.removeEventListener('keydown', handler);
+      window.removeEventListener('hecos-node-toggle-mute', handleToggleMute);
+      if (wrapperEl) wrapperEl.removeEventListener('contextmenu', handleWrapperContextMenu);
+    };
+  }, [deleteSelected, setNodes, notifyChange, performUndo, performRedo, pushHistory, reactFlowWrapper]);
 
   // ── Wire HecosFlowsBridge ─────────────────────────────────────────────────
   useEffect(() => {
@@ -436,24 +613,41 @@ export default function FlowsApp() {
           : n
         ));
       },
+      setNodeAudioState(stepId, isPlaying) {
+        setNodes(nds => nds.map(n => n.id === stepId
+          ? { ...n, data: { ...n.data, audioPlaying: isPlaying } }
+          : n
+        ));
+      },
       resetNodeStates() {
-        execStateRef.current = {};
-        setNodes(nds => nds.map(n => ({ ...n, data: { ...n.data, execState: null } })));
+        setNodes(nds => nds.map(n => ({ ...n, data: { ...n.data, state: 'idle' } })));
       },
       deleteSelectedNodes: deleteSelected,
       undo: performUndo,
       redo: performRedo,
+      setInteractionMode(mode) {
+        setInteractionMode(mode);
+      },
     };
 
     window.togglePalette = () => setPaletteOpen(p => !p);
+    window.toggleGroup = (id) => handleContextMenuAction('TOGGLE_GROUP', { id });
+    window.groupSelected = () => handleContextMenuAction('GROUP_SELECTED');
+    window.ungroupSelected = (id) => {
+      // Find selected group node if ID not provided
+      const nds = nodesRef.current;
+      const groupNode = id ? nds.find(n => n.id === id) : nds.find(n => n.selected && n.type === 'groupNode');
+      if (groupNode) handleContextMenuAction('UNGROUP', groupNode);
+    };
 
     return () => { bridge._api = null; };
-  }, [setNodes, setEdges, exportFlow, deleteSelected, rfInstance, performUndo, performRedo]);
+  }, [setNodes, setEdges, exportFlow, deleteSelected, rfInstance, performUndo, performRedo, setInteractionMode]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div ref={reactFlowWrapper} style={{ width: '100%', height: '100%', position: 'relative' }}>
       <ReactFlow
+        className={interactionMode === 'select' ? 'rf-mode-select' : 'rf-mode-hand'}
         nodes={nodes}
         edges={edges}
         onNodesChange={handleNodesChange}
@@ -474,6 +668,9 @@ export default function FlowsApp() {
         fitView
         proOptions={{ hideAttribution: true }}
         deleteKeyCode={null}
+        panOnDrag={interactionMode === 'hand'}
+        selectionOnDrag={interactionMode === 'select'}
+        selectionMode={SelectionMode.Partial}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#1a1a2e" />
         <Controls showInteractive={false} />

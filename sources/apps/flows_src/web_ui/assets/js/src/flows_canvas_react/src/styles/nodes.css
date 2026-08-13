@@ -1,0 +1,172 @@
+/* ── Base node wrapper ───────────────────────────────────────────────────── */
+.hc-node {
+  min-width: 200px;
+  max-width: 280px;
+  border-radius: var(--node-radius);
+  border: var(--node-border);
+  box-shadow: var(--node-shadow);
+  font-family: 'Inter', 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: box-shadow 0.2s, border-color 0.2s;
+  overflow: hidden;
+  background: rgba(10,10,20,0.95);
+}
+.hc-node:hover {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.12), var(--node-shadow);
+}
+.hc-node.selected {
+  border-color: rgba(255,255,255,0.35) !important;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.2), var(--node-shadow) !important;
+}
+.hc-node.disabled {
+  opacity: 0.55;
+  filter: grayscale(85%);
+}
+.hc-node-bypass-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.3);
+  z-index: 10;
+  pointer-events: none;
+}
+.hc-node-bypass-overlay i {
+  font-size: 5rem;
+  color: rgba(239,68,68,0.7);
+}
+
+/* ── Node header ─────────────────────────────────────────────────────────── */
+.hc-node-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  user-select: none;
+}
+.hc-node-header .icon { font-size: 1rem; }
+.hc-node-header .title { flex: 1; font-size: 0.68rem; }
+.hc-node-header .badge {
+  font-size: 0.58rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}
+
+/* ── Node body ───────────────────────────────────────────────────────────── */
+.hc-node-body {
+  padding: 8px 12px 10px;
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.55);
+}
+.hc-node-body .step-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hc-node-body .param-preview {
+  color: rgba(255,255,255,0.45);
+  font-size: 0.63rem;
+  line-height: 1.5;
+  max-height: 48px;
+  overflow: hidden;
+}
+
+/* ── Execution state overlays ────────────────────────────────────────────── */
+.hc-node.state-running {
+  border-color: var(--state-running) !important;
+  box-shadow: 0 0 16px rgba(34,197,94,0.35), var(--node-shadow) !important;
+  animation: hc-pulse 1s ease-in-out infinite alternate;
+}
+.hc-node.state-done {
+  border-color: var(--state-done) !important;
+  box-shadow: 0 0 12px rgba(107,114,128,0.25), var(--node-shadow) !important;
+}
+.hc-node.state-error {
+  border-color: var(--state-error) !important;
+  box-shadow: 0 0 14px rgba(239,68,68,0.35), var(--node-shadow) !important;
+}
+@keyframes hc-pulse {
+  from { box-shadow: 0 0 10px rgba(34,197,94,0.2), var(--node-shadow); }
+  to   { box-shadow: 0 0 24px rgba(34,197,94,0.55), var(--node-shadow); }
+}
+/* -- Group Node ------------------------------------------------------------ */
+.hc-group-node {
+  min-width: 200px;
+  max-width: 300px;
+  border-radius: 12px;
+  border: 2px dashed var(--group-color, #0ea5e9);
+  background: rgba(10, 15, 25, 0.7);
+  backdrop-filter: blur(8px);
+  font-family: 'Inter', sans-serif;
+  color: #fff;
+  transition: all 0.2s;
+}
+.hc-group-node.selected {
+  box-shadow: 0 0 15px rgba(255,255,255,0.15), inset 0 0 10px rgba(255,255,255,0.05);
+  border-color: #fff !important;
+}
+.hc-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(0,0,0,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+.hc-group-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+.hc-group-title {
+  flex: 1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.hc-group-toggle {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.hc-group-toggle:hover {
+  color: #fff;
+}
+.hc-group-body {
+  padding: 12px;
+  display: flex;
+  justify-content: center;
+}
+.hc-group-count {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.5);
+  background: rgba(0,0,0,0.3);
+  padding: 4px 10px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

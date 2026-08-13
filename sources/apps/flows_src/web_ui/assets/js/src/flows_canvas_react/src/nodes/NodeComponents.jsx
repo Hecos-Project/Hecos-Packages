@@ -27,7 +27,38 @@ export function TriggerNode({ data, selected }) {
 
 export function LogicNode({ data, selected }) {
   const method = data.action?.split('__')[1] || '';
-  const hasBranches = ['if_else', 'switch', 'and_gate', 'or_gate'].includes(method);
+  
+  if (method === 'if_else') {
+    const branches = Array.isArray(data.params?.branches) ? data.params.branches : [];
+    let customHandles = [];
+    if (branches.length > 0) {
+      customHandles = branches.map((_, i) => ({
+        id: `branch_${i}`,
+        label: i === 0 ? 'If' : `Elif ${i}`,
+        color: '#22c55e'
+      }));
+      customHandles.push({ id: 'false', label: 'Else', color: '#ef4444' });
+    } else {
+      // Legacy: old schema with condition string
+      customHandles = [
+        { id: 'true', label: 'True', color: '#22c55e' },
+        { id: 'false', label: 'False', color: '#ef4444' }
+      ];
+    }
+
+    return (
+      <BaseNode
+        data={data}
+        selected={selected}
+        headerColor="#78350f"
+        showInputHandle={true}
+        showOutputHandle={false}
+        customHandles={customHandles}
+      />
+    );
+  }
+
+  const hasBranches = ['switch', 'and_gate', 'or_gate'].includes(method);
   return (
     <BaseNode
       data={data}

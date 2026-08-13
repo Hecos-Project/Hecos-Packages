@@ -92,20 +92,6 @@
                    value="1" min="1" max="60"
                    onchange="if(window.saveConfig) window.saveConfig(true);">
         </div>
-
-        <!-- Live flow list summary -->
-        <div class="field mt-3">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <label style="margin:0;"><i class="fas fa-list"></i> Saved Flows</label>
-                <button type="button" class="btn btn-outline-accent btn-sm"
-                        onclick="window.refreshFlowsList()">
-                    <i class="fas fa-sync-alt"></i> Refresh
-                </button>
-            </div>
-            <div id="flows-config-list" style="max-height:280px; overflow-y:auto;">
-                <p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Loading flows...</p>
-            </div>
-        </div>
     </div>
 
     <!-- ── Scheduler ──────────────────────────────────────────────── -->

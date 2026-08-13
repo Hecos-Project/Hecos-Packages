@@ -211,6 +211,30 @@ def init_plugin_routes(app, cfg_mgr, hecos_root=None, logger=None, **kwargs):
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
+    @app.route("/api/flows/archive", methods=["GET"])
+    @login_required
+    def api_flows_archive_list():
+        try:
+            limit = int(request.args.get("limit", 50))
+            offset = int(request.args.get("offset", 0))
+            storage, *_ = _flows()
+            runs = storage.list_archived_runs(limit, offset)
+            return jsonify({"ok": True, "runs": runs})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @app.route("/api/flows/archive/<run_id>", methods=["GET"])
+    @login_required
+    def api_flows_archive_get(run_id):
+        try:
+            storage, *_ = _flows()
+            run = storage.get_archived_run(run_id)
+            if not run:
+                return jsonify({"ok": False, "error": "Not found"}), 404
+            return jsonify({"ok": True, "run": run})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
     @app.route("/api/flows/compile", methods=["POST"])
     @login_required
     def api_flows_compile():
@@ -289,16 +313,18 @@ def init_plugin_routes(app, cfg_mgr, hecos_root=None, logger=None, **kwargs):
             try:
                 yield f"data: {json.dumps({'type': 'connected', 'run_id': run_id})}\n\n"
                 timeout = time.time() + 300
+                idx = 0
                 while time.time() < timeout:
-                    while queue:
-                        event = queue.pop(0)
+                    while idx < len(queue):
+                        event = queue[idx]
+                        idx += 1
                         yield f"data: {json.dumps(event)}\n\n"
                         if event.get("type") == "stream_end":
                             return
                     time.sleep(0.15)
                 yield f"data: {json.dumps({'type': 'timeout'})}\n\n"
             finally:
-                bus.unsubscribe(run_id)
+                pass
 
         return Response(
             stream_with_context(_generate()),

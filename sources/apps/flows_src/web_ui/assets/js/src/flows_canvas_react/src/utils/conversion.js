@@ -38,6 +38,7 @@ export function flowToRFNodes(flowObj) {
 
   const steps = Array.isArray(flowObj.pipeline) ? flowObj.pipeline : [];
   const flowAreas = Array.isArray(flowObj.areas) ? flowObj.areas : [];
+  const flowGroups = Array.isArray(flowObj.groups) ? flowObj.groups : [];
 
   const rfNodes = steps.map((step, i) => {
     const nodeType = getNodeTypeFromAction(step.action);
@@ -57,10 +58,23 @@ export function flowToRFNodes(flowObj) {
         dependsOn: step.depends_on || [],
         note: step.note || '',
         disabled: step.disabled === true,
+        muted: step.muted === true || String(step.muted).toLowerCase() === 'true' || step.params?.muted === true,
         disableMode: step.disable_mode || (step.action === 'CONTROL__start' ? 'stop' : 'skip'),
         execState: null,
       },
     };
+  });
+
+  // Check which children are hidden due to collapsed groups
+  const hiddenChildren = new Set();
+  flowGroups.forEach(g => {
+    if (g.collapsed !== false) {
+      (g.children || []).forEach(cId => hiddenChildren.add(cId));
+    }
+  });
+
+  rfNodes.forEach(n => {
+    if (hiddenChildren.has(n.id)) n.hidden = true;
   });
 
   // Build edges from depends_on
@@ -107,6 +121,43 @@ export function flowToRFNodes(flowObj) {
     });
   });
 
+  // Build group nodes
+  flowGroups.forEach(g => {
+    rfNodes.push({
+      id: g.id,
+      type: 'groupNode',
+      position: g.position || { x: 0, y: 0 },
+      data: {
+        label: g.label || 'Group',
+        color: g.color || '#0ea5e9',
+        collapsed: g.collapsed !== false,
+        children: g.children || [],
+        onToggle: null // Will be bound dynamically by FlowsApp context menu or bridge, wait, we can't easily bind it here if conversion is pure. 
+                       // Actually, we bound it dynamically inside GROUP_SELECTED, but for loaded nodes, we can't bind handleContextMenuAction easily.
+                       // Instead, we can dispatch a custom DOM event or use window.HecosFlowsBridge to toggle.
+      },
+    });
+  });
+
+  // For edges crossing collapsed groups, we need to repoint them visually
+  const groupChildrenMap = {};
+  flowGroups.forEach(g => { if (g.collapsed !== false) g.children.forEach(c => groupChildrenMap[c] = g.id); });
+  
+  if (Object.keys(groupChildrenMap).length > 0) {
+    rfEdges.forEach(e => {
+      const gSource = groupChildrenMap[e.source];
+      const gTarget = groupChildrenMap[e.target];
+      if (gSource && !gTarget) {
+        e.data = { originalSource: e.source };
+        e.source = gSource;
+      }
+      if (!gSource && gTarget) {
+        e.data = { originalTarget: e.target };
+        e.target = gTarget;
+      }
+    });
+  }
+
   return { nodes: rfNodes, edges: rfEdges };
 }
 
@@ -119,14 +170,18 @@ export function rfNodesToFlow(rfNodes, rfEdges) {
   // Build adjacency: target → [source] from edges
   const incomingMap = {};
   (rfEdges || []).forEach(e => {
-    if (!incomingMap[e.target]) incomingMap[e.target] = [];
+    // Restore original endpoints if they were repointed to a group node
+    const realSource = e.data?.originalSource || e.source;
+    const realTarget = e.data?.originalTarget || e.target;
+
+    if (!incomingMap[realTarget]) incomingMap[realTarget] = [];
     
     if (e.sourceHandle && e.sourceHandle !== 'out') {
       let branchName = e.sourceHandle;
       if (branchName === 'true' || branchName === 'false') branchName += '_branch';
-      incomingMap[e.target].push({ node: e.source, branch: branchName });
+      incomingMap[realTarget].push({ node: realSource, branch: branchName });
     } else {
-      incomingMap[e.target].push(e.source);
+      incomingMap[realTarget].push(realSource);
     }
   });
 
@@ -139,6 +194,7 @@ export function rfNodesToFlow(rfNodes, rfEdges) {
 
   const pipeline = [];
   const areas = [];
+  const groups = [];
 
   sorted.forEach(node => {
     if (node.type === 'areaNode') {
@@ -156,6 +212,19 @@ export function rfNodesToFlow(rfNodes, rfEdges) {
       return;
     }
 
+    if (node.type === 'groupNode') {
+      const d = node.data || {};
+      groups.push({
+        id: node.id,
+        label: d.label || 'Group',
+        color: d.color || '#0ea5e9',
+        collapsed: d.collapsed !== false,
+        children: d.children || [],
+        position: { x: Math.round(node.position.x), y: Math.round(node.position.y) },
+      });
+      return;
+    }
+
     const d = node.data || {};
     const step = {
       id: node.id,
@@ -167,6 +236,7 @@ export function rfNodesToFlow(rfNodes, rfEdges) {
     if (d.outputAs) step.output_as = d.outputAs;
     if (d.note) step.note = d.note;
     if (d.disabled) step.disabled = true;
+    if (d.muted) step.muted = true;
     if (d.disableMode && d.disableMode !== 'skip') step.disable_mode = d.disableMode;
 
     const deps = incomingMap[node.id] || [];
@@ -175,5 +245,5 @@ export function rfNodesToFlow(rfNodes, rfEdges) {
     pipeline.push(step);
   });
 
-  return { pipeline, areas };
+  return { pipeline, areas, groups };
 }

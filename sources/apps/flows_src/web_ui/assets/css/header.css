@@ -1,0 +1,39 @@
+/* ── Header ── */
+#flows-header {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0 1.5rem;
+  height: 56px;
+  background: rgba(0,0,0,0.5);
+  border-bottom: 1px solid var(--flows-border);
+  backdrop-filter: blur(12px);
+  position: relative; z-index: 100;
+  flex-shrink: 0;
+}
+#flows-header .logo-group { display:flex; align-items:center; gap:.6rem; }
+#flows-header .logo-group img { height:28px; }
+#flows-header .logo-group .brand {
+  font-weight: 700; font-size: .9rem;
+  background: linear-gradient(135deg,var(--flows-accent),var(--flows-accent2));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  letter-spacing:.08em;
+}
+#flows-header .page-title {
+  font-size: .75rem; color:var(--flows-muted); text-transform:uppercase; letter-spacing:.12em;
+}
+#flows-header nav { display:flex; gap:.5rem; margin-left:auto; align-items:center; }
+#flows-header nav a, #flows-header nav button {
+  display:flex; align-items:center; gap:.4rem;
+  padding:.4rem .8rem; border-radius:8px;
+  font-size:.78rem; font-weight:500;
+  color:var(--flows-muted); text-decoration:none;
+  border:none; background:transparent; cursor:pointer;
+  transition: color .2s, background .2s;
+}
+#flows-header nav a:hover, #flows-header nav button:hover {
+  color:var(--flows-text); background:rgba(255,255,255,.06);
+}
+#flows-header nav .btn-primary {
+  background:linear-gradient(135deg,var(--flows-accent),var(--flows-accent2));
+  color:#000; font-weight:600;
+}
+#flows-header nav .btn-primary:hover { opacity:.88; }

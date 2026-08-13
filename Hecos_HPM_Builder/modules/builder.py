@@ -104,7 +104,7 @@ def _build_single_package(target_dir, packages_dir):
     files_to_pack = []
     
     for root, dirs, files in os.walk(target_dir):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
+        dirs[:] = [d for d in dirs if d not in ("__pycache__", "node_modules", ".git", "dist", "build", ".venv", "venv")]
         for fname in files:
             full = Path(root) / fname
             rel = full.relative_to(target_dir).as_posix()

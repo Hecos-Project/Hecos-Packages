@@ -1,9 +1,10 @@
 // ── SSE Log stream ────────────────────────────────────────────────
 function startLogStream(runId, onDone) {
   if (sseSource) sseSource.close();
-  const log = document.getElementById('log-output');
-  if (!log) return;
-  log.innerHTML = '';
+  const log1 = document.getElementById('log-output');
+  const log2 = document.getElementById('canvas-log-output');
+  if (log1) log1.innerHTML = '';
+  if (log2) log2.innerHTML = '';
   const status = document.getElementById('log-status');
   if (status) status.textContent = `Run: ${runId}`;
 
@@ -25,30 +26,92 @@ function startLogStream(runId, onDone) {
 }
 
 function appendLog(ev) {
-  const log = document.getElementById('log-output');
-  if (!log) return;
-  const empty = log.querySelector('.log-empty');
-  if (empty) empty.remove();
+  const log1 = document.getElementById('log-output');
+  const log2 = document.getElementById('canvas-log-output');
+  if (log1) {
+    const empty = log1.querySelector('.log-empty');
+    if (empty) empty.remove();
+  }
+  if (log2) {
+    const empty = log2.querySelector('.log-empty');
+    if (empty) empty.remove();
+  }
 
   let cls='info', icon='fa-circle', text='';
   const ts = ev.ts ? ev.ts.slice(11,19) : '';
   
   if (ev.type==='flow_start')    { cls='start'; icon='fa-play-circle';   text=`▶ Flow started: ${ev.flow_id}`;
     if (typeof resetNodeStates === 'function') resetNodeStates();
+    if (typeof resetTimelineNodeStates === 'function') resetTimelineNodeStates();
+    if (typeof startTimelineRun === 'function') startTimelineRun(ev.flow_id, null);
   }
-  else if (ev.type==='flow_done')    { cls='ok';    icon='fa-check-circle';  text=`✅ Flow completed`; }
+  else if (ev.type==='flow_done')    { cls='ok';    icon='fa-check-circle';  text=`✅ Flow completed`;
+    if (typeof finishTimelineRun === 'function') finishTimelineRun('done');
+    if (typeof applyFlowOutcome === 'function') applyFlowOutcome(currentFlowId || ev.flow_id, 'done');
+  }
   else if (ev.type==='flow_aborted') { cls='abort';  icon='fa-ban';           text=`⛔ Flow aborted by user`;
     if (typeof resetNodeStates === 'function') resetNodeStates();
+    if (typeof finishTimelineRun === 'function') finishTimelineRun('error');
+    if (typeof applyFlowOutcome === 'function') applyFlowOutcome(currentFlowId || ev.flow_id, 'aborted');
   }
-  else if (ev.type==='flow_error')   { cls='error';  icon='fa-times-circle';  text=`❌ Flow error: ${ev.error}`; }
-  else if (ev.type==='step_start')   { cls='info';   icon='fa-cog';           text=`  → ${ev.step_id} (${ev.action})`;
-    if (typeof setNodeState === 'function') setNodeState(ev.step_id, 'running');
+  else if (ev.type==='flow_error')   { cls='error';  icon='fa-times-circle';  text=`❌ Flow error: ${ev.error}`;
+    if (typeof finishTimelineRun === 'function') finishTimelineRun('error');
+    if (typeof applyFlowOutcome === 'function') applyFlowOutcome(currentFlowId || ev.flow_id, 'error');
   }
-  else if (ev.type==='step_ok')      { cls='ok';     icon='fa-check';         text=`  ✓ ${ev.step_id}${ev.output?' → '+ev.output.slice(0,80):''}`.trim();
-    if (typeof setNodeState === 'function') setNodeState(ev.step_id, 'done');
+  else if (ev.type==='step_start')   {
+    if (ev._subflow) {
+      cls='info'; icon='fa-caret-right';
+      text=`    ↳ [${ev._subflow_id}] ${(ev.step_id||'').trim()} (${ev.action})`;
+    } else {
+      cls='info'; icon='fa-cog'; text=`  → ${ev.step_id} (${ev.action})`;
+      if (typeof setNodeState === 'function') setNodeState(ev.step_id, 'running');
+      if (typeof setTimelineNodeState === 'function') setTimelineNodeState(ev.step_id, 'running');
+      if (typeof _tlUpdateHeaders === 'function') _tlUpdateHeaders({ currentStep: ev.step_id });
+    }
   }
-  else if (ev.type==='step_error')   { cls='error';  icon='fa-exclamation';   text=`  ✗ ${ev.step_id}: ${ev.error}`;
-    if (typeof setNodeState === 'function') setNodeState(ev.step_id, 'error');
+  else if (ev.type==='step_ok')      {
+    if (ev._subflow) {
+      cls='ok'; icon='fa-check';
+      text=`    ↳ ✓ [${ev._subflow_id}] ${(ev.step_id||'').trim()}${ev.output ? ' → '+ev.output.slice(0,60) : ''}`.trim();
+    } else {
+      cls='ok'; icon='fa-check';
+      text=`  ✓ ${ev.step_id}${ev.output?' → '+ev.output.slice(0,80):''}`.trim();
+      if (typeof setNodeState === 'function') setNodeState(ev.step_id, 'done');
+      if (typeof setTimelineNodeState === 'function') setTimelineNodeState(ev.step_id, 'done');
+    }
+  }
+  else if (ev.type==='step_error')   {
+    if (ev._subflow) {
+      cls='error'; icon='fa-exclamation';
+      text=`    ↳ ✗ [${ev._subflow_id}] ${(ev.step_id||'').trim()}: ${ev.error}`;
+    } else {
+      cls='error'; icon='fa-exclamation';
+      text=`  ✗ ${ev.step_id}: ${ev.error}`;
+      if (typeof setNodeState === 'function') setNodeState(ev.step_id, 'error');
+      if (typeof setTimelineNodeState === 'function') setTimelineNodeState(ev.step_id, 'error');
+    }
+  }
+  else if (ev.type==='subflow_start') {
+    const fname = ev._subflow_name || ev.flow_id || ev._subflow_id || 'Unknown Flow';
+    const rid = ev._sub_run_id || ev.run_id || 'unknown_run';
+    
+    const banner = document.createElement('div');
+    banner.className = 'log-subflow-banner';
+    banner.innerHTML = `
+      <div class="banner-top"><i class="fas fa-bolt"></i> SUB-FLOW STARTED: <strong>${fname}</strong></div>
+      <div class="banner-bot">Run ID: ${rid}</div>
+    `;
+    
+    if (log1) { log1.appendChild(banner.cloneNode(true)); log1.scrollTop = log1.scrollHeight; }
+    if (log2) { log2.appendChild(banner.cloneNode(true)); log2.scrollTop = log2.scrollHeight; }
+    
+    return;
+  }
+  else if (ev.type==='audio_start')  { cls='info';   icon='fa-volume-up';     text=`  🔊 ${ev.step_id} playing audio...`;
+    if (typeof setNodeAudioState === 'function') setNodeAudioState(ev.step_id, true);
+  }
+  else if (ev.type==='audio_stop')   { cls='info';   icon='fa-volume-mute';   text=`  🔇 ${ev.step_id} finished audio`;
+    if (typeof setNodeAudioState === 'function') setNodeAudioState(ev.step_id, false);
   }
   else if (ev.type==='connected')    { cls='info';   icon='fa-link';          text=`Connected to run ${ev.run_id}`; }
   else if (ev.type==='toast')        {
@@ -112,23 +175,60 @@ function appendLog(ev) {
     inputDiv.appendChild(btn);
     line.appendChild(inputDiv);
     
-    log.appendChild(line);
-    log.scrollTop = log.scrollHeight;
-    
     // Auto focus the input field
     setTimeout(() => inputField.focus(), 100);
+    
+    // Also append to the other log if it exists
+    if (log1 && log2) {
+      if (log1) { log1.appendChild(line); log1.scrollTop = log1.scrollHeight; }
+      if (log2 && log1) { 
+        const lineClone = line.cloneNode(true);
+        // We'd need to re-bind events for the clone. For simplicity in wait_input, 
+        // we'll just append it to whichever log is currently visible, or both, but only one will have the working button.
+        // Actually, better to just append the original to both? No, a node can only be in one place.
+        // Let's just append to log2 (the overlay) if it exists, otherwise log1.
+        if (log2) {
+          log2.appendChild(line);
+          log2.scrollTop = log2.scrollHeight;
+        } else if (log1) {
+          log1.appendChild(line);
+          log1.scrollTop = log1.scrollHeight;
+        }
+      }
+    } else {
+      const targetLog = log2 || log1;
+      if (targetLog) {
+        targetLog.appendChild(line);
+        targetLog.scrollTop = targetLog.scrollHeight;
+      }
+    }
+    
     return;
   }
   else return;
 
-  const line = document.createElement('div');
-  line.className = `log-line ${cls}`;
-  line.innerHTML = `<span class="ts">${ts}</span><span class="evt"><i class="fas ${icon}"></i> ${text}</span>`;
-  log.appendChild(line);
-  log.scrollTop = log.scrollHeight;
+  const htmlContent = `<span class="ts">${ts}</span><span class="evt"><i class="fas ${icon}"></i> ${text}</span>`;
+  
+  if (log1) {
+    const line1 = document.createElement('div');
+    line1.className = `log-line ${cls}`;
+    line1.innerHTML = htmlContent;
+    log1.appendChild(line1);
+    log1.scrollTop = log1.scrollHeight;
+  }
+  if (log2) {
+    const line2 = document.createElement('div');
+    line2.className = `log-line ${cls}`;
+    line2.innerHTML = htmlContent;
+    log2.appendChild(line2);
+    log2.scrollTop = log2.scrollHeight;
+  }
 }
 
 function clearLog() {
-  const log = document.getElementById('log-output');
-  if (log) log.innerHTML = '<div class="log-empty">Log cleared.</div>';
+  const log1 = document.getElementById('log-output');
+  const log2 = document.getElementById('canvas-log-output');
+  const msg = '<div class="log-empty">Log cleared.</div>';
+  if (log1) log1.innerHTML = msg;
+  if (log2) log2.innerHTML = msg;
 }

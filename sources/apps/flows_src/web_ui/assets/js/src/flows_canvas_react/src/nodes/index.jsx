@@ -1,5 +1,6 @@
 import { ActionNode, TriggerNode, LogicNode, AINode, HttpNode, DelayNode, VarNode } from './NodeComponents.jsx';
 import AreaNode from './AreaNode.jsx';
+import GroupNode from './GroupNode.jsx';
 
 export const nodeTypes = {
   actionNode:  ActionNode,
@@ -10,4 +11,5 @@ export const nodeTypes = {
   delayNode:   DelayNode,
   varNode:     VarNode,
   areaNode:    AreaNode,
+  groupNode:   GroupNode,
 };
