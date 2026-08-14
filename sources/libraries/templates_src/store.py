@@ -52,6 +52,15 @@ def _now_iso() -> str:
 def _load() -> dict:
     """Load the full templates store from disk. Returns {} on missing/invalid file."""
     if not os.path.exists(_STORE):
+        default_tpl = os.path.join(os.path.dirname(os.path.abspath(__file__)), "default_templates.json")
+        if os.path.exists(default_tpl):
+            try:
+                with open(default_tpl, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                _save(data)
+                return data
+            except Exception as e:
+                logger.warning(f"[TEMPLATES] Could not load default templates: {e}")
         return {}
     try:
         with open(_STORE, "r", encoding="utf-8") as f:

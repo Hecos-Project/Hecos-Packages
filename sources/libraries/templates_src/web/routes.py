@@ -1,4 +1,4 @@
-from hecos.hpm.templates.api import templates_bp
+from hecos.hpm.libraries.templates.api import templates_bp
 
 def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
     if "templates" not in app.blueprints:

@@ -1,4 +1,4 @@
-"""
+﻿"""
 MODULE: Mail Store
 DESCRIPTION: SQLite-based persistence layer for the Mail plugin.
              DB: hecos/memory/mail.db
@@ -31,6 +31,7 @@ def _get_db_path() -> str:
 _CREATE_MESSAGES = """
 CREATE TABLE IF NOT EXISTS messages (
     id               TEXT PRIMARY KEY,
+    account_id       TEXT NOT NULL DEFAULT 'default',
     uid              INTEGER NOT NULL DEFAULT 0,
     folder           TEXT NOT NULL DEFAULT 'INBOX',
     subject          TEXT NOT NULL DEFAULT '',
@@ -68,6 +69,7 @@ CREATE TABLE IF NOT EXISTS attachments (
 _CREATE_DRAFTS = """
 CREATE TABLE IF NOT EXISTS drafts (
     id         TEXT PRIMARY KEY,
+    account_id TEXT NOT NULL DEFAULT 'default',
     to_addrs   TEXT NOT NULL DEFAULT '',
     cc         TEXT NOT NULL DEFAULT '',
     bcc        TEXT NOT NULL DEFAULT '',
@@ -86,6 +88,17 @@ def _get_conn() -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA foreign_keys=ON;")
     conn.executescript(_CREATE_MESSAGES + _CREATE_ATTACHMENTS + _CREATE_DRAFTS)
+    
+    # Simple migration: add account_id if missing
+    try:
+        conn.execute("ALTER TABLE messages ADD COLUMN account_id TEXT NOT NULL DEFAULT 'default'")
+    except sqlite3.OperationalError:
+        pass  # Column likely exists
+    try:
+        conn.execute("ALTER TABLE drafts ADD COLUMN account_id TEXT NOT NULL DEFAULT 'default'")
+    except sqlite3.OperationalError:
+        pass
+        
     conn.commit()
     return conn
 
@@ -116,16 +129,17 @@ def upsert_message(data: dict) -> dict:
 
         conn.execute("""
             INSERT INTO messages
-              (id, uid, folder, subject, from_addr, to_addrs, cc, bcc, reply_to,
+              (id, account_id, uid, folder, subject, from_addr, to_addrs, cc, bcc, reply_to,
                body_text, body_html, date, flags, read, starred,
                thread_id, message_id_header, in_reply_to, has_attachments, preview, synced_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(id) DO UPDATE SET
               uid=excluded.uid, folder=excluded.folder, flags=excluded.flags,
               read=excluded.read, starred=excluded.starred, synced_at=excluded.synced_at,
               has_attachments=excluded.has_attachments, preview=excluded.preview
         """, (
             mid,
+            data.get('account_id', 'default'),
             data.get("uid", 0),
             data.get("folder", "INBOX"),
             data.get("subject", ""),
@@ -170,13 +184,13 @@ def get_message(message_id: str) -> dict | None:
         conn.close()
 
 
-def list_folder(folder: str = "INBOX", limit: int = 100,
+def list_folder(account_id: str = "default", folder: str = "INBOX", limit: int = 100,
                 unread_only: bool = False, starred_only: bool = False) -> list:
     """List messages in a folder, newest first."""
     conn = _get_conn()
     try:
-        conditions = ["folder = ?"]
-        params = [folder]
+        conditions = ["account_id = ?", "folder = ?"]
+        params = [account_id, folder]
         if unread_only:
             conditions.append("read = 0")
         if starred_only:
@@ -198,7 +212,7 @@ def list_folder(folder: str = "INBOX", limit: int = 100,
         conn.close()
 
 
-def search_messages(query: str, folder: str = None, limit: int = 50) -> list:
+def search_messages(account_id: str = "default", query: str = "", folder: str = None, limit: int = 50) -> list:
     """Full-text search across subject, from, to, and body_text."""
     q = f"%{query}%"
     conn = _get_conn()
@@ -206,18 +220,18 @@ def search_messages(query: str, folder: str = None, limit: int = 50) -> list:
         if folder:
             rows = conn.execute(
                 """SELECT * FROM messages
-                   WHERE folder = ? AND (subject LIKE ? OR from_addr LIKE ?
+                   WHERE account_id = ? AND folder = ? AND (subject LIKE ? OR from_addr LIKE ?
                          OR to_addrs LIKE ? OR body_text LIKE ? OR preview LIKE ?)
                    ORDER BY date DESC LIMIT ?""",
-                (folder, q, q, q, q, q, limit)
+                (account_id, folder, q, q, q, q, q, limit)
             ).fetchall()
         else:
             rows = conn.execute(
                 """SELECT * FROM messages
-                   WHERE subject LIKE ? OR from_addr LIKE ?
+                   WHERE account_id = ? AND (subject LIKE ? OR from_addr LIKE ?
                          OR to_addrs LIKE ? OR body_text LIKE ? OR preview LIKE ?
                    ORDER BY date DESC LIMIT ?""",
-                (q, q, q, q, q, limit)
+                (account_id, q, q, q, q, q, limit)
             ).fetchall()
         result = []
         for row in rows:
@@ -277,13 +291,13 @@ def delete_message(message_id: str) -> bool:
         conn.close()
 
 
-def get_stats() -> dict:
+def get_stats(account_id: str = "default") -> dict:
     """Returns message counts per folder."""
     conn = _get_conn()
     try:
         rows = conn.execute(
             "SELECT folder, COUNT(*) as total, SUM(CASE WHEN read=0 THEN 1 ELSE 0 END) as unread "
-            "FROM messages GROUP BY folder"
+            "FROM messages WHERE account_id = ? GROUP BY folder", (account_id,)
         ).fetchall()
         stats = {"inbox": 0, "inbox_unread": 0, "sent": 0, "drafts": 0, "trash": 0, "starred": 0}
         for row in rows:
@@ -297,22 +311,22 @@ def get_stats() -> dict:
                 stats["trash"] = row["total"]
         # Starred is a flag, not a folder
         starred_count = conn.execute(
-            "SELECT COUNT(*) FROM messages WHERE starred = 1"
+            "SELECT COUNT(*) FROM messages WHERE account_id = ? AND starred = 1", (account_id,)
         ).fetchone()[0]
         stats["starred"] = starred_count
         # Drafts
-        stats["drafts"] = conn.execute("SELECT COUNT(*) FROM drafts").fetchone()[0]
+        stats["drafts"] = conn.execute("SELECT COUNT(*) FROM drafts WHERE account_id = ?", (account_id,)).fetchone()[0]
         return stats
     finally:
         conn.close()
 
 
-def get_uid_set(folder: str) -> set:
+def get_uid_set(account_id: str, folder: str) -> set:
     """Returns the set of UIDs already in the DB for a folder (for efficient IMAP sync)."""
     conn = _get_conn()
     try:
         rows = conn.execute(
-            "SELECT uid FROM messages WHERE folder = ? AND uid > 0", (folder,)
+            "SELECT uid FROM messages WHERE account_id = ? AND folder = ? AND uid > 0", (account_id, folder,)
         ).fetchall()
         return {row[0] for row in rows}
     finally:
@@ -347,7 +361,7 @@ def add_attachment(message_id: str, filename: str, size: int,
 
 # â”€â”€ Drafts CRUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-def save_draft(to_addrs: str = "", cc: str = "", bcc: str = "",
+def save_draft(account_id: str = "default", to_addrs: str = "", cc: str = "", bcc: str = "",
                subject: str = "", body: str = "", is_html: bool = False,
                draft_id: str = None) -> dict:
     """Create or update a draft. Returns the draft dict."""
@@ -363,9 +377,9 @@ def save_draft(to_addrs: str = "", cc: str = "", bcc: str = "",
         else:
             draft_id = str(uuid.uuid4())
             conn.execute(
-                "INSERT INTO drafts (id, to_addrs, cc, bcc, subject, body, is_html, created_at, updated_at) "
-                "VALUES (?,?,?,?,?,?,?,?,?)",
-                (draft_id, to_addrs, cc, bcc, subject, body, int(is_html), now, now)
+                "INSERT INTO drafts (id, account_id, to_addrs, cc, bcc, subject, body, is_html, created_at, updated_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (draft_id, account_id, to_addrs, cc, bcc, subject, body, int(is_html), now, now)
             )
         conn.commit()
         return get_draft(draft_id) or {}
@@ -386,10 +400,10 @@ def get_draft(draft_id: str) -> dict | None:
         conn.close()
 
 
-def list_drafts() -> list:
+def list_drafts(account_id: str = "default") -> list:
     conn = _get_conn()
     try:
-        rows = conn.execute("SELECT * FROM drafts ORDER BY updated_at DESC").fetchall()
+        rows = conn.execute("SELECT * FROM drafts WHERE account_id = ? ORDER BY updated_at DESC", (account_id,)).fetchall()
         result = []
         for row in rows:
             d = _row_to_dict(row)
@@ -410,12 +424,20 @@ def delete_draft(draft_id: str) -> bool:
         conn.close()
 
 
-def clear_folder(folder: str) -> int:
+def clear_folder(account_id: str, folder: str) -> int:
     """Deletes all messages for a folder (used before full re-sync)."""
     conn = _get_conn()
     try:
-        cur = conn.execute("DELETE FROM messages WHERE folder = ?", (folder,))
+        cur = conn.execute("DELETE FROM messages WHERE account_id = ? AND folder = ?", (account_id, folder,))
         conn.commit()
         return cur.rowcount
     finally:
         conn.close()
+
+
+
+
+
+
+
+

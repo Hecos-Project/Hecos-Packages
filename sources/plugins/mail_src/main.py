@@ -1,4 +1,4 @@
-"""
+﻿"""
 MODULE: Mail Plugin â€” LLM Tools
 DESCRIPTION: MailTools class exposing all mail operations as Hecos LLM tools.
              Loaded at boot via plugin manifest (is_class_based: true, on_load: true).
@@ -17,17 +17,20 @@ class MailTools:
 
     # â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+    def _active_account_id(self) -> str:
+        return self._mail_cfg().get("active_account_id", "default")
+
     def _mail_cfg(self) -> dict:
         """Returns the MAIL section of the current config."""
         return self._cfg.get("plugins", {}).get("MAIL", self._cfg)
 
     def _smtp(self, username: str = "admin"):
         from hecos.hpm.mail.smtp_client import build_smtp_client
-        return build_smtp_client(self._mail_cfg(), username)
+        return build_smtp_client(self._mail_cfg(), username, account_id=self._active_account_id())
 
     def _imap(self, username: str = "admin"):
         from hecos.hpm.mail.imap_client import build_imap_client
-        return build_imap_client(self._mail_cfg(), username)
+        return build_imap_client(self._mail_cfg(), username, account_id=self._active_account_id())
 
     # â”€â”€ LLM Tools â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -65,7 +68,7 @@ class MailTools:
             if cfg.get("sync_on_open", True):
                 self._do_sync(folder, limit)
 
-            msgs = store.list_folder(folder=folder.upper(), limit=limit,
+            msgs = store.list_folder(account_id=self._active_account_id(), folder=folder.upper(), limit=limit,
                                      unread_only=unread_only)
             if not msgs:
                 return f"ðŸ“­ No messages found in {folder}."
@@ -89,7 +92,7 @@ class MailTools:
         """Searches emails by keyword across subject, sender and body."""
         try:
             from hecos.hpm.mail import store
-            msgs = store.search_messages(query=query, folder=folder, limit=limit)
+            msgs = store.search_messages(account_id=self._active_account_id(), query=query, folder=folder, limit=limit)
             if not msgs:
                 return f"ðŸ“­ No emails found matching '{query}'."
 
@@ -233,12 +236,13 @@ class MailTools:
             ok, err = client.connect()
             if not ok:
                 raise ConnectionError(err)
-            known = store.get_uid_set(folder.upper())
+            known = store.get_uid_set(self._active_account_id(), folder.upper())
             messages = client.sync_folder(folder=folder, max_msgs=max_msgs,
                                           known_uids=known)
             client.disconnect()
             count = 0
             for msg in messages:
+                msg['account_id'] = self._active_account_id()
                 store.upsert_message(msg)
                 count += 1
             logger.debug(f"[MAIL] Synced {count} new messages in {folder}")
@@ -251,7 +255,7 @@ class MailTools:
         """Finds a message by 8-char ID prefix."""
         from hecos.hpm.mail import store
         for folder in ("INBOX", "SENT", "DRAFTS", "TRASH"):
-            msgs = store.list_folder(folder=folder, limit=200)
+            msgs = store.list_folder(account_id=self._active_account_id(), folder=folder, limit=200)
             for m in msgs:
                 if m["id"].startswith(prefix):
                     return m
@@ -276,4 +280,5 @@ def on_load(config):
             register_routes(app)
     except Exception as e:
         logger.debug("MAIL", f"API route registration deferred: {e}")
+
 

@@ -144,10 +144,10 @@ class SmtpClient:
             return False, f"SMTP connection failed: {e}"
 
 
-def build_smtp_client(cfg: dict, username: str = "admin") -> SmtpClient:
+def build_smtp_client(cfg: dict, username: str = "admin", account_id: str = None) -> SmtpClient:
     """Factory: builds a SmtpClient from resolved settings."""
     from hecos.hpm.mail.credential_helper import resolve_mail_settings
-    s = resolve_mail_settings(cfg, username)
+    s = resolve_mail_settings(cfg, username, account_id)
     return SmtpClient(
         host=s.get("smtp_host", ""),
         port=s.get("smtp_port", 587),
@@ -156,3 +156,4 @@ def build_smtp_client(cfg: dict, username: str = "admin") -> SmtpClient:
         password=s.get("password", ""),
         display_name=s.get("display_name", "")
     )
+

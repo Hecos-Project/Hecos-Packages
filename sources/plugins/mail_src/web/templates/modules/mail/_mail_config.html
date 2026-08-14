@@ -1,0 +1,167 @@
+<!-- MAIL CONFIG PANEL -->
+<div class="config-section no-autosave" style="max-width: 900px; margin: 0 auto; padding-bottom: 120px;">
+    <div class="card glass-card" style="padding: 20px;">
+        <h3 class="section-title" style="margin-bottom:8px; font-size: 18px; color:var(--accent);"><i class="fas fa-envelope-open-text"></i> {{ translations.get('mail_cfg_title', 'Mail Accounts & Configuration') }}</h3>
+        
+        <!-- Multi-Account Section -->
+        <div style="display: grid; grid-template-columns: 250px 1fr; gap: 24px; margin-top: 20px;">
+            
+            <!-- Left: Account List -->
+            <div style="border-right: 1px solid var(--border); padding-right: 16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                    <strong style="color:var(--text); font-size:14px;">Accounts</strong>
+                    <button onclick="mailAddNewAccount()" class="mail-btn primary" style="padding:4px 8px; font-size:11px;">
+                        <i class="fas fa-plus"></i> Add
+                    </button>
+                </div>
+                <div id="mail-accounts-list" style="display:flex; flex-direction:column; gap:8px; max-height:400px; overflow-y:auto;">
+                    <!-- Accounts rendered here via JS -->
+                </div>
+            </div>
+
+            <!-- Right: Account Editor -->
+            <div id="mail-account-editor" style="display:none;">
+                <input type="hidden" id="mail_edit_account_id">
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h4 style="margin:0; color:var(--accent);" id="mail_edit_header">Edit Account</h4>
+                    <button onclick="mailDeleteCurrentAccount()" class="mail-btn danger" style="padding:4px 8px; font-size:11px;">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+
+                <div class="field">
+                    <label>Account Name (e.g. Work, Personal)</label>
+                    <input type="text" id="mail_edit_name" class="config-input">
+                </div>
+
+                <div class="grid-2">
+                    <div class="field">
+                        <label>
+                            <i class="fas fa-at" style="color:var(--accent);"></i> {{ translations.get('mail_cfg_email', 'Email Address') }}
+                        </label>
+                        <input type="email" id="mail_edit_email" class="config-input" autocomplete="username">
+                    </div>
+
+                    <div class="field">
+                        <label>
+                            <i class="fas fa-key" style="color:var(--yellow, #fbbf24);"></i> {{ translations.get('mail_cfg_pwd', 'App Password') }}
+                        </label>
+                        <div style="display:flex; gap:8px;">
+                            <input type="password" id="mail_edit_password" autocomplete="new-password" style="flex:1;">
+                            <button type="button" onclick="mailTogglePasswordVisibility()" id="mail-pwd-eye-btn" style="padding:6px 12px; border-radius:7px; border:1px solid var(--border); background:var(--bg3); color:var(--text); cursor:pointer;">
+                                <i class="fas fa-eye" id="mail-pwd-eye-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Override Settings for this account -->
+                <details style="margin-top:16px; padding: 12px; background:var(--bg2); border:1px solid var(--border); border-radius:10px;">
+                    <summary style="cursor:pointer; font-weight:600; color:var(--text); user-select:none; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-sliders-h" style="color:var(--accent);"></i> <span style="font-size:14px;">{{ translations.get('mail_cfg_advanced', 'Advanced Server Parameters') }}</span>
+                    </summary>
+                    
+                    <div style="padding-top: 16px;">
+                        <h6 style="color:var(--text); font-size:13px; margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:4px;">
+                            {{ translations.get('mail_cfg_smtp', 'SMTP (Outgoing Mail)') }}
+                        </h6>
+                        <div class="grid-2">
+                            <div class="field">
+                                <label>Host</label>
+                                <input type="text" id="mail_edit_smtp_host" placeholder="smtp.mail.com" class="config-input">
+                            </div>
+                            <div class="field">
+                                <label>Port & Security</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input type="number" id="mail_edit_smtp_port" placeholder="587" style="width:40%;" class="config-input">
+                                    <select id="mail_edit_smtp_security" style="flex:1;" class="config-input">
+                                        <option value="STARTTLS">STARTTLS</option>
+                                        <option value="TLS">TLS</option>
+                                        <option value="PLAIN">None</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h6 style="color:var(--text); font-size:13px; margin-bottom:10px; margin-top:20px; border-bottom:1px solid var(--border); padding-bottom:4px;">
+                            {{ translations.get('mail_cfg_imap', 'IMAP (Incoming Mail)') }}
+                        </h6>
+                        <div class="grid-2">
+                            <div class="field">
+                                <label>Host</label>
+                                <input type="text" id="mail_edit_imap_host" placeholder="imap.mail.com" class="config-input">
+                            </div>
+                            <div class="field">
+                                <label>Port & Security</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input type="number" id="mail_edit_imap_port" placeholder="993" style="width:40%;" class="config-input">
+                                    <select id="mail_edit_imap_security" style="flex:1;" class="config-input">
+                                        <option value="SSL">SSL</option>
+                                        <option value="STARTTLS">STARTTLS</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end; align-items:center;">
+                    <span id="mail-account-save-indicator" style="font-size:11px; color:var(--muted); display:none;">
+                        <i class="fas fa-check-circle" style="color:var(--success, #10b981);"></i> Saved
+                    </span>
+                    <button onclick="mailTestAccount()" class="mail-btn" style="background:var(--bg3);">
+                        <i class="fas fa-plug"></i> Test Connection
+                    </button>
+                </div>
+
+            </div> <!-- /Account Editor -->
+
+        </div> <!-- /Multi-Account Grid -->
+
+        <div style="height: 1px; background:var(--border); margin: 30px 0;"></div>
+
+        <!-- Global Settings -->
+        <h4 style="margin-bottom: 12px; color:var(--text); font-size:15px;">Global Settings</h4>
+        
+        <div class="field" style="margin-top:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <label style="margin:0;">{{ translations.get('mail_cfg_sync_open', 'Sync on Open') }}</label>
+                </div>
+                <label class="switch"><input type="checkbox" id="plugins.MAIL.sync_on_open"><span class="slider"></span></label>
+            </div>
+        </div>
+
+        <div class="field" style="margin-top:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <label style="margin:0;">{{ translations.get('mail_cfg_auto_detect', 'Auto-Detect Server') }}</label>
+                </div>
+                <label class="switch"><input type="checkbox" id="plugins.MAIL.auto_detect_provider"><span class="slider"></span></label>
+            </div>
+        </div>
+
+        <div class="field" style="margin-top:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <label style="margin:0;">{{ translations.get('mail_cfg_max_msg', 'Max Messages to sync') }}</label>
+                <input type="number" id="plugins.MAIL.max_messages" placeholder="100" style="width:100px;" class="config-input">
+            </div>
+        </div>
+        
+        <div style="margin-top:20px; display:flex; align-items:center; justify-content:flex-end; gap:8px; font-size:12px; color:var(--muted);">
+            <i class="fas fa-info-circle"></i>
+            Settings are saved automatically when you click the global <strong style="color:var(--text);">Save</strong> button below.
+        </div>
+
+        <div style="height: 1px; background:var(--border); margin: 24px 0;"></div>
+        
+        <!-- Back Button -->
+        <div style="text-align:right;">
+            <button onclick="mailToggleConfig()" class="mail-btn" style="background:var(--bg3);">
+                <i class="fas fa-arrow-left"></i> {{ translations.get('mail_cfg_back', 'Back to Mail') }}
+            </button>
+        </div>
+
+    </div>
+</div>

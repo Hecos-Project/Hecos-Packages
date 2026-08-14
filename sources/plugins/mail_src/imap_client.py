@@ -346,10 +346,10 @@ class ImapClient:
             return []
 
 
-def build_imap_client(cfg: dict, username: str = "admin") -> ImapClient:
+def build_imap_client(cfg: dict, username: str = "admin", account_id: str = None) -> ImapClient:
     """Factory: builds an ImapClient from resolved settings."""
     from hecos.hpm.mail.credential_helper import resolve_mail_settings
-    s = resolve_mail_settings(cfg, username)
+    s = resolve_mail_settings(cfg, username, account_id)
     return ImapClient(
         host=s.get("imap_host", ""),
         port=s.get("imap_port", 993),
@@ -357,3 +357,4 @@ def build_imap_client(cfg: dict, username: str = "admin") -> ImapClient:
         username=s.get("email", ""),
         password=s.get("password", ""),
     )
+
