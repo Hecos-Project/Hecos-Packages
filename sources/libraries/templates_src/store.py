@@ -26,6 +26,14 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Optional
 
+# Optional: use cssutils or premailer for production-grade inlining.
+# We ship a lightweight self-contained inliner so there are no extra deps.
+try:
+    import premailer as _premailer  # type: ignore
+    _HAS_PREMAILER = True
+except ImportError:
+    _HAS_PREMAILER = False
+
 from hecos.core.logging import logger
 
 # ── Constants ──────────────────────────────────────────────────────────────────
@@ -123,7 +131,100 @@ def _interpolate(text: str, variables: dict) -> str:
     return re.sub(r"\{\{\s*(\w+)\s*\}\}", _replace, text)
 
 
+def _inline_css(html: str, css: str) -> str:
+    """
+    Inline CSS rules into HTML elements' style attributes.
+
+    Strategy (two-pass):
+    1. If premailer is available, use it (handles all CSS).
+    2. Otherwise fall back to our own lightweight inliner that handles
+       the most critical email-breaking property: img width/height.
+
+    The fallback is intentionally narrow but solves the #1 problem reported:
+    GrapeJS saves  `img.gjs-... { width: 100px; }` in body_text but email
+    clients strip the <style> block, so the image reverts to natural size.
+    We parse those img rules and add `width` / `height` as HTML attributes
+    AND as inline style on every matching <img>.
+    """
+    if not html or not css:
+        return html
+
+    # ── Option A: premailer (full CSS inlining) ──────────────────────────────
+    if _HAS_PREMAILER:
+        try:
+            full = f"<html><head><style>{css}</style></head><body>{html}</body></html>"
+            inlined = _premailer.transform(full, remove_classes=False)
+            # Extract just the <body> content
+            m = re.search(r"<body[^>]*>(.*?)</body>", inlined, re.DOTALL | re.IGNORECASE)
+            return m.group(1).strip() if m else html
+        except Exception:
+            pass  # fall through to Option B
+
+    # ── Option B: lightweight inliner for img width / height ────────────────
+    # Parse  img.classname { width: Xpx; height: Ypx; ... }  from GrapeJS CSS
+    rule_pat = re.compile(
+        r'img(?:\.[\w-]+)?\s*\{([^}]*)\}',
+        re.DOTALL | re.IGNORECASE
+    )
+    # Also catch generic: .classname img { ... }  or just img { ... }
+    generic_pat = re.compile(
+        r'(?:\.[\w-]+\s+)?img\s*\{([^}]*)\}',
+        re.DOTALL | re.IGNORECASE
+    )
+
+    def _extract_dim(declarations: str, prop: str) -> str | None:
+        m = re.search(rf'\b{prop}\s*:\s*([^;]+);?', declarations, re.IGNORECASE)
+        return m.group(1).strip() if m else None
+
+    # Collect all img rules
+    img_rules: list[str] = []
+    for pat in (rule_pat, generic_pat):
+        for m in pat.finditer(css):
+            img_rules.append(m.group(1))
+
+    if not img_rules:
+        return html
+
+    # Merge all declarations (last wins)
+    merged: dict[str, str] = {}
+    for decl_block in img_rules:
+        for decl in decl_block.split(';'):
+            decl = decl.strip()
+            if ':' in decl:
+                prop, val = decl.split(':', 1)
+                merged[prop.strip().lower()] = val.strip()
+
+    if not merged:
+        return html
+
+    # Build the extra inline style fragment we want to inject
+    inline_extra = '; '.join(f"{p}: {v}" for p, v in merged.items())
+
+    def _patch_img(m: re.Match) -> str:
+        tag = m.group(0)
+        # Merge into existing style="..."
+        existing = re.search(r'style=["\']([^"\']*)["\']', tag)
+        if existing:
+            combined = existing.group(1).rstrip(';') + '; ' + inline_extra
+            tag = tag[:existing.start()] + f'style="{combined}"' + tag[existing.end():]
+        else:
+            tag = tag.rstrip('>').rstrip('/') + f' style="{inline_extra}">'
+        # Also set HTML width/height attributes for legacy clients
+        if 'width' in merged:
+            w = re.sub(r'[^\d]', '', merged['width'])  # extract digits
+            if w and not re.search(r'\bwidth=', tag):
+                tag = tag.rstrip('>').rstrip('/') + f' width="{w}">'
+        if 'height' in merged:
+            h = re.sub(r'[^\d]', '', merged['height'])
+            if h and not re.search(r'\bheight=', tag):
+                tag = tag.rstrip('>').rstrip('/') + f' height="{h}">'
+        return tag
+
+    return re.sub(r'<img\b[^>]*>', _patch_img, html)
+
+
 # ── Public API ─────────────────────────────────────────────────────────────────
+
 
 def list_templates(channel: Optional[str] = None) -> list[dict]:
     """
@@ -323,10 +424,35 @@ def render_template(template_id: str, variables: dict) -> dict:
     if tpl is None:
         raise KeyError(f"Template '{template_id}' not found.")
 
+    body_html = _interpolate(tpl.get("body_html", ""), variables)
+    body_text = _interpolate(tpl.get("body_text", ""), variables)
+
+    # For email templates, GrapeJS stores pure CSS in body_text.
+    # STEP 1: Inline critical CSS properties (especially img size) directly
+    #         into element style="" attributes so Gmail/Outlook can't strip them.
+    if tpl.get("channel") == "email" and body_html and body_text:
+        body_html = _inline_css(body_html, body_text)
+
+    # STEP 2: Wrap in a full HTML document (keeps <style> as fallback for
+    #         clients that DO support it, and ensures correct rendering overall).
+    if tpl.get("channel") == "email" and body_html:
+        style_block = f"<style>\n{body_text}\n</style>" if body_text else ""
+        body_html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{style_block}
+</head>
+<body style="margin: 0; padding: 0;">
+{body_html}
+</body>
+</html>"""
+
     return {
         "subject":   _interpolate(tpl.get("subject",   ""), variables),
-        "body_html": _interpolate(tpl.get("body_html", ""), variables),
-        "body_text": _interpolate(tpl.get("body_text", ""), variables),
+        "body_html": body_html,
+        "body_text": body_text,
         # Header and footer are static: NOT interpolated — intentional feature
         "header":    tpl.get("header", ""),
         "footer":    tpl.get("footer", ""),

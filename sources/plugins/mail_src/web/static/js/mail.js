@@ -608,10 +608,131 @@ async function mailSyncCurrent() {
 
 function mailCompose() {
     document.getElementById('mail-compose-title').innerText = 'New Message';
-    ['mail-compose-to','mail-compose-cc','mail-compose-subject','mail-compose-body','mail-compose-in-reply-to']
+    ['mail-compose-to','mail-compose-cc','mail-compose-subject','mail-compose-body','mail-compose-in-reply-to', 'mail-compose-template']
         .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    _mailResetTemplateBands();
     document.getElementById('mail-compose-modal').classList.add('active');
     setTimeout(() => document.getElementById('mail-compose-to')?.focus(), 100);
+    _mailLoadTemplates();
+    _mailLoadContactsData();
+}
+
+function _mailResetTemplateBands() {
+    const hdr = document.getElementById('mail-compose-header-preview');
+    const ftr = document.getElementById('mail-compose-footer-preview');
+    const hdrIf = document.getElementById('mail-compose-header-iframe');
+    const ftrIf = document.getElementById('mail-compose-footer-iframe');
+    
+    if (hdr) { hdr.textContent = 'No template selected'; hdr.classList.add('empty'); hdr.style.display = ''; }
+    if (hdrIf) { hdrIf.srcdoc = ''; hdrIf.style.display = 'none'; }
+    
+    if (ftr) { ftr.textContent = 'No template selected'; ftr.classList.add('empty'); ftr.style.display = ''; }
+    if (ftrIf) { ftrIf.srcdoc = ''; ftrIf.style.display = 'none'; }
+}
+
+let _mailTemplatesCache = [];
+async function _mailLoadTemplates() {
+    try {
+        const res = await fetch('/api/templates/?channel=email').then(r => r.json());
+        // The API returns a direct array, not {templates: [...]}
+        const templatesList = Array.isArray(res) ? res : (res.templates || []);
+        if (templatesList.length >= 0) {
+            _mailTemplatesCache = templatesList;
+            const select = document.getElementById('mail-compose-template');
+            if (select) {
+                select.innerHTML = '<option value="">-- No Template --</option>';
+                templatesList.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.name;
+                    select.appendChild(opt);
+                });
+            }
+        }
+    } catch(e) { console.warn('Could not load templates', e); }
+}
+
+function mailApplyTemplate(templateId) {
+    if (!templateId) {
+        _mailResetTemplateBands();
+        return;
+    }
+    const tpl = _mailTemplatesCache.find(t => t.id === templateId);
+    if (!tpl) return;
+
+    const hdr = document.getElementById('mail-compose-header-preview');
+    const ftr = document.getElementById('mail-compose-footer-preview');
+    const hdrIf = document.getElementById('mail-compose-header-iframe');
+    const ftrIf = document.getElementById('mail-compose-footer-iframe');
+
+    if (tpl.channel === 'email' && tpl.body_html) {
+        // Render rich HTML split for Email
+        let html = tpl.body_html;
+        
+        // Find split point
+        let splitIdx = html.indexOf('{{ body }}');
+        if (splitIdx === -1) splitIdx = html.indexOf('{{ message }}');
+        
+        if (splitIdx !== -1) {
+            let headerHtml = html.substring(0, splitIdx);
+            let footerHtml = html.substring(splitIdx + 10); // length of {{ body }}
+            
+            // Extract inline styles if any exist in the HTML
+            const styleMatch = html.match(/<style[^>]*>[\s\S]*?<\/style>/gi);
+            let styles = styleMatch ? styleMatch.join('\n') : '';
+            
+            // Inject GrapeJS CSS which is saved in body_text
+            if (tpl.body_text) {
+                styles += '\n<style>' + tpl.body_text + '</style>';
+            }
+
+            if (hdr) hdr.style.display = 'none';
+            if (hdrIf) {
+                hdrIf.style.display = 'block';
+                hdrIf.srcdoc = (styles ? styles + '\n' : '') + headerHtml;
+            }
+            
+            if (ftr) ftr.style.display = 'none';
+            if (ftrIf) {
+                ftrIf.style.display = 'block';
+                ftrIf.srcdoc = (styles ? styles + '\n' : '') + footerHtml;
+            }
+        } else {
+            // No split point found, show everything in header
+            let fullHtml = html;
+            if (tpl.body_text) {
+                fullHtml = '<style>' + tpl.body_text + '</style>\n' + fullHtml;
+            }
+            if (hdr) hdr.style.display = 'none';
+            if (hdrIf) { hdrIf.style.display = 'block'; hdrIf.srcdoc = fullHtml; }
+            if (ftr) { ftr.style.display = ''; ftr.textContent = '(no {{ body }} variable found in template)'; ftr.classList.add('empty'); }
+            if (ftrIf) { ftrIf.style.display = 'none'; ftrIf.srcdoc = ''; }
+        }
+    } else {
+        // Plain text fallback (WhatsApp, Telegram, etc)
+        if (hdrIf) hdrIf.style.display = 'none';
+        if (ftrIf) ftrIf.style.display = 'none';
+        if (hdr) hdr.style.display = '';
+        if (ftr) ftr.style.display = '';
+        
+        const headerText = tpl.header || '';
+        if (hdr) {
+            if (headerText.trim()) { hdr.textContent = headerText.trim(); hdr.classList.remove('empty'); }
+            else { hdr.textContent = '(no header in this template)'; hdr.classList.add('empty'); }
+        }
+        
+        const footerText = tpl.footer || '';
+        if (ftr) {
+            if (footerText.trim()) { ftr.textContent = footerText.trim(); ftr.classList.remove('empty'); }
+            else { ftr.textContent = '(no footer in this template)'; ftr.classList.add('empty'); }
+        }
+    }
+
+    // Pre-fill subject if empty and template has one
+    if (tpl.subject) {
+        const subj = document.getElementById('mail-compose-subject');
+        if (subj && !subj.value) subj.value = tpl.subject;
+    }
 }
 
 function mailCloseComposeModal() {
@@ -640,6 +761,7 @@ function _openReplyModal(m, replyAll) {
     document.getElementById('mail-compose-body').value = quote;
     document.getElementById('mail-compose-modal').classList.add('active');
     setTimeout(() => document.getElementById('mail-compose-body')?.focus(), 100);
+    _mailLoadTemplates();
 }
 
 async function mailForwardActive() {
@@ -658,6 +780,7 @@ async function mailForwardActive() {
         document.getElementById('mail-compose-body').value = `\n\n\n--- Forwarded Message ---\nFrom: ${m.from_addr}\nDate: ${m.date}\nSubject: ${m.subject}\n\n${m.body_text || ''}`;
         document.getElementById('mail-compose-modal').classList.add('active');
         setTimeout(() => document.getElementById('mail-compose-to')?.focus(), 100);
+        _mailLoadTemplates();
     } catch(e) {}
 }
 
@@ -668,16 +791,34 @@ async function mailSend() {
     const body    = document.getElementById('mail-compose-body').value.trim();
     const replyId = document.getElementById('mail-compose-in-reply-to').value;
     const title   = document.getElementById('mail-compose-title').innerText;
+    const templateId = document.getElementById('mail-compose-template')?.value;
+    
     if (!to) { mailShowToast('Please insert a recipient (To:)', 'warning'); return; }
+    
     const btn = document.getElementById('mail-send-btn');
     const old = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
     btn.disabled = true;
+    
     try {
         let res;
-        if (replyId && title.includes('Reply'))   res = await mailApiPost(`/reply/${replyId}`, {body, reply_all: !!cc});
-        else if (replyId && title.includes('Fwd') || title.includes('Forward')) res = await mailApiPost(`/forward/${replyId}`, {to, body: body.split('--- Forwarded')[0]});
-        else res = await mailApiPost('/send', {to, cc, subject: subj, body, is_html: false});
+        const payload = {to, cc, subject: subj, body, is_html: false};
+        if (templateId) {
+            payload.template_id = templateId;
+            payload.template_vars = { body: body, message: body }; // Map textarea to both common variable names
+        }
+        
+        if (replyId && title.includes('Reply')) {
+            payload.reply_all = !!cc;
+            res = await mailApiPost(`/reply/${replyId}`, payload);
+        }
+        else if (replyId && (title.includes('Fwd') || title.includes('Forward'))) {
+            payload.body = payload.body.split('--- Forwarded')[0];
+            res = await mailApiPost(`/forward/${replyId}`, payload);
+        }
+        else {
+            res = await mailApiPost('/send', payload);
+        }
         if (res.ok) {
             window.dispatchEvent(new CustomEvent('hecos.tooltip', {detail: 'Message sent!'}));
             mailCloseComposeModal();
@@ -726,3 +867,115 @@ if (mailPanel && mailPanel.classList.contains('active')) {
     };
 })();
 
+
+// ── Contacts Autocomplete & Group Picker ──────────────────────────────────────
+
+let _mailContactsData = [];
+let _mailContactsTags = [];
+
+async function _mailLoadContactsData() {
+    try {
+        const res = await fetch('/api/contacts/emails').then(r => r.json());
+        if (res.ok) _mailContactsData = res.emails || [];
+        const resTags = await fetch('/api/contacts/tags').then(r => r.json());
+        if (resTags.ok) _mailContactsTags = resTags.tags || [];
+        
+        // Populate group picker
+        const select = document.getElementById('mail-group-picker');
+        if (select) {
+            select.innerHTML = '<option value="" style="background-color:var(--bg2,#1e1e1e); color:var(--text,#fff);">-- Select a tag/group --</option>';
+            _mailContactsTags.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                opt.style.cssText = 'background-color:var(--bg2,#1e1e1e); color:var(--text,#fff);';
+                select.appendChild(opt);
+            });
+        }
+    } catch(e) { console.warn('Could not load contacts data', e); }
+}
+
+function _mailContactsAutocomplete(query) {
+    const dropdown = document.getElementById('mail-contacts-dropdown');
+    if (!dropdown) return;
+    
+    // Extract the current term being typed (after the last comma)
+    const terms = query.split(',');
+    const currentTerm = terms[terms.length - 1].trim().toLowerCase();
+    
+    if (currentTerm.length < 2) {
+        dropdown.style.display = 'none';
+        return;
+    }
+    
+    const matches = _mailContactsData.filter(c => 
+        (c.display_name || '').toLowerCase().includes(currentTerm) || 
+        (c.email || '').toLowerCase().includes(currentTerm)
+    ).slice(0, 8); // max 8 results
+    
+    if (matches.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+    }
+    
+    dropdown.innerHTML = '';
+    matches.forEach(c => {
+        const li = document.createElement('li');
+        li.style.cssText = 'padding:8px 12px; cursor:pointer; display:flex; flex-direction:column; border-bottom:1px solid var(--border,#333);';
+        li.innerHTML = `
+            <span style="font-weight:bold; font-size:0.9rem;">${hecosEscapeHtml(c.display_name)}</span>
+            <span style="font-size:0.8rem; opacity:0.7;">${hecosEscapeHtml(c.email)}</span>
+        `;
+        li.onmouseenter = () => li.style.background = 'var(--bg3,#2a2a2a)';
+        li.onmouseleave = () => li.style.background = 'transparent';
+        li.onclick = () => {
+            terms[terms.length - 1] = ' ' + (c.display_name ? `"${c.display_name}" <${c.email}>` : c.email);
+            const input = document.getElementById('mail-compose-to');
+            input.value = terms.join(',').trim() + ', ';
+            dropdown.style.display = 'none';
+            input.focus();
+        };
+        dropdown.appendChild(li);
+    });
+    dropdown.style.display = 'block';
+}
+
+function _mailToggleGroupPicker() {
+    const row = document.getElementById('mail-group-picker-row');
+    if (row) row.style.display = row.style.display === 'none' ? 'flex' : 'none';
+}
+
+function _mailApplyGroup(tag) {
+    const countEl = document.getElementById('mail-group-count');
+    if (!tag) {
+        if (countEl) countEl.textContent = '';
+        return;
+    }
+    
+    // Find all contacts with this tag
+    const matches = _mailContactsData.filter(c => {
+        const tags = (c.tags || '').split(',').map(t => t.trim().toLowerCase());
+        return tags.includes(tag.toLowerCase());
+    });
+    
+    if (countEl) {
+        countEl.textContent = matches.length > 0 ? `(${matches.length} recipients)` : '(0 recipients)';
+    }
+    
+    if (matches.length > 0) {
+        const input = document.getElementById('mail-compose-to');
+        let current = input.value.trim();
+        if (current && !current.endsWith(',')) current += ', ';
+        
+        const emails = matches.map(c => c.display_name ? `"${c.display_name}" <${c.email}>` : c.email).join(', ');
+        input.value = current + emails + ', ';
+    }
+}
+
+// Hide autocomplete when clicking outside
+document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('mail-contacts-dropdown');
+    if (dropdown && !e.target.closest('#mail-compose-to') && !e.target.closest('#mail-contacts-dropdown')) {
+        dropdown.style.display = 'none';
+    }
+});

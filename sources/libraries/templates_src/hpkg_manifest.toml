@@ -13,6 +13,9 @@ plugin_dir = "."
 lazy_load = true
 is_class_based = true
 api_routes_file = "web/routes.py"
+dependencies = [
+    "premailer",
+]
 
 [config_panel]
 tab_id = "templates"

@@ -246,18 +246,162 @@ def export_vcard(contact_id):
 
 
 @contacts_bp.route("/import", methods=["POST"])
-def import_vcard():
+def import_contacts():
+    """
+    Universal import endpoint. Accepts:
+    - vCard (.vcf) file upload  →  field 'file' with content-type text/vcard
+    - CSV file upload           →  field 'file' with .csv extension
+    - JSON body                 →  { "contacts": [...] } or raw list
+    - Raw vcf text body
+    Query params:
+      ?mode=duplicate (default) | replace
+    """
     from hecos.hpm.contacts import store
+    mode = request.args.get("mode", "duplicate")
     try:
+        raw_bytes = None
+        filename = ""
+
         if "file" in request.files:
-            raw = request.files["file"].read().decode("utf-8", errors="replace")
-        else:
-            raw = (request.get_data(as_text=True) or
-                   (request.get_json(force=True) or {}).get("vcf", ""))
+            f = request.files["file"]
+            filename = (f.filename or "").lower()
+            raw_bytes = f.read()
+        
+        # --- CSV import ---
+        if filename.endswith(".csv") or request.content_type == "text/csv":
+            import csv, io
+            text = raw_bytes.decode("utf-8-sig", errors="replace") if raw_bytes else request.get_data(as_text=True)
+            reader = csv.DictReader(io.StringIO(text))
+            # Auto-detect column names case-insensitively
+            imported = []
+            for row in reader:
+                row_low = {k.lower().strip(): v.strip() for k, v in row.items() if v}
+                # Find email column
+                email_val = (row_low.get("email") or row_low.get("e-mail") or
+                             row_low.get("email address") or row_low.get("mail") or "")
+                first = (row_low.get("first name") or row_low.get("first_name") or
+                         row_low.get("nome") or row_low.get("name") or
+                         row_low.get("display_name") or row_low.get("full name") or
+                         email_val.split("@")[0] or "Contact")
+                last  = (row_low.get("last name") or row_low.get("last_name") or
+                         row_low.get("cognome") or "")
+                c = store.add(
+                    first_name=first, last_name=last or None,
+                    company=row_low.get("company") or row_low.get("azienda") or None,
+                    role=row_low.get("role") or row_low.get("title") or None,
+                    notes=row_low.get("notes") or row_low.get("note") or None,
+                    tags=row_low.get("tags") or row_low.get("tag") or None,
+                    label_color=row_low.get("color") or row_low.get("label_color") or None,
+                )
+                if email_val:
+                    store.add_field(c["id"], "email", email_val, label="work", is_primary=True)
+                phone_val = row_low.get("phone") or row_low.get("telefono") or row_low.get("mobile") or ""
+                if phone_val:
+                    store.add_field(c["id"], "phone", phone_val, label="mobile", is_primary=True)
+                imported.append(c)
+            return jsonify({"ok": True, "imported": len(imported), "contacts": imported}), 201
+
+        # --- JSON import ---
+        json_data = None
+        if raw_bytes and (filename.endswith(".json") or request.content_type == "application/json"):
+            import json as _json
+            json_data = _json.loads(raw_bytes.decode("utf-8", errors="replace"))
+        elif not raw_bytes:
+            json_data = request.get_json(force=True, silent=True)
+        
+        if json_data is not None:
+            contacts_list = json_data if isinstance(json_data, list) else json_data.get("contacts", [])
+            count = store.import_full_backup(contacts_list, mode=mode)
+            return jsonify({"ok": True, "imported": count}), 201
+
+        # --- vCard fallback ---
+        raw = raw_bytes.decode("utf-8", errors="replace") if raw_bytes else request.get_data(as_text=True)
         if not raw:
-            return jsonify({"ok": False, "error": "No vCard data provided"}), 400
+            return jsonify({"ok": False, "error": "No data provided. Send a CSV/JSON/vCard file."}), 400
         created = store.import_vcard(raw)
         return jsonify({"ok": True, "imported": len(created), "contacts": created}), 201
+
+    except Exception as e:
+        logger.debug("CONTACTS", f"POST /api/contacts/import error: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@contacts_bp.route("/export", methods=["GET"])
+def export_contacts():
+    """
+    Export all contacts.
+    ?format=json (default) | csv
+    ?tag=... (filter by tag)
+    """
+    from hecos.hpm.contacts import store
+    fmt = request.args.get("format", "json").lower()
+    tag = request.args.get("tag")
+    try:
+        contacts = store.list_all(tag=tag, limit=1_000_000)
+        if fmt == "csv":
+            import csv, io
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow(["display_name", "first_name", "last_name", "company", "role",
+                             "email", "phone", "tags", "notes", "birthday"])
+            for c in contacts:
+                email = next((f["value"] for f in c.get("fields", []) if f["field_type"] == "email"), "")
+                phone = next((f["value"] for f in c.get("fields", []) if f["field_type"] == "phone"), "")
+                writer.writerow([c.get("display_name",""), c.get("first_name",""), c.get("last_name",""),
+                                 c.get("company",""), c.get("role",""), email, phone,
+                                 c.get("tags",""), c.get("notes",""), c.get("birthday","")])
+            return Response(buf.getvalue(), mimetype="text/csv",
+                            headers={"Content-Disposition": "attachment; filename=contacts.csv"})
+        else:
+            import json as _json
+            return Response(_json.dumps({"contacts": contacts, "count": len(contacts)}, ensure_ascii=False, indent=2),
+                            mimetype="application/json",
+                            headers={"Content-Disposition": "attachment; filename=contacts.json"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@contacts_bp.route("/emails", methods=["GET"])
+def get_emails():
+    """
+    Fast endpoint for Mail autocomplete and group-send.
+    Returns a flat list of {display_name, email} for all contacts with an email field.
+    ?q=...  full-text filter
+    ?tag=...  filter by tag
+    """
+    from hecos.hpm.contacts import store
+    q   = request.args.get("q", "")
+    tag = request.args.get("tag", "")
+    try:
+        contacts = store.search(q) if q else store.list_all(tag=tag or None, limit=1_000_000)
+        result = []
+        for c in contacts:
+            for f in c.get("fields", []):
+                if f["field_type"] == "email":
+                    result.append({
+                        "id": c["id"],
+                        "display_name": c.get("display_name", ""),
+                        "email": f["value"],
+                        "tags": c.get("tags", ""),
+                    })
+        return jsonify({"ok": True, "emails": result, "count": len(result)})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@contacts_bp.route("/tags", methods=["GET"])
+def get_tags():
+    """Return all distinct tags used across contacts."""
+    from hecos.hpm.contacts import store
+    try:
+        contacts = store.list_all(limit=1_000_000)
+        tags = set()
+        for c in contacts:
+            for t in (c.get("tags") or "").split(","):
+                t = t.strip()
+                if t:
+                    tags.add(t)
+        return jsonify({"ok": True, "tags": sorted(tags)})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 

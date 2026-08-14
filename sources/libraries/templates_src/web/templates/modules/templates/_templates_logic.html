@@ -1,3 +1,4 @@
+<script>
 /* ── Templates Manager — Client Logic ────────────────────────────────── */
 (function () {
   'use strict';
@@ -105,31 +106,17 @@
         if (el) el.style.display = (c === ch) ? '' : 'none';
       });
       if (ch === 'email') {
-        let fullHtml = tpl ? (tpl.body_html || '') : '';
-        if (tpl && tpl.body_text) {
-          fullHtml = '<style>' + tpl.body_text + '</style>\n' + fullHtml;
-        }
-        this._initGrapes(fullHtml);
+        this._initGrapes(tpl ? (tpl.body_html || '') : '');
       } else {
-        const container = document.getElementById('tpl-editor-' + ch);
-        if (!container) return;
-        // Fill the 3 sections: header, body (body_text), footer
-        const headerTa = container.querySelector('.tpl-header-textarea');
-        const bodyTa   = container.querySelector('.tpl-main-textarea');
-        const footerTa = container.querySelector('.tpl-footer-textarea');
-        if (headerTa) headerTa.value = tpl ? (tpl.header || '') : '';
-        if (bodyTa)   { bodyTa.value = tpl ? (tpl.body_text || '') : ''; tplUpdateCharCount(bodyTa); }
-        if (footerTa) footerTa.value = tpl ? (tpl.footer || '') : '';
+        const body = tpl ? (tpl.body || '') : '';
+        // find the active textarea (all share same id tpl-edit-body; last visible wins)
+        const ta = document.querySelector('#tpl-editor-' + ch + ' .tpl-body-textarea');
+        if (ta) { ta.value = body; tplUpdateCharCount(ta); }
       }
     },
 
     _initGrapes(html) {
-      if (_grapes) {
-          // If GrapeJS is already init, we must set components AND styles.
-          // By passing a string with <style>, GrapeJS parses both.
-          _grapes.setComponents(html);
-          return;
-      }
+      if (_grapes) { _grapes.setComponents(html); return; }
       if (typeof grapesjs === 'undefined') return;
       const loading = document.getElementById('tpl-grapes-loading');
       if (loading) loading.style.display = 'none';
@@ -156,33 +143,25 @@
       if (delBtn) delBtn.style.display = 'none';
     },
 
-    /* ── SAVE ─────────────────────────────────────────────────────── */
+    /* ── SAVE ──────────────────────────────────────────────────────── */
     async saveTemplate() {
       const ch = _val('tpl-edit-channel');
-      let body_text = '';
+      let body = '';
       let body_html = '';
-      let header = '';
-      let footer = '';
       if (ch === 'email') {
         body_html = _grapes ? _grapes.getHtml() : '';
-        body_text = _grapes ? _grapes.getCss() : '';
+        body = _grapes ? _grapes.getHtml() : '';
       } else {
-        const container = document.getElementById('tpl-editor-' + ch);
-        if (container) {
-          header    = (container.querySelector('.tpl-header-textarea') || {}).value || '';
-          body_text = (container.querySelector('.tpl-main-textarea')   || {}).value || '';
-          footer    = (container.querySelector('.tpl-footer-textarea') || {}).value || '';
-        }
+        const ta = document.querySelector('#tpl-editor-' + ch + ' .tpl-body-textarea');
+        body = ta ? ta.value : '';
       }
       const isDefaultEl = document.getElementById('tpl-edit-is-default');
       const payload = {
         name: _val('tpl-edit-name'),
         description: _val('tpl-edit-description'),
         channel: ch,
-        header,
-        body_text,
+        body,
         body_html,
-        footer,
         is_default: isDefaultEl ? isDefaultEl.checked : false,
       };
       if (!payload.name) { window.showToast && window.showToast('Template name is required', 'warning'); return; }
@@ -195,14 +174,12 @@
       }
       if (res.ok) {
         _dirty = false;
-        _activeId = res.template ? res.template.id : _activeId;
+        _activeId = res.id || _activeId;
         window.showToast && window.showToast('Template saved', 'success');
         await this.loadAll();
         // Re-render history
-        if (_activeId) {
-          const tRes = await api('GET', '/' + _activeId);
-          if (tRes.ok) this._renderHistory(tRes.template.versions || []);
-        }
+        const tRes = await api('GET', '/' + _activeId);
+        if (tRes.ok) this._renderHistory(tRes.template.versions || []);
       } else {
         window.showToast && window.showToast('Save failed: ' + (res.error||'unknown'), 'error');
       }
@@ -253,6 +230,7 @@
 
     /* ── VARIABLES ─────────────────────────────────────────────────── */
     loadFlowVariables() {
+      // placeholder — can hook into Flows API if available
       window.showToast && window.showToast('Flow variables import not available in this context', 'info');
     },
 
@@ -397,7 +375,7 @@
   };
 
   window.tplUpdateCharCount = function(ta) {
-    const countEl = ta.closest('.tpl-textarea-wrap')?.querySelector('.tpl-char-num');
+    const countEl = ta.closest('.tpl-textarea-wrap')?.querySelector('.tpl-char-count span');
     if (countEl) countEl.textContent = ta.value.length;
     // Auto-detect variables
     const matches = ta.value.match(/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g) || [];
@@ -423,43 +401,15 @@
     }
   };
 
-  /* ── Auto-init via MutationObserver ─────────────────────────────── */
-  // The panel is injected dynamically — DOMContentLoaded fires too early.
-  // We watch for the templates panel to appear, then call TM.init().
-  let _tplInitDone = false;
-
-  function _tryInit() {
-    if (_tplInitDone) return;
+  /* Auto-init when the templates tab becomes visible */
+  document.addEventListener('DOMContentLoaded', () => {
+    const tabBtn = document.querySelector('[data-target="templates"], [href="#templates"]');
+    if (tabBtn) {
+      tabBtn.addEventListener('click', () => setTimeout(() => TM.init(), 100));
+    }
+    // Also init if the panel is already active on load
     const panel = document.getElementById('tab-templates');
-    if (!panel) return;
-    // Only init if the panel is actually visible
-    if (panel.offsetParent === null && panel.style.display === 'none') return;
-    _tplInitDone = true;
-    console.log('[TEMPLATES] Panel ready — initializing TemplateManager');
-    TM.init();
-  }
-
-  // Also hook into tab click events on the sidebar nav
-  function _hookTabClick() {
-    // Hecos uses data-target or similar for tab switching
-    document.addEventListener('click', function(e) {
-      const btn = e.target.closest('[data-target="templates"], [href="#templates"], [onclick*="templates"]');
-      if (btn) {
-        setTimeout(() => {
-          _tplInitDone = false; // allow re-init on tab switch
-          _tryInit();
-        }, 150);
-      }
-    });
-  }
-
-  const _observer = new MutationObserver(() => {
-    _tryInit();
+    if (panel && panel.offsetParent !== null) TM.init();
   });
-  _observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
-
-  _hookTabClick();
-  // Try immediately in case panel already exists
-  _tryInit();
-
 })();
+</script>

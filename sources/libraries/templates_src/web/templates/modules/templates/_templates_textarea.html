@@ -1,0 +1,41 @@
+<!-- ── 3-section editor: Header / Body / Footer ───────────────────────────── -->
+
+<!-- HEADER -->
+<div class="tpl-field">
+  <label>
+    <i class="fas fa-heading" style="opacity:.6; margin-right:5px;"></i>Header
+    <span class="tpl-optional">(optional)</span>
+  </label>
+  <div class="tpl-textarea-wrap">
+    <textarea class="tpl-body-textarea tpl-header-textarea" rows="2"
+              placeholder="Header text… e.g. 'Message sent via Hecos – https://…'"
+              oninput="TemplateManager._dirty=true"></textarea>
+  </div>
+</div>
+
+<!-- BODY -->
+<div class="tpl-field">
+  <label>
+    <i class="fas fa-align-left" style="opacity:.6; margin-right:5px;"></i>Body
+    <span class="tpl-required" style="color:var(--accent); font-size:0.72rem; margin-left:4px;">*required</span>
+  </label>
+  <div class="tpl-textarea-wrap">
+    <textarea class="tpl-body-textarea tpl-main-textarea"
+              placeholder="Template body… Hello {{ nome }}, your order is ready."
+              oninput="TemplateManager._dirty=true; tplUpdateCharCount(this)"></textarea>
+    <div class="tpl-char-count"><span class="tpl-char-num">0</span> characters</div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="tpl-field">
+  <label>
+    <i class="fas fa-shoe-prints" style="opacity:.6; margin-right:5px;"></i>Footer
+    <span class="tpl-optional">(optional – signature, legal text, etc.)</span>
+  </label>
+  <div class="tpl-textarea-wrap">
+    <textarea class="tpl-body-textarea tpl-footer-textarea" rows="2"
+              placeholder="Footer / signature… e.g. 'Urania 9800 – Assistant of the Divine Admin'"
+              oninput="TemplateManager._dirty=true"></textarea>
+  </div>
+</div>

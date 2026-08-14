@@ -1,4 +1,4 @@
-﻿<!-- MAIL GRID — Inbox layout: sidebar + message list + preview -->
+<!-- MAIL GRID — Inbox layout: sidebar + message list + preview -->
 <div class="mail-shell">
 
     <!-- Toolbar -->
@@ -17,22 +17,22 @@
         <div class="mail-spinner" id="mail-sync-spinner"></div>
 
         <div class="mail-search-wrap">
-            <input class="mail-search" id="mail-search-input" type="text"
-                   placeholder="{{ translations.get('mail_search_placeholder', 'Cerca nelle email...') }}"
+            <input class="mail-search" id="mail-search-input" type="text" name="fake-search-field" autocomplete="new-password"
+                   placeholder="{{ translations.get('mail_search_placeholder', 'Search emails...') }}"
                    oninput="mailSearchDebounce(this.value)">
         </div>
 
         <div class="mail-filter-btns">
             <button class="mail-filter-btn active" id="mail-filter-all" onclick="mailSetFilter('all')">
-                {{ translations.get('mail_filter_all', 'Tutte') }}
+                {{ translations.get('mail_filter_all', 'All') }}
             </button>
             <button class="mail-filter-btn" id="mail-filter-unread" onclick="mailSetFilter('unread')">
                 <i class="fas fa-circle" style="font-size:0.5rem;color:#6c63ff"></i>
-                {{ translations.get('mail_filter_unread', 'Non lette') }}
+                {{ translations.get('mail_filter_unread', 'Unread') }}
             </button>
             <button class="mail-filter-btn" id="mail-filter-starred" onclick="mailSetFilter('starred')">
                 <i class="fas fa-star" style="color:#f59e0b"></i>
-                {{ translations.get('mail_filter_starred', 'Preferite') }}
+                {{ translations.get('mail_filter_starred', 'Starred') }}
             </button>
         </div>
 
@@ -51,20 +51,20 @@
 
     <!-- Sidebar -->
     <div class="mail-sidebar" id="mail-sidebar">
-        <div class="mail-sidebar-section">{{ translations.get('mail_folders', 'Cartelle') }}</div>
+        <div class="mail-sidebar-section">{{ translations.get('mail_folders', 'Folders') }}</div>
         <div class="mail-folder-item active" onclick="mailSelectFolder('INBOX')" id="mail-folder-INBOX">
             <span class="mail-folder-icon"><i class="fas fa-inbox"></i></span>
-            <span class="mail-folder-label">{{ translations.get('mail_folder_inbox', 'In arrivo') }}</span>
+            <span class="mail-folder-label">{{ translations.get('mail_folder_inbox', 'Inbox') }}</span>
             <span class="mail-folder-badge" id="mail-badge-inbox"></span>
         </div>
         <div class="mail-folder-item" onclick="mailSelectFolder('SENT')" id="mail-folder-SENT">
             <span class="mail-folder-icon"><i class="fas fa-paper-plane"></i></span>
-            <span class="mail-folder-label">{{ translations.get('mail_folder_sent', 'Inviati') }}</span>
+            <span class="mail-folder-label">{{ translations.get('mail_folder_sent', 'Sent') }}</span>
             <span class="mail-folder-badge" id="mail-badge-sent"></span>
         </div>
         <div class="mail-folder-item" onclick="mailSelectFolder('DRAFTS')" id="mail-folder-DRAFTS">
             <span class="mail-folder-icon"><i class="fas fa-file-alt"></i></span>
-            <span class="mail-folder-label">{{ translations.get('mail_folder_drafts', 'Bozze') }}</span>
+            <span class="mail-folder-label">{{ translations.get('mail_folder_drafts', 'Drafts') }}</span>
             <span class="mail-folder-badge" id="mail-badge-drafts"></span>
         </div>
         <div class="mail-folder-item" onclick="mailSelectFolder('SPAM')" id="mail-folder-SPAM">
@@ -74,13 +74,13 @@
         </div>
         <div class="mail-folder-item" onclick="mailSelectFolder('TRASH')" id="mail-folder-TRASH">
             <span class="mail-folder-icon"><i class="fas fa-trash-alt"></i></span>
-            <span class="mail-folder-label">{{ translations.get('mail_folder_trash', 'Cestino') }}</span>
+            <span class="mail-folder-label">{{ translations.get('mail_folder_trash', 'Trash') }}</span>
             <span class="mail-folder-badge" id="mail-badge-trash"></span>
         </div>
-        <div class="mail-sidebar-section" style="margin-top:12px">{{ translations.get('mail_views', 'Viste') }}</div>
+        <div class="mail-sidebar-section" style="margin-top:12px">{{ translations.get('mail_views', 'Views') }}</div>
         <div class="mail-folder-item" onclick="mailSetFilter('starred'); mailSelectFolder('INBOX');" id="mail-folder-STARRED">
             <span class="mail-folder-icon"><i class="fas fa-star" style="color:#f59e0b"></i></span>
-            <span class="mail-folder-label">{{ translations.get('mail_folder_starred', 'Preferite') }}</span>
+            <span class="mail-folder-label">{{ translations.get('mail_folder_starred', 'Starred') }}</span>
             <span class="mail-folder-badge" id="mail-badge-starred"></span>
         </div>
     </div>
@@ -92,7 +92,7 @@
                 <span id="mail-folder-title" style="font-weight:600;color:var(--text-primary,#e0e0f0)">Inbox</span>
                 <span id="mail-count-label" style="margin-left:6px"></span>
                 <div style="margin-left:auto;display:flex;gap:6px">
-                    <button class="mail-msg-action-btn" onclick="mailSelectAll()" title="{{ translations.get('mail_select_all', 'Seleziona tutto') }}">
+                    <button class="mail-msg-action-btn" onclick="mailSelectAll()" title="{{ translations.get('mail_select_all', 'Select all') }}">
                         <i class="fas fa-check-square"></i>
                     </button>
                 </div>
@@ -100,8 +100,8 @@
             <div class="mail-list" id="mail-list">
                 <div class="mail-empty">
                     <i class="fas fa-envelope-open"></i>
-                    <div class="mail-empty-title">{{ translations.get('mail_empty_title', 'Nessun messaggio') }}</div>
-                    <div class="mail-empty-sub">{{ translations.get('mail_empty_sub', 'Premi Sync per aggiornare la posta') }}</div>
+                    <div class="mail-empty-title">{{ translations.get('mail_empty_title', 'No messages') }}</div>
+                    <div class="mail-empty-sub">{{ translations.get('mail_empty_sub', 'Press Sync to refresh emails') }}</div>
                 </div>
             </div>
         </div>
@@ -112,16 +112,16 @@
                 <div class="mail-preview-subject" id="mail-preview-subject"></div>
                 <div class="mail-preview-meta" id="mail-preview-meta"></div>
                 <div class="mail-preview-actions">
-                    <button class="mail-btn" onclick="mailReplyActive()" title="{{ translations.get('mail_reply', 'Rispondi') }}">
-                        <i class="fas fa-reply"></i> {{ translations.get('mail_reply', 'Rispondi') }}
+                    <button class="mail-btn" onclick="mailReplyActive()" title="{{ translations.get('mail_reply', 'Reply') }}">
+                        <i class="fas fa-reply"></i> {{ translations.get('mail_reply', 'Reply') }}
                     </button>
-                    <button class="mail-btn" onclick="mailReplyAllActive()" title="{{ translations.get('mail_reply_all', 'Rispondi a tutti') }}">
+                    <button class="mail-btn" onclick="mailReplyAllActive()" title="{{ translations.get('mail_reply_all', 'Reply all') }}">
                         <i class="fas fa-reply-all"></i>
                     </button>
-                    <button class="mail-btn" onclick="mailForwardActive()" title="{{ translations.get('mail_forward', 'Inoltra') }}">
-                        <i class="fas fa-share"></i> {{ translations.get('mail_forward', 'Inoltra') }}
+                    <button class="mail-btn" onclick="mailForwardActive()" title="{{ translations.get('mail_forward', 'Forward') }}">
+                        <i class="fas fa-share"></i> {{ translations.get('mail_forward', 'Forward') }}
                     </button>
-                    <button class="mail-btn danger" onclick="mailDeleteActive()" title="{{ translations.get('mail_delete', 'Elimina') }}" style="margin-left:auto">
+                    <button class="mail-btn danger" onclick="mailDeleteActive()" title="{{ translations.get('mail_delete', 'Delete') }}" style="margin-left:auto">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>
@@ -129,7 +129,7 @@
             <div class="mail-preview-body" id="mail-preview-body">
                 <div class="mail-preview-empty">
                     <i class="fas fa-envelope"></i>
-                    <span>{{ translations.get('mail_select_msg', 'Seleziona un messaggio') }}</span>
+                    <span>{{ translations.get('mail_select_msg', 'Select a message') }}</span>
                 </div>
             </div>
         </div>
@@ -156,4 +156,3 @@
     </div>
     <div id="mail-fs-body"></div>
 </div>
-

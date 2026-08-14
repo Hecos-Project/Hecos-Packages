@@ -6,10 +6,10 @@
             <button class="tpl-icon-btn" title="Backup All Contacts" onclick="contactsUI.backupFull()">
                 <i class="fas fa-download"></i>
             </button>
-            <button class="tpl-icon-btn" title="Import / Restore Contacts" onclick="document.getElementById('c-restore-file').click()">
+            <button class="tpl-icon-btn" title="Import Contacts (JSON, CSV, vCard)" onclick="document.getElementById('c-restore-file').click()">
                 <i class="fas fa-upload"></i>
             </button>
-            <input type="file" id="c-restore-file" accept=".json" style="display:none" onchange="contactsUI.restoreFile(event)">
+            <input type="file" id="c-restore-file" accept=".json,.csv,.vcf" style="display:none" onchange="contactsUI.restoreFile(event)">
         </div>
     </div>
     <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">

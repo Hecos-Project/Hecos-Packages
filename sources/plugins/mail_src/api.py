@@ -143,7 +143,7 @@ def send_email():
     template_vars = data.get("template_vars", {})
     if template_id:
         try:
-            from hecos.plugins.templates import store as tpl_store
+            from hecos.hpm.libraries.templates import store as tpl_store
             rendered = tpl_store.render_template(template_id, template_vars)
             subject  = rendered.get("subject")   or subject
             if rendered.get("body_html"):

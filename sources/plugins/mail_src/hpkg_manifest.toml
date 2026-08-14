@@ -44,7 +44,10 @@ llm_tools = [
     "list_emails",
     "get_email",
 ]
-slash_commands = []
+slash_commands = [
+    "/mail",
+    "/send",
+]
 has_widget = false
 has_config_panel = true
 has_api_routes = true
@@ -135,3 +138,15 @@ required = [
 [tool_schema.function.parameters.properties.email_id]
 type = "string"
 description = "The unique ID of the email to retrieve."
+
+[[slash_command]]
+name = "/mail"
+description = "Opens, lists, or checks your emails. You can also specify an action like '/mail sync' or '/mail read <id>'."
+action_type = "llm_agent"
+prompt_template = "Please help me manage my emails. Here is my request: {{user_input}}. If I didn't specify anything, just list my recent emails."
+
+[[slash_command]]
+name = "/send"
+description = "Send a new email. Example: '/send an email to Tony saying hi' or just '/send' to start an interactive drafting process."
+action_type = "llm_agent"
+prompt_template = "I want to send an email. Please help me draft and send it using the send_email tool. Request: {{user_input}}"
