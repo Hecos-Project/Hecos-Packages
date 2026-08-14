@@ -1,0 +1,84 @@
+<!-- NOTIFICATIONS CENTER PANEL -->
+<div id="tab-notifications" class="panel">
+  <div class="card">
+    <div class="card-title"><i class="fas fa-bell"></i> Notifications Center</div>
+    <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">
+      Send automated notifications via Email or Messenger when system events occur.
+      Uses the <strong>MAIL</strong> and/or <strong>MESSENGER</strong> plugins if available.
+    </p>
+
+    <!-- Plugin not available warning -->
+    <div id="ntf-no-plugins-warn" style="display:none; padding:12px 15px; background:rgba(255,165,0,0.1); border:1px solid rgba(255,165,0,0.3); border-radius:8px; margin-bottom:18px; font-size:13px; color:#ffaa44;">
+      <i class="fas fa-exclamation-triangle"></i>
+      No messaging plugins found. Install <strong>MAIL</strong> or <strong>MESSENGER</strong> from the Package Manager to use this panel.
+    </div>
+
+    <!-- Master Switch -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding:15px; background:var(--glass); border-radius:8px; border:1px solid var(--border);">
+      <div>
+        <h4 style="margin:0; font-size:15px;">Enable Global Notifications</h4>
+        <span style="font-size:12px; color:var(--muted);">Turn all notifications on or off.</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="notifications-master-switch" onchange="window.ntfSave()">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- Destinations -->
+    <div style="margin-bottom:25px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h3 style="margin:0; font-size:14px; color:var(--accent);"><i class="fas fa-address-book"></i> Destinations</h3>
+        <div id="ntf-add-buttons" style="display:flex; gap:6px; flex-wrap:wrap;">
+          <!-- Buttons injected dynamically per available plugin -->
+        </div>
+      </div>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">
+        Add a destination for each available channel. Channels depend on installed plugins.
+      </p>
+      <div id="ntf-destinations-list" style="display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size:12px; color:var(--muted); font-style:italic;">Loading...</div>
+      </div>
+    </div>
+
+    <hr style="border:0; border-top:1px solid var(--border); margin:25px 0;">
+
+    <!-- Event Rules -->
+    <div>
+      <h3 style="margin-bottom:10px; font-size:14px; color:var(--accent);"><i class="fas fa-project-diagram"></i> Event Rules</h3>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:15px;">Select which destination should be notified for each event type. Hold Ctrl to select multiple.</p>
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border); color:var(--muted);">
+              <th style="padding:10px 8px; text-align:left; width:200px;">Event</th>
+              <th style="padding:10px 8px; text-align:left;">Description</th>
+              <th style="padding:10px 8px; text-align:left; width:280px;">Destination</th>
+            </tr>
+          </thead>
+          <tbody id="ntf-rules-table">
+            <tr><td colspan="3" style="padding:15px 8px; color:var(--muted); font-style:italic; font-size:12px;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="display:flex; align-items:center; gap:15px; margin-top:30px;">
+      <button class="btn btn-secondary" onclick="window.ntfTest()"><i class="fas fa-vial"></i> Send Test Notification</button>
+      <span id="ntf-save-status" style="font-size:11px; color:var(--muted);"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Inline confirm modal (no dependency on hpmShowConfirm) -->
+<div id="ntf-confirm-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
+  <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:28px 32px; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <p id="ntf-confirm-text" style="margin:0 0 24px; font-size:14px; line-height:1.6; color:var(--text);"></p>
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="window._ntfModalResolve(false)">Cancel</button>
+      <button id="ntf-confirm-ok" class="btn btn-primary" onclick="window._ntfModalResolve(true)">Confirm</button>
+    </div>
+  </div>
+</div>
+
