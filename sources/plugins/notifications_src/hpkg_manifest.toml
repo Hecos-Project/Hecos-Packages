@@ -1,0 +1,56 @@
+id = "notifications"
+manifest_version = "1"
+name = "Notifications Center"
+version = "1.0.0"
+author = "Antonio Meloni"
+license = "GPL-3.0"
+description = "Event notification system for Hecos. Sends notifications via MAIL or MESSENGER when system events occur (boot, errors, Flow completion, etc.). Requires at least one of the MAIL or MESSENGER plugins installed."
+type = "plugin"
+pip_isolation = "shared"
+target_dir = "hpm"
+plugin_dir = "."
+hecos_min_version = "0.48.0"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+readme = "README.md"
+dependencies = []
+optional_dependencies = [
+    "mail",
+    "messenger",
+]
+pip_requirements = []
+tag = "NOTIFICATIONS"
+lazy_load = false
+is_class_based = true
+on_load = true
+api_routes_file = "web/routes.py"
+signature = "m5pg0OiqXEkw1DUJbkaxf0RGYhDI4T+bq5CSfRc/j2FUXB6YVsy7Vb4EcVL/Uv/2VtnYJvgx4QTm2KrtpxJYAw=="
+
+[config_panel]
+tab_id = "notifications"
+tab_label = "Notifications"
+tab_icon = "fas fa-bell"
+category = "SISTEMA"
+template_file = "web/templates/config_notifications.html"
+api_routes_file = "web/routes.py"
+config_api_get = "/hecos/api/plugins/notifications/config"
+config_api_post = "/hecos/api/plugins/notifications/config"
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = "Plugin-driven notification router. No credentials required — it delegates sending to the MAIL or MESSENGER plugins. Supports events: system_boot, system_shutdown, system_error, flow_started, flow_completed, flow_failed, package_installed, security_login_failed."
+
+[file_hashes]
+"config.py" = "c6f966e710b5fa3d405fe34b3cf864c6bd9314af46bd3db73bcd196873ab47a0"
+"dispatcher.py" = "70571d23d0dd672abe94c5114d62b83cef14f98aa0b6b38717461d83d1c49258"
+"event_types.py" = "9a58de313a6ce83cf8c7246f60fd355a7539c76f3d22d0e81b02ab75dc8537a5"
+"main.py" = "4c36d3e8998e1c280fad8e871395532ba3ccd6f8f4192756e18cba7465ec83b2"
+"README.md" = "32bdbebe56969379d74cd4e103fcf68e728cc6ac45286d6b57c220ca38710d42"
+"__init__.py" = "f52b7c83d50bf8a2503dea726788a002ff49bbf2a168ed3e153395b735a7927d"
+"web/routes.py" = "3d6bec62287347f698acbc723a0764c267c97522a9969e42ae1b9570025dfd68"
+"web/templates/config_notifications.html" = "a401cb39cadd17d98f3043ddc890be5e303be5656bf7ad523a8a3aa506c2f3af"
