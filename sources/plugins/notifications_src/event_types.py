@@ -21,5 +21,9 @@ class SystemEvent(Enum):
     SECURITY_LOGIN_FAILED = "security_login_failed"
     SECURITY_NEW_DEVICE   = "security_new_device"
 
+    BACKUP_STARTED     = "backup_started"
+    BACKUP_COMPLETED   = "backup_completed"
+    BACKUP_FAILED      = "backup_failed"
+
     # Evento generico usato per notifiche di test
     CUSTOM = "custom"

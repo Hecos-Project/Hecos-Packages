@@ -13,23 +13,12 @@
       No messaging plugins found. Install <strong>MAIL</strong> or <strong>MESSENGER</strong> from the Package Manager to use this panel.
     </div>
 
-    <!-- Master Switch -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding:15px; background:var(--glass); border-radius:8px; border:1px solid var(--border);">
-      <div>
-        <h4 style="margin:0; font-size:15px;">Enable Global Notifications</h4>
-        <span style="font-size:12px; color:var(--muted);">Turn all notifications on or off.</span>
-      </div>
-      <label class="switch">
-        <input type="checkbox" id="notifications-master-switch" onchange="window.ntfSave()">
-        <span class="slider"></span>
-      </label>
-    </div>
-
     <!-- Destinations -->
     <div style="margin-bottom:25px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <h3 style="margin:0; font-size:14px; color:var(--accent);"><i class="fas fa-address-book"></i> Destinations</h3>
         <div id="ntf-add-buttons" style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="window.ntfOpenContactsModal()"><i class="fas fa-users"></i> Import from Contacts</button>
           <!-- Buttons injected dynamically per available plugin -->
         </div>
       </div>
@@ -47,13 +36,20 @@
     <div>
       <h3 style="margin-bottom:10px; font-size:14px; color:var(--accent);"><i class="fas fa-project-diagram"></i> Event Rules</h3>
       <p style="font-size:12px; color:var(--muted); margin-bottom:15px;">Select which destination should be notified for each event type. Hold Ctrl to select multiple.</p>
+      <div style="margin-bottom:15px; display:flex; gap:10px; align-items:center;">
+        <select id="ntf-add-rule-select" class="config-input" style="flex:1; max-width:300px;">
+          <option value="">-- Select an Event to Add --</option>
+        </select>
+        <button class="btn btn-secondary" onclick="window.ntfAddRule()"><i class="fas fa-plus"></i> Add Event Rule</button>
+      </div>
       <div style="overflow-x:auto;">
         <table style="width:100%; border-collapse:collapse; font-size:13px;">
           <thead>
             <tr style="border-bottom:1px solid var(--border); color:var(--muted);">
-              <th style="padding:10px 8px; text-align:left; width:200px;">Event</th>
-              <th style="padding:10px 8px; text-align:left;">Description</th>
-              <th style="padding:10px 8px; text-align:left; width:280px;">Destination</th>
+              <th style="padding:10px 8px; text-align:left; width:20%;">Event</th>
+              <th style="padding:10px 8px; text-align:left; width:35%;">Description</th>
+              <th style="padding:10px 8px; text-align:left; width:35%;">Configuration</th>
+              <th style="padding:10px 8px; text-align:right; width:10%;">Action</th>
             </tr>
           </thead>
           <tbody id="ntf-rules-table">
@@ -63,15 +59,88 @@
       </div>
     </div>
 
-    <!-- Footer -->
-    <div style="display:flex; align-items:center; gap:15px; margin-top:30px;">
+    <hr style="border:0; border-top:1px solid var(--border); margin:25px 0;">
+
+    <!-- Notification History -->
+    <div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h3 style="margin:0; font-size:14px; color:var(--accent);"><i class="fas fa-history"></i> Notification History</h3>
+        <button class="btn btn-secondary" onclick="window.ntfClearHistory()" style="font-size:11px; padding:4px 10px;"><i class="fas fa-trash"></i> Clear</button>
+      </div>
+      <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden; background:rgba(0,0,0,0.1);">
+        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+          <thead style="background:var(--bg2); border-bottom:1px solid var(--border);">
+            <tr>
+              <th style="padding:8px 10px; text-align:left; color:var(--muted); font-weight:600; white-space:nowrap;">Time</th>
+              <th style="padding:8px 10px; text-align:left; color:var(--muted); font-weight:600;">Event</th>
+              <th style="padding:8px 10px; text-align:left; color:var(--muted); font-weight:600;">Destination</th>
+              <th style="padding:8px 10px; text-align:left; color:var(--muted); font-weight:600;">Subject</th>
+              <th style="padding:8px 10px; text-align:center; color:var(--muted); font-weight:600;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="ntf-history-list">
+            <tr><td colspan="5" style="padding:14px; text-align:center; color:var(--muted); font-style:italic;">Loading history...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Live Log Box -->
+    <div style="margin-top:25px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h3 style="margin:0; font-size:14px; color:var(--accent);"><i class="fas fa-terminal"></i> Live Log</h3>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <span id="ntf-log-status" style="font-size:10px; color:var(--muted);">Connecting...</span>
+          <button class="btn btn-secondary" onclick="window.ntfClearLog()" style="font-size:11px; padding:3px 8px;"><i class="fas fa-eraser"></i> Clear</button>
+        </div>
+      </div>
+      <div id="ntf-log-box" style="background:#0a0a0a; border:1px solid var(--border); border-radius:8px; padding:10px 14px; height:180px; overflow-y:auto; font-family:monospace; font-size:11px; line-height:1.6; color:#b0b0b0;">
+        <div style="color:var(--muted); font-style:italic;">Waiting for log events...</div>
+      </div>
+    </div>
+
+    <!-- Footer: Test + Save Status -->
+    <div style="display:flex; align-items:center; gap:15px; margin-top:20px;">
       <button class="btn btn-secondary" onclick="window.ntfTest()"><i class="fas fa-vial"></i> Send Test Notification</button>
       <span id="ntf-save-status" style="font-size:11px; color:var(--muted);"></span>
     </div>
   </div>
 </div>
 
-<!-- Inline confirm modal (no dependency on hpmShowConfirm) -->
+
+<!-- Contacts Modal -->
+<div id="ntf-contacts-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
+  <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:28px 32px; max-width:500px; width:90%; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <h3 style="margin-top:0;">Select a Contact</h3>
+    <input type="text" id="ntf-contacts-search" placeholder="Search contacts..." class="config-input" style="margin-bottom:15px;" oninput="window.ntfSearchContacts(this.value)">
+    <div id="ntf-contacts-list" style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size:12px; color:var(--muted); font-style:italic;">Loading...</div>
+    </div>
+    <div style="display:flex; justify-content:flex-end; margin-top:20px;">
+      <button class="btn btn-secondary" onclick="document.getElementById('ntf-contacts-modal').style.display='none'">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Test Modal (with template selector) -->
+<div id="ntf-test-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
+  <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:28px 32px; max-width:440px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <h3 style="margin-top:0; font-size:15px;"><i class="fas fa-vial"></i> Send Test Notification</h3>
+    <p style="font-size:13px; color:var(--muted); margin-bottom:18px;">A test notification will be sent to all currently configured destinations.</p>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:5px;">Template (optional)</label>
+      <select id="ntf-test-template-select" class="config-input">
+        <option value="">-- No Template (Plain Text) --</option>
+      </select>
+    </div>
+    <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+      <button class="btn btn-secondary" onclick="document.getElementById('ntf-test-modal').style.display='none'">Cancel</button>
+      <button class="btn btn-primary" onclick="window.ntfSendTest()"><i class="fas fa-paper-plane"></i> Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Inline confirm modal -->
 <div id="ntf-confirm-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
   <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:28px 32px; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
     <p id="ntf-confirm-text" style="margin:0 0 24px; font-size:14px; line-height:1.6; color:var(--text);"></p>

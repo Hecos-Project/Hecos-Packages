@@ -11,6 +11,7 @@ DESCRIPTION: Core backup/restore logic for every Hecos module.
 
 import io
 import json
+import sys
 import zipfile
 import threading
 from datetime import datetime, timezone

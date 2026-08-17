@@ -44,10 +44,7 @@ llm_tools = [
     "list_emails",
     "get_email",
 ]
-slash_commands = [
-    "/mail",
-    "/send",
-]
+slash_commands = []
 has_widget = false
 has_config_panel = true
 has_api_routes = true

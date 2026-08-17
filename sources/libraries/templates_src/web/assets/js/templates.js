@@ -23,6 +23,7 @@
   let _activeId  = null;
   let _dirty     = false;
   let _grapes    = null; // GrapeJS instance
+  let _currentTemplate = null;
 
   /* ── public API ──────────────────────────────────────────────────── */
   const TM = {
@@ -46,8 +47,10 @@
       const channels = ['email','whatsapp','telegram','discord'];
       channels.forEach(ch => {
         const list = document.getElementById('tpl-list-' + ch);
+        const countSpan = document.getElementById('tpl-count-' + ch);
         if (!list) return;
         const items = _templates.filter(t => t.channel === ch);
+        if (countSpan) countSpan.textContent = '(' + items.length + ')';
         if (!items.length) {
           list.innerHTML = '<div class="tpl-sidebar-empty">No templates</div>';
           return;
@@ -76,8 +79,12 @@
       const res = await api('GET', '/' + id);
       if (!res.ok) { window.showToast && window.showToast('Could not load template', 'error'); return; }
       const t = res.template;
+      _currentTemplate = t;
       this._renderEditor(t);
       this._renderSidebar();
+      // GrapeJS sets dirty=true when components are loaded programmatically.
+      // Reset it after a short delay to ignore the initial load event.
+      setTimeout(() => { _dirty = false; TM._dirty = false; }, 100);
     },
 
     _renderEditor(t) {
@@ -110,6 +117,15 @@
           fullHtml = '<style>' + tpl.body_text + '</style>\n' + fullHtml;
         }
         this._initGrapes(fullHtml);
+        
+        // Populate header and footer for email
+        const container = document.getElementById('tpl-editor-email');
+        if (container) {
+          const headerTa = container.querySelector('.tpl-header-textarea');
+          const footerTa = container.querySelector('.tpl-footer-textarea');
+          if (headerTa) headerTa.value = tpl ? (tpl.header || '') : '';
+          if (footerTa) footerTa.value = tpl ? (tpl.footer || '') : '';
+        }
       } else {
         const container = document.getElementById('tpl-editor-' + ch);
         if (!container) return;
@@ -151,6 +167,7 @@
       if (_dirty && !(await tplShowConfirm('Discard unsaved changes?'))) return;
       _activeId = null;
       _dirty = false;
+      _currentTemplate = null;
       this._renderEditor({ name:'', description:'', channel: ch||'email', body:'', body_html:'', is_default:false, versions:[] });
       const delBtn = document.getElementById('tpl-delete-btn');
       if (delBtn) delBtn.style.display = 'none';
@@ -166,6 +183,12 @@
       if (ch === 'email') {
         body_html = _grapes ? _grapes.getHtml() : '';
         body_text = _grapes ? _grapes.getCss() : '';
+        // Read header and footer from the textareas
+        const container = document.getElementById('tpl-editor-email');
+        if (container) {
+          header = (container.querySelector('.tpl-header-textarea') || {}).value || '';
+          footer = (container.querySelector('.tpl-footer-textarea') || {}).value || '';
+        }
       } else {
         const container = document.getElementById('tpl-editor-' + ch);
         if (container) {
@@ -210,6 +233,7 @@
 
     /* ── DELETE ────────────────────────────────────────────────────── */
     async deleteTemplate(id) {
+      id = id || _activeId;
       if (!id) return;
       if (!(await tplShowConfirm('Delete this template?', 'Delete'))) return;
       const res = await api('DELETE', '/' + id);
@@ -327,9 +351,26 @@
       const ch = _val('tpl-edit-channel');
       if (ch === 'email' && rendered.body_html) {
         const iframe = document.getElementById('tpl-preview-iframe');
+        const autoResize = () => {
+          try {
+            if (iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.body) {
+              const body = iframe.contentWindow.document.body;
+              const html = iframe.contentWindow.document.documentElement;
+              const h = Math.max(body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight);
+              if (h > 50) iframe.style.height = (h + 5) + 'px';
+            }
+          } catch(e) {}
+        };
+        iframe.onload = () => {
+          autoResize();
+          try { new ResizeObserver(autoResize).observe(iframe.contentWindow.document.body); } catch(e) {}
+        };
         iframe.style.display = '';
         document.getElementById('tpl-preview-text').style.display = 'none';
         iframe.srcdoc = rendered.body_html;
+        setTimeout(autoResize, 50);
+        setTimeout(autoResize, 300);
+        setTimeout(autoResize, 1000);
       } else {
         document.getElementById('tpl-preview-iframe').style.display = 'none';
         const pre = document.getElementById('tpl-preview-text');
@@ -394,6 +435,9 @@
       p.style.display = p.id === targetId ? '' : 'none';
       p.classList.toggle('active', p.id === targetId);
     });
+    if (targetId === 'tpl-tab-preview') {
+      window.TemplateManager.previewRender();
+    }
   };
 
   window.tplUpdateCharCount = function(ta) {

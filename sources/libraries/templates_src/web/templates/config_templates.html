@@ -11,7 +11,7 @@
   <script src="https://unpkg.com/grapesjs@0.21.13/dist/grapes.min.js"></script>
 
   <!-- ── Layout: Sidebar + Main ──────────────────────────────────────── -->
-  <div style="height: calc(100vh - 120px); display: flex; flex-direction: column; padding: 0; overflow: hidden; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg, #0f0f15);">
+  <div style="display: flex; flex-direction: column; padding: 0; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg, #0f0f15); min-height: 600px;">
     <div class="tpl-layout" style="flex: 1; border-radius: inherit;">
 
     <!-- ─── SIDEBAR ──────────────────────────────────────────────────── -->
@@ -42,14 +42,18 @@
 
       {% for ch_id, ch_icon, ch_label in channels %}
       <div class="tpl-channel-group">
-        <div class="tpl-channel-header">
-          <span><i class="{{ ch_icon }}"></i> {{ ch_label }}</span>
-          <button class="tpl-new-btn" title="New {{ ch_label }} template"
-                  onclick="TemplateManager.newTemplate('{{ ch_id }}')">
-            <i class="fas fa-plus"></i>
-          </button>
+        <div class="tpl-channel-header" style="cursor: pointer; user-select: none;"
+             onclick="const list = document.getElementById('tpl-list-{{ ch_id }}'); const icon = this.querySelector('.tpl-collapse-icon'); if(list.style.display==='none'){ list.style.display=''; icon.classList.replace('fa-chevron-right','fa-chevron-down'); } else { list.style.display='none'; icon.classList.replace('fa-chevron-down','fa-chevron-right'); }">
+          <span style="display: flex; align-items: center; gap: 6px;"><i class="{{ ch_icon }}"></i> {{ ch_label }} <span id="tpl-count-{{ ch_id }}" style="opacity: 0.6; font-size: 0.75rem; font-weight: normal;"></span></span>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <button class="tpl-new-btn" title="New {{ ch_label }} template"
+                    onclick="event.stopPropagation(); TemplateManager.newTemplate('{{ ch_id }}')">
+              <i class="fas fa-plus"></i>
+            </button>
+            <i class="fas fa-chevron-right tpl-collapse-icon" style="font-size: 0.75rem; color: var(--muted); margin-left: 2px;"></i>
+          </div>
         </div>
-        <div id="tpl-list-{{ ch_id }}" class="tpl-channel-list">
+        <div id="tpl-list-{{ ch_id }}" class="tpl-channel-list" style="display: none;">
           <div class="tpl-sidebar-empty">Loading…</div>
         </div>
       </div>
@@ -181,9 +185,11 @@
               <input id="tpl-edit-subject" type="text" placeholder="Email subject… {{ nome }}"
                      oninput="TemplateManager._dirty=true">
             </div>
+
+
             <div class="tpl-grapes-wrapper">
               <div id="tpl-grapes-loading" class="tpl-grapes-loading">
-                <i class="fas fa-spinner fa-spin"></i> Loading email builder…
+                <i class="fas fa-spinner fa-spin"></i> Loading template editor…
               </div>
               <!-- GrapeJS panels -->
               <div class="tpl-grapes-layout">
@@ -207,6 +213,7 @@
               </div>
             </div>
           </div>
+
 
           <!-- WHATSAPP editor -->
           <div id="tpl-editor-whatsapp" style="display:none">

@@ -159,7 +159,8 @@ def _execute_step(
                 if "emit"   in sig_args: kwargs["emit"]   = emit
                 return handler(**kwargs)
             else:
-                import time as _time
+                import time
+import sys as _time
                 from ..registry import execute_action
                 clean_params = {k: v for k, v in params.items()
                                 if k not in ("timeout_seconds", "on_timeout_continue")}

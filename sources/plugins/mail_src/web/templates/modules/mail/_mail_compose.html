@@ -215,7 +215,7 @@
             <div class="mail-compose-section">
                 <div class="mail-compose-section-label">
                     <span class="section-badge badge-header">HEADER</span>
-                    <span>Template header — read only</span>
+                    <span>Template header</span>
                 </div>
                 <div class="mail-compose-section-content">
                     <div class="mail-template-band empty" id="mail-compose-header-preview">No template selected</div>
@@ -232,6 +232,7 @@
                 <div class="mail-compose-section-content" style="flex:1; min-height:0; display:flex; flex-direction:column;">
                     <textarea class="mail-compose-textarea" id="mail-compose-body"
                               placeholder="Write your message here..."></textarea>
+                    <iframe class="mail-template-iframe" id="mail-compose-body-iframe" style="display:none; flex:1; min-height:200px; background:#161b22;" sandbox="allow-same-origin"></iframe>
                 </div>
             </div>
 
@@ -239,7 +240,7 @@
             <div class="mail-compose-section">
                 <div class="mail-compose-section-label">
                     <span class="section-badge badge-footer">FOOTER</span>
-                    <span>Template footer — read only</span>
+                    <span>Template footer</span>
                 </div>
                 <div class="mail-compose-section-content">
                     <div class="mail-template-band empty" id="mail-compose-footer-preview">No template selected</div>

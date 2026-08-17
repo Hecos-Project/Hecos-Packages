@@ -38,8 +38,12 @@ class NotificationsConfig(BaseModel):
         "package_removed":       [],
         "security_login_failed": [],
         "security_new_device":   [],
+        "backup_started":        [],
+        "backup_completed":      [],
+        "backup_failed":         [],
         "custom":                [],
     })
+    event_templates: Dict[str, str] = Field(default_factory=dict)
 
 
 # ── Config file path (same dir as this file) ──────────────────────────────────

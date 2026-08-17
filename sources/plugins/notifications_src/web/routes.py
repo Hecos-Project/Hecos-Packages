@@ -38,17 +38,75 @@ def init_plugin_routes(app, cfg_mgr=None, root_dir=None, log=None, get_sm=None):
     @app.route('/hecos/api/plugins/notifications/test', methods=['POST'])
     def test_notification():
         try:
-            from hecos.hpm.notifications.dispatcher import notify
-            from hecos.hpm.notifications.event_types import SystemEvent
-            notify(
-                event=SystemEvent.CUSTOM,
-                subject="Hecos Test Notification",
-                message="If you are reading this message, the Hecos Notifications Center is configured correctly!"
-            )
-            return jsonify({"status": "success", "message": "Test notification dispatched."})
+            from hecos.hpm.notifications.dispatcher import _dispatch_async
+            from hecos.hpm.notifications.config import load_config, save_config
+            import threading
+
+            data = flask_request.get_json(silent=True) or {}
+            template_id = data.get('template_id', '')
+
+            cfg = load_config()
+            destinations = cfg.get('destinations', {})
+
+            if not destinations:
+                return jsonify({"status": "error", "message": "No destinations configured. Add at least one destination first."}), 400
+
+            # Temporarily force all destinations into the 'custom' rule so
+            # _dispatch_async will send to everyone regardless of configured rules.
+            original_rules = cfg.get('rules', {}).copy()
+            original_tpl   = cfg.get('event_templates', {}).get('custom', '')
+
+            cfg.setdefault('rules', {})['custom'] = list(destinations.keys())
+            if template_id:
+                cfg.setdefault('event_templates', {})['custom'] = template_id
+            elif 'custom' in cfg.get('event_templates', {}):
+                cfg['event_templates'].pop('custom', None)
+
+            save_config(cfg)
+
+            def _run_and_restore():
+                try:
+                    _dispatch_async(
+                        event_type_str='custom',
+                        subject='Hecos Test Notification',
+                        message='If you are reading this, the Hecos Notifications Center is configured correctly!'
+                    )
+                finally:
+                    # Restore original config
+                    restored = load_config()
+                    restored['rules'] = original_rules
+                    if original_tpl:
+                        restored.setdefault('event_templates', {})['custom'] = original_tpl
+                    else:
+                        restored.get('event_templates', {}).pop('custom', None)
+                    save_config(restored)
+
+            t = threading.Thread(target=_run_and_restore, daemon=True, name='NtfTestThread')
+            t.start()
+
+            return jsonify({"status": "success", "message": f"Test dispatched to {len(destinations)} destination(s)."})
         except Exception as e:
             logger.error(f"[NOTIFICATIONS API] test error: {e}")
             return jsonify({"status": "error", "message": str(e)}), 500
+
+    @app.route('/hecos/api/plugins/notifications/history', methods=['GET'])
+    def get_notifications_history():
+        try:
+            from hecos.hpm.notifications.history import get_history
+            return jsonify(get_history())
+        except Exception as e:
+            logger.error(f"[NOTIFICATIONS API] history GET error: {e}")
+            return jsonify([]), 500
+
+    @app.route('/hecos/api/plugins/notifications/history/clear', methods=['POST'])
+    def clear_notifications_history():
+        try:
+            from hecos.hpm.notifications.history import clear_history
+            clear_history()
+            return jsonify({"status": "ok"})
+        except Exception as e:
+            logger.error(f"[NOTIFICATIONS API] history CLEAR error: {e}")
+            return jsonify({"status": "error"}), 500
 
     @app.route('/hecos/api/plugins/notifications/available_plugins', methods=['GET'])
     def get_available_plugins():

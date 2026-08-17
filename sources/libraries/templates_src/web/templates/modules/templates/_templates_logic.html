@@ -19,11 +19,12 @@
     return res.json();
   }
 
-  /* ── state ───────────────────────────────────────────────────────── */
-  let _templates = [];   // flat list from server
-  let _activeId  = null;
-  let _dirty     = false;
-  let _grapes    = null; // GrapeJS instance
+  /* ── state ──────────────────────────────────────────────────────── */
+  let _templates       = [];   // flat list from server
+  let _activeId        = null;
+  let _dirty           = false;
+  let _grapes          = null; // GrapeJS instance
+  let _currentTemplate = null; // full template object currently open
 
   /* ── public API ──────────────────────────────────────────────────── */
   const TM = {
@@ -77,6 +78,7 @@
       const res = await api('GET', '/' + id);
       if (!res.ok) { window.showToast && window.showToast('Could not load template', 'error'); return; }
       const t = res.template;
+      _currentTemplate = t;
       this._renderEditor(t);
       this._renderSidebar();
     },
@@ -106,14 +108,73 @@
         if (el) el.style.display = (c === ch) ? '' : 'none';
       });
       if (ch === 'email') {
-        this._initGrapes(tpl ? (tpl.body_html || '') : '');
+        // Load only the body into GrapeJS for editing
+        const bodyHtml = (tpl && tpl.body_html) || '';
+        this._initGrapes(bodyHtml);
+        // Render the FULL template (header + body + footer) in the preview iframe
+        this._renderFullPreviewIframe(tpl);
       } else {
-        const body = tpl ? (tpl.body || '') : '';
-        // find the active textarea (all share same id tpl-edit-body; last visible wins)
-        const ta = document.querySelector('#tpl-editor-' + ch + ' .tpl-body-textarea');
-        if (ta) { ta.value = body; tplUpdateCharCount(ta); }
+        const body = tpl ? (tpl.body || tpl.body_text || '') : '';
+        const container = document.getElementById('tpl-editor-' + ch);
+        if (container) {
+          const ta = container.querySelector('.tpl-main-textarea') || container.querySelector('.tpl-body-textarea');
+          if (ta) { ta.value = body; tplUpdateCharCount(ta); }
+        }
       }
     },
+
+    _renderFullPreviewIframe(tpl) {
+      const iframe = document.getElementById('tpl-full-preview-iframe');
+      if (!iframe) return;
+      const header   = (tpl && tpl.header)    || '';
+      const bodyHtml = (tpl && tpl.body_html) || '';
+      const footer   = (tpl && tpl.footer)    || '';
+      // Extract body content from each section
+      const _body = (html) => {
+        if (!html) return '';
+        const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        return m ? m[1] : html;
+      };
+      const _css = (html) => {
+        if (!html) return '';
+        const m = html.match(/<style[^>]*>[\s\S]*?<\/style>/gi);
+        return m ? m.join('\n') : '';
+      };
+      const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  ${_css(header)}
+  ${_css(bodyHtml)}
+  ${_css(footer)}
+</head>
+<body style="margin:0;padding:0;background-color:#0d1117;">
+${_body(header)}
+${_body(bodyHtml)}
+${_body(footer)}
+</body>
+</html>`;
+      iframe.srcdoc = fullHtml;
+      // Auto-resize iframe to content
+      const resize = () => {
+        try {
+          const d = iframe.contentWindow && iframe.contentWindow.document;
+          if (d && d.body) {
+            const h = Math.max(d.body.scrollHeight, 400);
+            iframe.style.minHeight = (h + 10) + 'px';
+          }
+        } catch(e) {}
+      };
+      iframe.onload = resize;
+      setTimeout(resize, 300);
+      setTimeout(resize, 1000);
+    },
+
+    refreshFullPreview() {
+      this._renderFullPreviewIframe(_currentTemplate);
+    },
+
 
     _initGrapes(html) {
       if (_grapes) { _grapes.setComponents(html); return; }
@@ -146,22 +207,33 @@
     /* ── SAVE ──────────────────────────────────────────────────────── */
     async saveTemplate() {
       const ch = _val('tpl-edit-channel');
-      let body = '';
+      let body_text = '';
       let body_html = '';
+      let header = _currentTemplate ? (_currentTemplate.header || '') : '';
+      let footer = _currentTemplate ? (_currentTemplate.footer || '') : '';
       if (ch === 'email') {
         body_html = _grapes ? _grapes.getHtml() : '';
-        body = _grapes ? _grapes.getHtml() : '';
+        body_text = _grapes ? _grapes.getCss()  : '';
+        // After save, refresh the preview iframe
+        setTimeout(() => this._renderFullPreviewIframe(Object.assign({}, _currentTemplate, { body_html })), 500);
       } else {
-        const ta = document.querySelector('#tpl-editor-' + ch + ' .tpl-body-textarea');
-        body = ta ? ta.value : '';
+        const container = document.getElementById('tpl-editor-' + ch);
+        if (container) {
+          const ta = container.querySelector('.tpl-main-textarea') || container.querySelector('.tpl-body-textarea');
+          body_text = ta ? ta.value : '';
+          header = (container.querySelector('.tpl-header-textarea') || {}).value || header;
+          footer = (container.querySelector('.tpl-footer-textarea') || {}).value || footer;
+        }
       }
       const isDefaultEl = document.getElementById('tpl-edit-is-default');
       const payload = {
         name: _val('tpl-edit-name'),
         description: _val('tpl-edit-description'),
         channel: ch,
-        body,
+        body_text,
         body_html,
+        header,
+        footer,
         is_default: isDefaultEl ? isDefaultEl.checked : false,
       };
       if (!payload.name) { window.showToast && window.showToast('Template name is required', 'warning'); return; }
@@ -187,6 +259,7 @@
 
     /* ── DELETE ────────────────────────────────────────────────────── */
     async deleteTemplate(id) {
+      id = id || _activeId;
       if (!id) return;
       if (!(await tplShowConfirm('Delete this template?', 'Delete'))) return;
       const res = await api('DELETE', '/' + id);
@@ -305,9 +378,26 @@
       const ch = _val('tpl-edit-channel');
       if (ch === 'email' && rendered.body_html) {
         const iframe = document.getElementById('tpl-preview-iframe');
+        const autoResize = () => {
+          try {
+            if (iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.body) {
+              const body = iframe.contentWindow.document.body;
+              const html = iframe.contentWindow.document.documentElement;
+              const h = Math.max(body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight);
+              if (h > 50) iframe.style.height = (h + 5) + 'px';
+            }
+          } catch(e) {}
+        };
+        iframe.onload = () => {
+          autoResize();
+          try { new ResizeObserver(autoResize).observe(iframe.contentWindow.document.body); } catch(e) {}
+        };
         iframe.style.display = '';
         document.getElementById('tpl-preview-text').style.display = 'none';
         iframe.srcdoc = rendered.body_html;
+        setTimeout(autoResize, 50);
+        setTimeout(autoResize, 300);
+        setTimeout(autoResize, 1000);
       } else {
         document.getElementById('tpl-preview-iframe').style.display = 'none';
         const pre = document.getElementById('tpl-preview-text');

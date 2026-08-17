@@ -1,4 +1,4 @@
-﻿"""
+"""
 MODULE: Mail Plugin â€” LLM Tools
 DESCRIPTION: MailTools class exposing all mail operations as Hecos LLM tools.
              Loaded at boot via plugin manifest (is_class_based: true, on_load: true).
@@ -274,11 +274,9 @@ def on_load(config):
     # Register API routes (idempotent â€” safe to call even if already registered at boot)
     try:
         from hecos.hpm.mail.api import register_routes
-        from hecos.modules.web_ui import get_app
+        from hecos.modules.web_ui.server_flask import get_app
         app = get_app()
         if app:
             register_routes(app)
     except Exception as e:
-        logger.debug("MAIL", f"API route registration deferred: {e}")
-
 

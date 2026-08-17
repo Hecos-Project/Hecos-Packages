@@ -660,67 +660,152 @@ function mailApplyTemplate(templateId) {
     const tpl = _mailTemplatesCache.find(t => t.id === templateId);
     if (!tpl) return;
 
-    const hdr = document.getElementById('mail-compose-header-preview');
-    const ftr = document.getElementById('mail-compose-footer-preview');
+    const hdr   = document.getElementById('mail-compose-header-preview');
+    const ftr   = document.getElementById('mail-compose-footer-preview');
     const hdrIf = document.getElementById('mail-compose-header-iframe');
     const ftrIf = document.getElementById('mail-compose-footer-iframe');
+    const bdyTa = document.getElementById('mail-compose-body');
+    const bdyIf = document.getElementById('mail-compose-body-iframe');
 
-    if (tpl.channel === 'email' && tpl.body_html) {
-        // Render rich HTML split for Email
-        let html = tpl.body_html;
-        
-        // Find split point
-        let splitIdx = html.indexOf('{{ body }}');
-        if (splitIdx === -1) splitIdx = html.indexOf('{{ message }}');
-        
-        if (splitIdx !== -1) {
-            let headerHtml = html.substring(0, splitIdx);
-            let footerHtml = html.substring(splitIdx + 10); // length of {{ body }}
-            
-            // Extract inline styles if any exist in the HTML
-            const styleMatch = html.match(/<style[^>]*>[\s\S]*?<\/style>/gi);
-            let styles = styleMatch ? styleMatch.join('\n') : '';
-            
-            // Inject GrapeJS CSS which is saved in body_text
-            if (tpl.body_text) {
-                styles += '\n<style>' + tpl.body_text + '</style>';
-            }
+    // Helper: check if content looks like HTML
+    const isHtml = tag => tag && (tag.includes('<') || tag.includes('&'));
 
-            if (hdr) hdr.style.display = 'none';
+    // Extract styles from body_html + body_text (GrapeJS CSS)
+    const styleMatch = (tpl.body_html || '').match(/<style[^>]*>[\s\S]*?<\/style>/gi);
+    let styles = styleMatch ? styleMatch.join('\n') : '';
+    if (tpl.body_text) styles += '\n<style>' + tpl.body_text + '</style>';
+
+    if (tpl.channel === 'email') {
+
+        // ── HEADER ──────────────────────────────────────────────────────────
+        const headerContent = tpl.header || '';
+        if (headerContent.trim() && isHtml(headerContent)) {
+            const doc = (styles ? styles + '\n' : '') + headerContent;
+            if (hdr)   hdr.style.display = 'none';
             if (hdrIf) {
                 hdrIf.style.display = 'block';
-                hdrIf.srcdoc = (styles ? styles + '\n' : '') + headerHtml;
+                hdrIf.onload = () => {
+                    if(hdrIf.contentDocument) {
+                        hdrIf.contentDocument.body.setAttribute('contenteditable', 'true');
+                        hdrIf.contentDocument.addEventListener('dblclick', function(e) {
+                            if (e.target.tagName === 'IMG') {
+                                mailShowPrompt("Enter new image URL:", e.target.src, "Update", (newUrl) => {
+                                    if (newUrl) e.target.src = newUrl;
+                                });
+                            }
+                        });
+                    }
+                };
+                hdrIf.srcdoc = doc;
             }
-            
-            if (ftr) ftr.style.display = 'none';
-            if (ftrIf) {
-                ftrIf.style.display = 'block';
-                ftrIf.srcdoc = (styles ? styles + '\n' : '') + footerHtml;
+        } else if (headerContent.trim()) {
+            if (hdrIf) hdrIf.style.display = 'none';
+            if (hdr) { hdr.style.display = ''; hdr.textContent = headerContent.trim(); hdr.classList.remove('empty'); }
+        } else {
+            if (hdrIf) hdrIf.style.display = 'none';
+            if (hdr) { hdr.style.display = ''; hdr.textContent = '(no header in this template)'; hdr.classList.add('empty'); }
+        }
+
+        // ── BODY (WYSIWYG iframe) ───────────────────────────────────────────
+        if (tpl.body_html) {
+            const subjInput = document.getElementById('mail-compose-subject');
+            const currentSubj = subjInput ? subjInput.value.trim() : '';
+            // Substitute {{ subject }} immediately with current value (or placeholder)
+            let doc = (styles ? styles + '\n' : '') + tpl.body_html;
+            doc = doc.replace(/\{\{\s*subject\s*\}\}/g, currentSubj || '{{ subject }}');
+            if (bdyTa) bdyTa.style.display = 'none';
+            if (bdyIf) {
+                bdyIf.style.display = 'block';
+                bdyIf.onload = () => {
+                    if (!bdyIf.contentDocument) return;
+                    bdyIf.contentDocument.body.setAttribute('contenteditable', 'true');
+                    // Live-update {{ subject }} badge as user types in Subject field
+                    if (subjInput) {
+                        subjInput._mailSubjListener && subjInput.removeEventListener('input', subjInput._mailSubjListener);
+                        subjInput._mailSubjListener = function() {
+                            const val = this.value.trim() || '{{ subject }}';
+                            const iDoc = bdyIf.contentDocument;
+                            if (!iDoc) return;
+                            // Update all elements whose text was originally {{ subject }}
+                            iDoc.querySelectorAll('[data-var-subject]').forEach(el => el.textContent = val);
+                        };
+                        // Mark the elements that carry {{ subject }} for live update
+                        bdyIf.contentDocument.querySelectorAll('*').forEach(el => {
+                            if (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
+                                if (el.childNodes[0].textContent.includes('{{ subject }}') ||
+                                    (currentSubj && el.textContent === currentSubj)) {
+                                    // store original so we can replace next time
+                                }
+                            }
+                        });
+                        // Simpler approach: find elements matching the subject badge span
+                        bdyIf.contentDocument.querySelectorAll('span, div').forEach(el => {
+                            if (el.children.length === 0 && el.textContent === (currentSubj || '{{ subject }}')) {
+                                el.setAttribute('data-var-subject', '1');
+                            }
+                        });
+                        subjInput.addEventListener('input', subjInput._mailSubjListener);
+                    }
+                    // Double-click to edit images
+                    bdyIf.contentDocument.addEventListener('dblclick', function(e) {
+                        if (e.target.tagName === 'IMG') {
+                            mailShowPrompt("Enter new image URL:", e.target.src, "Update", (newUrl) => {
+                                if (newUrl) e.target.src = newUrl;
+                            });
+                        }
+                    });
+                };
+                bdyIf.srcdoc = doc;
             }
         } else {
-            // No split point found, show everything in header
-            let fullHtml = html;
-            if (tpl.body_text) {
-                fullHtml = '<style>' + tpl.body_text + '</style>\n' + fullHtml;
-            }
-            if (hdr) hdr.style.display = 'none';
-            if (hdrIf) { hdrIf.style.display = 'block'; hdrIf.srcdoc = fullHtml; }
-            if (ftr) { ftr.style.display = ''; ftr.textContent = '(no {{ body }} variable found in template)'; ftr.classList.add('empty'); }
-            if (ftrIf) { ftrIf.style.display = 'none'; ftrIf.srcdoc = ''; }
+            if (bdyIf) bdyIf.style.display = 'none';
+            if (bdyTa) bdyTa.style.display = 'block';
         }
+
+        // ── FOOTER ──────────────────────────────────────────────────────────
+        const footerContent = tpl.footer || '';
+        if (footerContent.trim() && isHtml(footerContent)) {
+            const doc = (styles ? styles + '\n' : '') + footerContent;
+            if (ftr)   ftr.style.display = 'none';
+            if (ftrIf) {
+                ftrIf.style.display = 'block';
+                ftrIf.onload = () => {
+                    if(ftrIf.contentDocument) {
+                        ftrIf.contentDocument.body.setAttribute('contenteditable', 'true');
+                        ftrIf.contentDocument.addEventListener('dblclick', function(e) {
+                            if (e.target.tagName === 'IMG') {
+                                mailShowPrompt("Enter new image URL:", e.target.src, "Update", (newUrl) => {
+                                    if (newUrl) e.target.src = newUrl;
+                                });
+                            }
+                        });
+                    }
+                };
+                ftrIf.srcdoc = doc;
+            }
+        } else if (footerContent.trim()) {
+            if (ftrIf) ftrIf.style.display = 'none';
+            if (ftr) { ftr.style.display = ''; ftr.textContent = footerContent.trim(); ftr.classList.remove('empty'); }
+        } else {
+            if (ftrIf) ftrIf.style.display = 'none';
+            if (ftr) { ftr.style.display = ''; ftr.textContent = '(no footer in this template)'; ftr.classList.add('empty'); }
+        }
+
     } else {
         // Plain text fallback (WhatsApp, Telegram, etc)
         if (hdrIf) hdrIf.style.display = 'none';
         if (ftrIf) ftrIf.style.display = 'none';
+        if (bdyIf) bdyIf.style.display = 'none';
+        if (bdyTa) bdyTa.style.display = 'block';
         if (hdr) hdr.style.display = '';
         if (ftr) ftr.style.display = '';
-        
+
         const headerText = tpl.header || '';
         if (hdr) {
             if (headerText.trim()) { hdr.textContent = headerText.trim(); hdr.classList.remove('empty'); }
             else { hdr.textContent = '(no header in this template)'; hdr.classList.add('empty'); }
         }
-        
+
         const footerText = tpl.footer || '';
         if (ftr) {
             if (footerText.trim()) { ftr.textContent = footerText.trim(); ftr.classList.remove('empty'); }
@@ -731,7 +816,9 @@ function mailApplyTemplate(templateId) {
     // Pre-fill subject if empty and template has one
     if (tpl.subject) {
         const subj = document.getElementById('mail-compose-subject');
-        if (subj && !subj.value) subj.value = tpl.subject;
+        // If template subject is a variable placeholder like {{ subject }}, don't pre-fill
+        const isPlaceholder = /^\{\{\s*\w+\s*\}\}$/.test((tpl.subject || '').trim());
+        if (subj && !subj.value && !isPlaceholder) subj.value = tpl.subject;
     }
 }
 
@@ -788,10 +875,15 @@ async function mailSend() {
     const to      = document.getElementById('mail-compose-to').value.trim();
     const cc      = document.getElementById('mail-compose-cc').value.trim();
     const subj    = document.getElementById('mail-compose-subject').value.trim();
-    const body    = document.getElementById('mail-compose-body').value.trim();
     const replyId = document.getElementById('mail-compose-in-reply-to').value;
     const title   = document.getElementById('mail-compose-title').innerText;
     const templateId = document.getElementById('mail-compose-template')?.value;
+    
+    // Body: either from the WYSIWYG iframe or the plain textarea
+    const bdyIf = document.getElementById('mail-compose-body-iframe');
+    const bdyTa = document.getElementById('mail-compose-body');
+    const bodyIsIframe = bdyIf && bdyIf.style.display !== 'none' && bdyIf.contentDocument;
+    const body = bodyIsIframe ? '' : (bdyTa ? bdyTa.value.trim() : '');
     
     if (!to) { mailShowToast('Please insert a recipient (To:)', 'warning'); return; }
     
@@ -803,9 +895,54 @@ async function mailSend() {
     try {
         let res;
         const payload = {to, cc, subject: subj, body, is_html: false};
+        
         if (templateId) {
-            payload.template_id = templateId;
-            payload.template_vars = { body: body, message: body }; // Map textarea to both common variable names
+            const tpl = _mailTemplatesCache.find(t => t.id === templateId);
+            if (tpl && tpl.channel === 'email') {
+                // Assemble final HTML from the three editable iframes
+                const hdrIf = document.getElementById('mail-compose-header-iframe');
+                const ftrIf = document.getElementById('mail-compose-footer-iframe');
+                
+                const editedHeader = hdrIf && hdrIf.contentDocument && hdrIf.style.display !== 'none'
+                    ? hdrIf.contentDocument.body.innerHTML : '';
+                let editedBody = bodyIsIframe
+                    ? bdyIf.contentDocument.body.innerHTML : body.replace(/\n/g, '<br>');
+                editedBody = editedBody.replace(/\{\{\s*subject\s*\}\}/g, subj);
+                const editedFooter = ftrIf && ftrIf.contentDocument && ftrIf.style.display !== 'none'
+                    ? ftrIf.contentDocument.body.innerHTML : '';
+                
+                const finalHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { margin:0; padding:0; background-color:#0d1117; font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif; }
+  table { border-collapse:collapse; }
+  @media screen and (max-width:600px) { .mobile-padding { padding:16px !important; } }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#0d1117;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0d1117;">
+  <tr><td align="center" style="padding:24px 16px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:680px;width:100%;background-color:#161b22;border-radius:16px;overflow:hidden;">
+      <tr><td>
+        ${editedHeader}
+        ${editedBody}
+        ${editedFooter}
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+                payload.body = finalHtml;
+                payload.is_html = true;
+                // Don't set template_id — we already assembled the HTML
+            } else {
+                payload.template_id = templateId;
+                payload.template_vars = { body: body, message: body };
+            }
         }
         
         if (replyId && title.includes('Reply')) {
