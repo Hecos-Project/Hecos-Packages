@@ -82,12 +82,14 @@ header {
 .btn-danger { color:var(--red) !important; border-color:rgba(255,75,75,.3); }
 .btn-danger:hover { background:rgba(255,75,75,.1); }
 input[type="file"] { display:none; }
+.toolbar-break { display: none; } /* visible only on mobile via media query */
 
 /* ── Main layout ─────────────────────────────────────────── */
 #main-layout {
   display:flex;
   flex:1;
   overflow:hidden;
+  position: relative;
 }
 
 /* ── Sidebar (tree) ──────────────────────────────────────── */
@@ -295,6 +297,147 @@ td.actions-cell button:hover { background:rgba(255,75,75,.15); }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:rgba(var(--accent-rgb),.2); border-radius:3px; }
 
+/* ── Search Bar ──────────────────────────────────────────── */
+#search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#search-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 5px 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+#search-input-wrap:focus-within {
+  border-color: rgba(var(--accent-rgb), 0.5);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.08);
+}
+
+#search-icon {
+  color: var(--muted);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+#search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+}
+#search-input::placeholder { color: var(--muted); }
+
+#search-clear {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+#search-input-wrap:focus-within #search-clear,
+#search-input:not(:placeholder-shown) ~ #search-clear { opacity: 1; }
+
+#search-scope-label {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+/* ── Search Results Panel ────────────────────────────────── */
+#search-results-panel {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 200;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#search-results-panel.hidden { display: none; }
+
+#search-results-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#search-results-title { font-size: 13px; font-weight: 600; color: var(--accent); flex: 1; }
+#search-results-count { font-size: 11px; color: var(--muted); }
+
+#search-results-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.search-loading, .search-empty, .search-error {
+  padding: 24px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+.search-error { color: var(--red); }
+
+.search-group-title {
+  padding: 8px 16px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  background: var(--glass);
+  border-top: 1px solid var(--border);
+}
+.search-group-title:first-child { border-top: none; }
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+  font-size: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(var(--border-rgb, 255,255,255), 0.04);
+  transition: background 0.12s;
+}
+.search-row:hover { background: rgba(var(--accent-rgb), 0.06); }
+
+.sr-icon { flex-shrink: 0; width: 16px; text-align: center; color: var(--muted); }
+.sr-name { flex-shrink: 0; font-weight: 500; color: var(--text); }
+.sr-name mark { background: rgba(var(--accent-rgb), 0.25); color: var(--accent); border-radius: 2px; padding: 0 1px; }
+.sr-path { flex: 1; color: var(--muted); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.sr-meta { flex-shrink: 0; color: var(--muted); font-size: 10px; white-space: nowrap; }
+.sr-actions { display: flex; gap: 4px; flex-shrink: 0; opacity: 0; transition: opacity 0.15s; }
+.search-row:hover .sr-actions { opacity: 1; }
+.sr-btn {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--muted); border-radius: 5px;
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 11px; transition: all 0.15s;
+}
+.sr-btn:hover { color: var(--accent); border-color: rgba(var(--accent-rgb), 0.3); }
+
 /* Mobile responsive fixes */
 @media (max-width: 768px) {
   .hide-on-mobile { display: none !important; }
@@ -307,37 +450,7 @@ td.actions-cell button:hover { background:rgba(255,75,75,.15); }
     display: flex;
     flex-direction: column;
   }
-  #sidebar-header, #tree-root { display: none; } /* Hide heavy folder tree */
-  #quick-links-section { border-top: none; }
-  #quick-links-body {
-    display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
-    max-height: unset;
-    padding: 8px;
-    gap: 12px;
-  }
-  .ql-group {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 0;
-  }
-  .ql-group-title {
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: var(--glass);
-    white-space: nowrap;
-  }
-  .ql-item {
-    padding: 4px 10px;
-    border-radius: 4px;
-    background: rgba(var(--accent-rgb), 0.05);
-  }
-  .ql-item:hover {
-    padding-left: 10px;
-  }
+  #sidebar-header, #tree-root, #sidebar-resizer, #quick-links-section { display: none !important; } /* Hide folder tree and quick links on mobile */
 
   header {
     height: auto;
@@ -360,12 +473,26 @@ td.actions-cell button:hover { background:rgba(255,75,75,.15); }
   }
   #toolbar {
     flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px;
+    gap: 4px;
+    padding: 5px 8px;
   }
-  #path-bar {
-    width: 100%;
-    order: -1;
+  #path-bar, .toolbar-break { display: none; }
+  #drive-select {
+    flex: 1;
+    min-width: 0;
+    margin-right: 0 !important;
+    font-size: 12px !important;
+  }
+  #toolbar .btn-label { display: none; }
+  #toolbar .btn, #toolbar .btn-primary {
+    padding: 5px 8px;
+    font-size: 13px;
+    flex-shrink: 0;
+    min-width: unset;
+  }
+  #view-mode-toggles {
+    margin-left: 0 !important;
+    gap: 4px;
   }
   table thead th:nth-child(2),
   table thead th:nth-child(3),

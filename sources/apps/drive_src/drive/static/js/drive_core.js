@@ -26,8 +26,23 @@ async function loadDir(path) {
     renderTable();
     updateLocationBar(path, data.entries, data.abs_path, data.root_label);
 
+    // Sync drive-select dropdown if it exists
+    const sel = document.getElementById("drive-select");
+    if (sel && currentRootLabel) {
+      const curRoot = currentRootLabel.replace(/\\/g, "/").toLowerCase();
+      for (const opt of sel.options) {
+        const optRoot = opt.value.replace(/\\/g, "/").toLowerCase();
+        if (curRoot.startsWith(optRoot.substring(0, 3)) || optRoot.startsWith(curRoot.substring(0, 3))) {
+          opt.selected = true;
+          break;
+        }
+      }
+    }
+
     // Rebuild the entire tree from what we know
     renderTree();
+
+    if (window.searchUpdateScope) window.searchUpdateScope();
 
   } catch (e) {
     showMsg("Errore di rete: " + e, "err");
@@ -104,8 +119,10 @@ async function loadDrives() {
 
     // Pre-select current drive if we know it
     if (currentRootLabel) {
+      const curRoot = currentRootLabel.replace(/\\/g, "/").toLowerCase();
       for (const opt of sel.options) {
-        if (currentRootLabel.toLowerCase().startsWith(opt.value.replace(/\//g,"\\").toLowerCase().substring(0,3))) {
+        const optRoot = opt.value.replace(/\\/g, "/").toLowerCase();
+        if (curRoot.startsWith(optRoot.substring(0, 3)) || optRoot.startsWith(curRoot.substring(0, 3))) {
           opt.selected = true;
           break;
         }

@@ -1,0 +1,64 @@
+{
+    "tag": "DOCS",
+    "name": "Document Maker",
+    "version": "1.0.0",
+    "description": "Generates PDF documents from HTML templates using Playwright.",
+    "lazy_load": true,
+    "is_class_based": true,
+    "commands": {
+        "generate_pdf": "Converts HTML content to a PDF file and returns the file path."
+    },
+    "tool_schema": [
+        {
+            "type": "function",
+            "function": {
+                "name": "DOCS__generate_pdf",
+                "description": "Generates a PDF document from a template ID or raw HTML. Use this when the user asks to create a magazine, report, or PDF document. Returns the absolute path of the generated PDF file, which can then be attached to emails or sent via messengers.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "html_content": {
+                            "type": "string",
+                            "description": "Optional: Raw HTML content to convert to PDF. If provided, template_id is ignored."
+                        },
+                        "template_id": {
+                            "type": "string",
+                            "description": "Optional: The ID of an existing template to render and convert to PDF."
+                        },
+                        "template_vars": {
+                            "type": "string",
+                            "description": "Optional: JSON string of variables to inject into the template if template_id is used."
+                        },
+                        "filename": {
+                            "type": "string",
+                            "description": "Optional: Desired name for the output PDF (e.g. 'magazine.pdf'). If not provided, a random UUID name will be used."
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "slash_commands": [
+        {
+            "id": "pdf",
+            "aliases": [
+                "/pdf",
+                "/makepdf",
+                "/documento"
+            ],
+            "description": "Genera un documento PDF da un testo HTML o da un template Hecos"
+        }
+    ],
+    "icon": "fa-file-pdf",
+    "config_panel": {
+        "tab_id": "docs",
+        "tab_label": "Document Maker",
+        "tab_icon": "<i class=\"fas fa-file-pdf\"></i>",
+        "template_file": "web/templates/config_document_maker.html",
+        "category": "PLUGINS",
+        "api_routes_file": "web/routes.py",
+        "js_file": "web/static/js/document_maker_panel.js",
+        "config_api_get": "/hecos/api/plugins/document_maker/config",
+        "config_api_post": "/hecos/api/plugins/document_maker/config"
+    }
+}

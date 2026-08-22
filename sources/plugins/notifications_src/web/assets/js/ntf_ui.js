@@ -3,15 +3,14 @@
 
     // ── Render ────────────────────────────────────────────────────────────────
         window.renderPanel = function() {
-            // Master switch
-            const sw = document.getElementById('notifications-master-switch');
-            if (sw) sw.checked = window.ntfConfig.enabled;
-
             // Add buttons
             window.renderAddButtons();
 
             // Destinations
             window.renderDestinations();
+
+            // Global Settings
+            window.renderGlobalSettings();
 
             // Rules
             window.renderRules();
@@ -50,6 +49,47 @@
                 container.appendChild(btn);
             });
         }
+        
+        window.renderGlobalSettings = function() {
+            const container = document.getElementById('ntf-default-mail-accounts-list');
+            if (!container) return;
+
+            if (!window.ntfMailAccounts || window.ntfMailAccounts.length === 0) {
+                container.innerHTML = '<div style="font-size:12px; color:var(--muted); font-style:italic;">No mail accounts configured. Check the MAIL plugin settings.</div>';
+                return;
+            }
+
+            // current selection — support both old (string) and new (array) format
+            let currentAccounts = window.ntfConfig.default_mail_accounts;
+            if (!Array.isArray(currentAccounts)) {
+                currentAccounts = window.ntfConfig.default_mail_account ? [window.ntfConfig.default_mail_account] : [];
+            }
+
+            container.innerHTML = '';
+            window.ntfMailAccounts.forEach(acc => {
+                const checked = currentAccounts.includes(acc.id) ? 'checked' : '';
+                const activeBadge = acc.is_active ? ' <span style="font-size:10px; background:var(--accent); color:#fff; border-radius:3px; padding:1px 5px; margin-left:4px;">active</span>' : '';
+                const label = document.createElement('label');
+                label.style.cssText = 'display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; padding:4px 0;';
+                label.innerHTML = `
+                    <input type="checkbox" class="ntf-global-acc-cb" value="${acc.id}" ${checked}
+                        onchange="window.ntfUpdateGlobalMailAccounts()">
+                    <span><strong>${acc.name || acc.id}</strong>${activeBadge} <span style="color:var(--muted); font-size:11px;">&lt;${acc.email}&gt;</span></span>
+                `;
+                container.appendChild(label);
+            });
+        };
+
+        window.ntfUpdateGlobalMailAccounts = function() {
+            const checked = Array.from(document.querySelectorAll('.ntf-global-acc-cb:checked')).map(cb => cb.value);
+            window.ntfConfig.default_mail_accounts = checked;
+            // remove legacy key
+            delete window.ntfConfig.default_mail_account;
+            window.ntfSaveQuiet();
+        };
+
+        // Legacy compat alias
+        window.ntfUpdateGlobalMailAccount = window.ntfUpdateGlobalMailAccounts;
 
         window.renderDestinations = function() {
             const container = document.getElementById('ntf-destinations-list');
@@ -111,7 +151,8 @@
 
             window.ntfEventDefs.forEach(evt => {
                 const selectedKeys = window.ntfConfig.rules[evt.id] || [];
-                const selectedTpl = window.ntfConfig.event_templates[evt.id] || "";
+                const tplData = window.ntfConfig.event_templates[evt.id];
+                const selectedTpl = tplData ? (typeof tplData === 'string' ? tplData : tplData.template_id) : "";
             
                 // Check if rule is active (has destinations or a template, or is forcefully added)
                 // For now, if it has any configuration, it's active.
@@ -137,22 +178,25 @@
                     selectCell = `<span style="font-size:11px; color:var(--muted);">Add a destination first</span>`;
                 } else {
                     let opts = destKeys.map(k => {
-                        const sel = selectedKeys.includes(k) ? 'selected' : '';
+                        const sel = selectedKeys.includes(k) ? 'checked' : '';
                         const plug = window.guessPluginFromUri(window.ntfConfig.destinations[k]);
                         const icon = plug ? plug.tag : '?';
-                        return `<option value="${k}" ${sel}>[${icon}] ${k}</option>`;
+                        return `
+                            <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; padding: 2px 4px;">
+                                <input type="checkbox" value="${k}" ${sel} onchange="window.ntfToggleRuleDest('${evt.id}', this)">
+                                [${icon}] ${k}
+                            </label>
+                        `;
                     }).join('');
-                    selectCell = `<div style="display:flex; flex-direction:column; gap:6px;">
-                        <select multiple class="config-input" style="width:100%; min-height:60px; padding:4px;"
-                        onchange="window.ntfUpdateRule('${evt.id}', this)">${opts}</select>`;
                     
-                    // Template Selector
-                    let tplOpts = `<option value="">-- Nessun Template (Plain Text) --</option>`;
-                    window.ntfAvailableTemplates.forEach(tpl => {
-                        const sel = (tpl.id === selectedTpl) ? 'selected' : '';
-                        tplOpts += `<option value="${tpl.id}" ${sel}>${tpl.name}</option>`;
-                    });
-                    selectCell += `<select class="config-input" style="width:100%; padding:4px;" onchange="window.ntfUpdateTemplate('${evt.id}', this.value)">${tplOpts}</select></div>`;
+                    selectCell = `<div style="display:flex; flex-direction:column; gap:6px;">
+                        <div style="width:100%; min-height:40px; max-height: 100px; overflow-y: auto; padding:4px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-alt);">
+                            ${opts}
+                        </div>`;
+                    
+                    const boundText = selectedTpl ? "Template Bound [Edit]" : "Compose Template & Vars";
+                    const btnClass = selectedTpl ? "btn-secondary" : "btn-primary";
+                    selectCell += `<button class="btn btn-sm ${btnClass}" style="margin-top:6px; width:100%; display:flex; justify-content:center;" onclick="window.ntfOpenEventComposer('${evt.id}')"><i class="fas fa-edit"></i> ${boundText}</button></div>`;
 
                 }
 
@@ -253,8 +297,14 @@
             window.ntfSaveQuiet();
         };
 
-        window.ntfUpdateRule = function(evtId, selectElem) {
-            window.ntfConfig.rules[evtId] = Array.from(selectElem.selectedOptions).map(o => o.value);
+        window.ntfToggleRuleDest = function(evtId, checkboxElem) {
+            let current = window.ntfConfig.rules[evtId] || [];
+            if (checkboxElem.checked) {
+                if (!current.includes(checkboxElem.value)) current.push(checkboxElem.value);
+            } else {
+                current = current.filter(k => k !== checkboxElem.value);
+            }
+            window.ntfConfig.rules[evtId] = current;
             window.ntfSaveQuiet();
         };
 

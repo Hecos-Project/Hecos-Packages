@@ -1,0 +1,95 @@
+id = "document_maker"
+manifest_version = "1"
+name = "Document Maker"
+version = "1.0.0"
+author = "Hecos Team / Antonio Meloni"
+license = "GPL-3.0"
+description = "Generates PDF documents from HTML templates using Playwright."
+type = "plugin"
+pip_isolation = "shared"
+target_dir = "hpm"
+plugin_dir = "."
+hecos_min_version = "0.40.0"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+readme = "README.md"
+readme_url = ""
+dependencies = [
+    "templates",
+]
+tag = "DOCS"
+lazy_load = true
+is_class_based = true
+api_routes_file = "web/routes.py"
+signature = "NYYCMueDx0y61yF90Wlerh2RsONLARuqLbyFB/F+6X870VhGORm7SXEfJ7JcJZKRW5k77sTlSnO0vyDegD4WAg=="
+
+[[slash_commands]]
+id = "pdf"
+aliases = [
+    "/pdf",
+    "/makepdf",
+    "/documento",
+]
+description = "Genera un documento PDF da un testo HTML o da un template Hecos"
+
+[commands]
+generate_pdf = "Converts HTML content to a PDF file and returns the file path."
+
+[capabilities]
+llm_tools = [
+    "generate_pdf",
+]
+slash_commands = [
+    "/pdf",
+    "/makepdf",
+    "/documento",
+]
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = "Uses Playwright via the browser_automation core module."
+
+[config_panel]
+tab_id = "docs"
+tab_label = "Document Maker"
+tab_icon = "<i class=\"fas fa-file-pdf\"></i>"
+template_file = "web/templates/config_document_maker.html"
+js_file = "web/static/js/document_maker_panel.js"
+category = "MULTIMEDIA"
+config_api_get = "/hecos/api/plugins/document_maker/config"
+config_api_post = "/hecos/api/plugins/document_maker/config"
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "DOCS__generate_pdf"
+description = "Generates a PDF document from a template ID or raw HTML. Use this when the user asks to create a magazine, report, or PDF document. Returns the absolute path of the generated PDF file, which can then be attached to emails or sent via messengers."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.html_content]
+type = "string"
+description = "Optional: Raw HTML content to convert to PDF. If provided, template_id is ignored."
+
+[tool_schema.function.parameters.properties.template_id]
+type = "string"
+description = "Optional: The ID of an existing template to render and convert to PDF."
+
+[tool_schema.function.parameters.properties.template_vars]
+type = "string"
+description = "Optional: JSON string of variables to inject into the template if template_id is used."
+
+[tool_schema.function.parameters.properties.filename]
+type = "string"
+description = "Optional: Desired name for the output PDF (e.g. 'magazine.pdf'). If not provided, a random UUID name will be used."
+
+[file_hashes]
+"main.py" = "fed5475e74535bd6955cf2764cb2a98258355593724d2e7b4b7b094ebb3ae494"
+"manifest.json" = "8a05872bcaece27335c2f6748d7a51a0768e5e9f25a6658f400f2a09a022239e"
+"README.md" = "fd962b26def13eaa1c923cfa543be642195740de33c8f951a207c9e691f064b7"
+"web/routes.py" = ""
+"web/templates/config_panel.html" = ""
+"web/static/js/document_maker_panel.js" = ""

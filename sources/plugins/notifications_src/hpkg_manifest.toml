@@ -23,7 +23,7 @@ lazy_load = false
 is_class_based = true
 on_load = true
 api_routes_file = "web/routes.py"
-signature = "m5pg0OiqXEkw1DUJbkaxf0RGYhDI4T+bq5CSfRc/j2FUXB6YVsy7Vb4EcVL/Uv/2VtnYJvgx4QTm2KrtpxJYAw=="
+signature = "v9ra7Qt1Ykcjx2OiHxkSWMyqgSwKtEXPpqSCg1Bm2zySSFhXfgBVpO255WwguYAwIMWC0X1tfYH+bZ/QWiYJAg=="
 
 [config_panel]
 tab_id = "notifications"
@@ -36,8 +36,27 @@ api_routes_file = "web/routes.py"
 config_api_get = "/hecos/api/plugins/notifications/config"
 config_api_post = "/hecos/api/plugins/notifications/config"
 
+[commands]
+list_destinations = "Lists all configured notification destinations."
+add_destination = "Adds a new notification destination (MAIL, CONTACT, or MESSENGER)."
+remove_destination = "Removes a notification destination by name."
+list_rules = "Lists all system events and their bound destinations."
+bind_event_destination = "Binds a destination to a system event."
+unbind_event_destination = "Removes a destination from a system event."
+set_event_template = "Configures an HTML template for a system event."
+send_notification = "Sends an ad-hoc notification immediately."
+
 [capabilities]
-llm_tools = []
+llm_tools = [
+    "list_destinations",
+    "add_destination",
+    "remove_destination",
+    "list_rules",
+    "bind_event_destination",
+    "unbind_event_destination",
+    "set_event_template",
+    "send_notification",
+]
 slash_commands = []
 has_widget = false
 has_config_panel = true
@@ -46,13 +65,189 @@ has_system_calls = false
 syscall_notes = ""
 notes = "Plugin-driven notification router. No credentials required — it delegates sending to the MAIL or MESSENGER plugins. Supports events: system_boot, system_shutdown, system_error, flow_started, flow_completed, flow_failed, package_installed, security_login_failed."
 
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "NOTIFICATIONS__list_destinations"
+description = "Lists all configured notification destinations. Use when the user asks 'show my notification destinations', 'chi riceve le notifiche?', 'lista destinatari notifiche'."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "NOTIFICATIONS__add_destination"
+description = "Adds a new notification destination. Use when the user says 'add a notification destination', 'aggiungi destinatario notifica', 'send notifications to X'."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "name",
+    "uri",
+]
+
+[tool_schema.function.parameters.properties.name]
+type = "string"
+description = "Friendly name for the destination (e.g. 'admin_email', 'team_telegram')."
+
+[tool_schema.function.parameters.properties.uri]
+type = "string"
+description = "Destination URI. Formats: MAIL:user@example.com, CONTACT:<uuid>, MESSENGER:Telegram:@username."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "NOTIFICATIONS__remove_destination"
+description = "Removes a notification destination by name. Use when the user says 'remove notification destination', 'rimuovi destinatario'."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "name",
+]
+
+[tool_schema.function.parameters.properties.name]
+type = "string"
+description = "The name of the destination to remove."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "NOTIFICATIONS__list_rules"
+description = "Lists all system events and which destinations are bound to each. Use when the user asks 'show notification rules', 'quali eventi hanno notifiche?', 'mostra regole notifiche'."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "NOTIFICATIONS__bind_event_destination"
+description = "Binds a destination to a system event so notifications are sent there. Use when the user says 'notify admin on system boot', 'manda notifica a X quando succede Y'."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "event",
+    "destination_name",
+]
+
+[tool_schema.function.parameters.properties.event]
+type = "string"
+description = "Event type: system_boot, system_shutdown, system_error, flow_started, flow_completed, flow_failed, package_installed, package_updated, package_removed, security_login_failed, security_new_device, backup_started, backup_completed, backup_failed, custom."
+
+[tool_schema.function.parameters.properties.destination_name]
+type = "string"
+description = "Name of an existing destination to bind."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "NOTIFICATIONS__unbind_event_destination"
+description = "Removes a destination from a system event. Use when the user says 'stop notifying X on event Y', 'rimuovi notifica per evento'."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "event",
+    "destination_name",
+]
+
+[tool_schema.function.parameters.properties.event]
+type = "string"
+description = "The event type string (e.g. 'system_boot')."
+
+[tool_schema.function.parameters.properties.destination_name]
+type = "string"
+description = "The destination name to unbind."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "NOTIFICATIONS__set_event_template"
+description = "Configures an HTML template and its variables for a given event. Use when the user says 'set template for system boot', 'usa questo template per le notifiche'."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "event",
+]
+
+[tool_schema.function.parameters.properties.event]
+type = "string"
+description = "The event type string (e.g. 'system_boot')."
+
+[tool_schema.function.parameters.properties.template_id]
+type = "string"
+description = "UUID of the template to use. Pass empty string to clear."
+
+[tool_schema.function.parameters.properties.variables]
+type = "string"
+description = "JSON string of key-value pairs for template variables (e.g. '{\"subject\":\"Hello\",\"message\":\"World\"}')."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "NOTIFICATIONS__send_notification"
+description = "Sends an ad-hoc notification immediately. Use when the user says 'send a notification', 'manda una notifica', 'notify admin that X happened', 'avvisa che'."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "subject",
+    "message",
+]
+
+[tool_schema.function.parameters.properties.subject]
+type = "string"
+description = "Notification subject line."
+
+[tool_schema.function.parameters.properties.message]
+type = "string"
+description = "Notification body text."
+
+[tool_schema.function.parameters.properties.destination]
+type = "string"
+description = "Optional destination URI (e.g. 'MAIL:user@example.com'). If omitted, sends to all configured destinations."
+
+[tool_schema.function.parameters.properties.template_id]
+type = "string"
+description = "Optional template UUID to render the message with."
+
+[[slash_command]]
+name = "/notify"
+description = "Manage notifications: list rules, add/remove destinations, bind events, or send ad-hoc alerts. Examples: '/notify list rules', '/notify send test to admin', '/notify bind system_boot to admin_email'."
+action_type = "llm_agent"
+prompt_template = "Help me manage my notifications. Request: {{user_input}}. If no specific action is given, list current rules and destinations."
+
+[[slash_command]]
+name = "/alert"
+description = "Send an immediate notification. Example: '/alert Server is down!' or '/alert to admin_email System restarted'."
+action_type = "llm_agent"
+prompt_template = "I want to send an immediate notification. Use the send_notification tool. Request: {{user_input}}"
+
 [file_hashes]
-"config.py" = "c6f966e710b5fa3d405fe34b3cf864c6bd9314af46bd3db73bcd196873ab47a0"
-"dispatcher.py" = "70571d23d0dd672abe94c5114d62b83cef14f98aa0b6b38717461d83d1c49258"
-"event_types.py" = "9a58de313a6ce83cf8c7246f60fd355a7539c76f3d22d0e81b02ab75dc8537a5"
-"main.py" = "4c36d3e8998e1c280fad8e871395532ba3ccd6f8f4192756e18cba7465ec83b2"
+"config.py" = "7a9303b95598bf84d05f562cfa502f16180bf0772ffd694218b6c8a88c4863db"
+"dispatcher.py" = "4525e527ee0ff8eb427d8ae913111d35b1c3699b48a9304c13b89002a2fb493d"
+"event_types.py" = "15a7ea60937150ae99c0f6ac0bf20eb694e79f52c588ab04626197390b13439d"
+"history.py" = "33291cc5f7678513e73ed1b3986584af3e3aec7dac336867086a9e040861fb0f"
+"main.py" = "c2d02c2288b57663c30cf08a7d1d0c6bef2a902483feb4afa8296b6eee6a6a77"
+"manifest.json" = "6ba56b6bf09399bdaaa610440c1761e1187629265b2f1d516483eff6e13c3c49"
+"notifications.toml" = "756ed352c226fc6cc9ba6db1401827b61c20c608fffb609dd6ad879c70a2693d"
 "README.md" = "32bdbebe56969379d74cd4e103fcf68e728cc6ac45286d6b57c220ca38710d42"
 "__init__.py" = "f52b7c83d50bf8a2503dea726788a002ff49bbf2a168ed3e153395b735a7927d"
-"web/routes.py" = "3d6bec62287347f698acbc723a0764c267c97522a9969e42ae1b9570025dfd68"
-"web/assets/js/notifications.js" = "048240dbf5d9dfd1c72b7ac0611a8b19de49f9285f84c23211358f178cffe0f1"
-"web/templates/hpm_notifications.html" = "a2ca31bb9ae57487ee3e7c2e0c08a9df49a1418a4aadf0d27ac6ee5bff2c3f62"
+"web/routes.py" = "6a9fb0b8bc1663e7617b62bab70f712331a929662cc87269d81d026d129cdbb1"
+"web/assets/js/notifications.js" = "2daf5ae774a4df3944cc796d930992b9e4d81fd1aac7beecdee3c39deb2b79a6"
+"web/assets/js/ntf_history.js" = "8ed538ec1cef7f1296477cd3c242b2bb5228b8a773aaf9035b4acd9e74d4d949"
+"web/assets/js/ntf_modals.js" = "e94b490a3ed9443a5f0cc2d79ce30a961eb64cdc4a85b0c68eee82c6478c547c"
+"web/assets/js/ntf_ui.js" = "7b90b4d155f7241b9161cd21f28e079d7d9698f694045b8967bf73a4e83e7518"
+"web/templates/hpm_notifications.html" = "e4f15792242e2af60c3e029e4604381aa76f3519279a30862d233612394ad015"

@@ -17,8 +17,7 @@ Endpoints
 
 from flask import Blueprint, request, jsonify
 from hecos.core.logging import logger
-
-templates_bp = Blueprint("templates", __name__, url_prefix="/api/templates")
+templates_bp = Blueprint("templates", __name__, url_prefix="/api/templates", template_folder="web/templates")
 
 
 # ── Blueprint Registration ──────────────────────────────────────────────────────

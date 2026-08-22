@@ -1,0 +1,84 @@
+[notifications.destinations]
+antonio_2949 = "CONTACT:34ff00d3-e512-486c-9b54-0850cdcb694d"
+
+[notifications.rules]
+backup_completed = []
+backup_failed = []
+backup_started = []
+custom = []
+flow_completed = []
+flow_failed = []
+flow_started = [
+    "antonio_2949",
+]
+package_installed = []
+package_removed = []
+package_updated = []
+security_login_failed = []
+security_new_device = []
+system_boot = [
+    "antonio_2949",
+]
+system_error = [
+    "antonio_2949",
+]
+system_shutdown = [
+    "antonio_2949",
+]
+
+[notifications.event_templates.backup_completed]
+template_id = ""
+
+[notifications.event_templates.backup_completed.variables]
+
+[notifications.event_templates.custom]
+template_id = ""
+
+[notifications.event_templates.custom.variables]
+
+[notifications.event_templates.flow_completed]
+sender_account = ""
+template_id = ""
+
+[notifications.event_templates.flow_completed.variables]
+message = "qwqwqq"
+subject = "qwqqwq"
+
+[notifications.event_templates.flow_started]
+template_id = "0a90ece2-0250-46d3-9718-a20c5a20fc3f"
+
+[notifications.event_templates.flow_started.variables]
+automation_id = "xcvxvx"
+durata = "xcvxcv"
+informazioni = "xcvxcv"
+message = "un flusso è partito!!"
+nome_automazione = "vxcv"
+note_utente = "xcvxcv"
+status = "cxvxcv"
+subject = "automation started!!"
+tempo_fine = "xcvxcvx"
+tempo_inizio = "xcvxcvx"
+
+[notifications.event_templates.system_boot]
+template_id = "00000000-0000-0000-0000-000000000001"
+
+[notifications.event_templates.system_boot.variables]
+message = "il sistema sta bootando!!"
+subject = "il sistema sta bootando!!"
+
+[notifications.event_templates.system_error]
+template_id = "00000000-0000-0000-0000-000000000001"
+
+[notifications.event_templates.system_error.variables]
+message = "fdsfdfdfd"
+subject = "fddfdf"
+
+[notifications.event_templates.system_shutdown]
+template_id = "992eef74-5cd1-42b9-b0da-cf84b22bbb31"
+
+[notifications.event_templates.system_shutdown.variables]
+anno = "xcvxcv"
+link_guida = "xcvx"
+message = "cvxcvxv"
+nome_utente = "xcvxv"
+subject = "xcvxcxv"

@@ -2,7 +2,7 @@
     'use strict';
 
     // ── State ──────────────────────────────────────────────────────────────────
-        window.ntfConfig = { enabled: false, destinations: {}, rules: {}, event_templates: {} };
+        window.ntfConfig = { destinations: {}, rules: {}, event_templates: {} };
         window.ntfAvailableTemplates = [];
         window.ntfAvailablePlugins = [];
 
@@ -23,8 +23,6 @@
 
     // ── Save ──────────────────────────────────────────────────────────────────
         window.ntfSave = async function(showToast) {
-            const sw = document.getElementById('notifications-master-switch');
-            if (sw) window.ntfConfig.enabled = sw.checked;
             try {
                 const res = await fetch('/hecos/api/plugins/notifications/config', {
                     method: 'POST',
@@ -50,10 +48,11 @@
         window.initNotificationsPanel = async function() {
             try {
                 // Load config and available plugins in parallel
-                const [cfgRes, plugRes, tplRes] = await Promise.all([
+                const [cfgRes, plugRes, tplRes, mailAccRes] = await Promise.all([
                     fetch('/hecos/api/plugins/notifications/config'),
                     fetch('/hecos/api/plugins/notifications/available_plugins'),
-                    fetch('/api/templates/')
+                    fetch('/api/templates/'),
+                    fetch('/hecos/api/plugins/notifications/mail_accounts')
                 ]);
 
                 const cfgData = await cfgRes.json();
@@ -61,7 +60,9 @@
                 const tplData = await tplRes.json();
 
                 if (cfgData.status === 'success') {
-                    window.ntfConfig = cfgData.config;
+                    window.ntfConfig = cfgData.config || {};
+                    if (!window.ntfConfig.destinations) window.ntfConfig.destinations = {};
+                    if (!window.ntfConfig.rules) window.ntfConfig.rules = {};
                     if (!window.ntfConfig.event_templates) window.ntfConfig.event_templates = {};
                 }
                 if (plugData.status === 'success') {
@@ -69,6 +70,12 @@
                 }
                 if (tplData.ok) {
                     window.ntfAvailableTemplates = tplData.templates || [];
+                }
+                
+                try {
+                    window.ntfMailAccounts = await mailAccRes.json();
+                } catch(e) {
+                    window.ntfMailAccounts = [];
                 }
 
                 // Show warning if no plugins

@@ -16,6 +16,7 @@ api_routes_file = "web/routes.py"
 dependencies = [
     "premailer",
 ]
+signature = "F68uxPUkVaVG6jupYDfXwhwJM8JaniLWVYSR/JY82wjSKzva1+BOcGV1sGnPExYrgb7GtG8z1uaAScy2gQZMBQ=="
 
 [config_panel]
 tab_id = "templates"
@@ -32,6 +33,8 @@ config_api_post = "/hecos/api/plugins/templates/config"
 llm_tools = [
     "list_templates",
     "render_template",
+    "create_template",
+    "update_template",
 ]
 slash_commands = []
 has_widget = false
@@ -75,4 +78,69 @@ description = "The ID or the exact Name of the template."
 
 [tool_schema.function.parameters.properties.variables]
 type = "string"
-description = "A JSON string containing the variables to inject (e.g. '{\"nome\": \"Mario\"}')."
+description = "A JSON string of variables to inject."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "TEMPLATES__create_template"
+description = "Creates a new custom HTML/CSS template from scratch. You can include Jinja variables (e.g. {{ title }}). Returns the ID of the new template."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "name",
+    "body_html",
+]
+
+[tool_schema.function.parameters.properties.name]
+type = "string"
+description = "The name of the new template."
+
+[tool_schema.function.parameters.properties.body_html]
+type = "string"
+description = "The raw HTML and CSS content of the template."
+
+[tool_schema.function.parameters.properties.subject]
+type = "string"
+description = "Optional default subject for the email."
+
+[tool_schema.function.parameters.properties.description]
+type = "string"
+description = "Optional description of what the template is for."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "TEMPLATES__update_template"
+description = "Updates the HTML content of an existing template."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "template_id",
+    "body_html",
+]
+
+[tool_schema.function.parameters.properties.template_id]
+type = "string"
+description = "The ID of the template to update."
+
+[tool_schema.function.parameters.properties.body_html]
+type = "string"
+description = "The new raw HTML and CSS content."
+
+[file_hashes]
+"api.py" = "cf3b568c17cdb95528a32a0c0281d55686dd37c470abb87439d9031bff4c67d8"
+"default_templates.json" = "cdb71c748542a6aeb15003635a5d5fc5fbb7c521f8709cd5b0c3d973d5883fe2"
+"main.py" = "feb569306746703226a4dfdeb35269be1ceaea06c6aeb61cf735853cf08086bb"
+"README.md" = "b4e899f164dc54bbbefa97f6e55db9a814dbd03b3e8c4c5d90d09c301aeccb02"
+"store.py" = "aac17e09b6ecbaac4050f7a40c6f692ec2658c43a9f84a7ce019aa11b4b23955"
+"web/routes.py" = "0482b45c385ac88e66b5d30b7321894700550cab356b67e29eb40ec34da83e4b"
+"web/assets/js/templates.js" = "434e4039146aeaadd127d19c46a0f5b73387938954cfd2ec4b6552b00334d3c7"
+"web/templates/config_templates.html" = "ec97c0ba39f3e73bb097dfd5c40f8b966aeced3114c8b13e967eca87f4abaf17"
+"web/templates/modules/templates/_templates_logic.html" = "1420d85c2d86ed29608ca81e40d11dff2c27464d4a2d9368dc8e9403d4c7007a"
+"web/templates/modules/templates/_templates_styles.html" = "7238b787a9cee10cc1814909229880f338c7791d5d3a0939b0b129fdb7c556eb"
+"web/templates/modules/templates/_templates_textarea.html" = "26d2e6ef98bc2b5038ddb687c9bdbfe9b230a968658b99206212c417644c9605"

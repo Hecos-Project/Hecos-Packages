@@ -50,9 +50,11 @@
   <button class="btn" onclick="goRoot()" title="{{ t('webui_drive_root_hint') or 'Back to root' }}"><i class="fas fa-home"></i></button>
   <button class="btn" onclick="goUp()" title="{{ t('webui_drive_up_hint') or 'Parent directory' }}"><i class="fas fa-arrow-up"></i></button>
   <div id="path-bar"><span class="crumb current"><i class="fas fa-home"></i> Drive</span></div>
-  <button class="btn btn-primary" onclick="document.getElementById('file-input').click()"><i class="fas fa-upload"></i> {{ t('webui_chat_upload') }}</button>
+  <!-- Flex line break: forces row 2 on mobile, invisible on desktop -->
+  <div class="toolbar-break"></div>
+  <button class="btn btn-primary" onclick="document.getElementById('file-input').click()"><i class="fas fa-upload"></i> <span class="btn-label">{{ t('webui_chat_upload') }}</span></button>
   <input type="file" id="file-input" multiple onchange="uploadFiles(this.files)">
-  <button class="btn" onclick="showMkdirModal()"><i class="fas fa-folder-plus"></i> {{ t('webui_drive_new_folder') or 'New Folder' }}</button>
+  <button class="btn" onclick="showMkdirModal()"><span class="fa-stack fa-xs" style="width:1em;height:1em;line-height:1em;vertical-align:middle"><i class="fas fa-folder fa-stack-1x"></i><i class="fas fa-plus fa-stack-1x" style="font-size:.45em;margin-top:.3em;color:var(--bg)"></i></span> <span class="btn-label">{{ t('webui_drive_new_folder') or 'New Folder' }}</span></button>
   
   <div id="view-mode-toggles" style="margin-left: auto; display: flex; gap: 4px;">
     <button class="btn" id="vm-list" onclick="setViewMode('list')" title="{{ t('webui_drive_view_list') or 'List View' }}"><i class="fas fa-list"></i></button>
@@ -61,7 +63,27 @@
   </div>
 </div>
 
+<!-- ── Search Bar ─────────────────────────────────────────── -->
+<div id="search-bar">
+  <div id="search-input-wrap">
+    <i class="fas fa-search" id="search-icon"></i>
+    <input type="text" id="search-input" placeholder="{{ t('webui_drive_search_placeholder') or 'Search files and folders…' }}" autocomplete="off">
+    <button id="search-clear" onclick="clearSearch()" title="Clear search"><i class="fas fa-times"></i></button>
+  </div>
+  <div id="search-scope-label"></div>
+</div>
+
 <div id="main-layout">
+
+<!-- ── Search Results Overlay ────────────────────────────── -->
+<div id="search-results-panel" class="hidden">
+  <div id="search-results-header">
+    <span id="search-results-title"><i class="fas fa-search"></i> Results</span>
+    <span id="search-results-count"></span>
+    <button class="btn btn-sm" onclick="clearSearch()"><i class="fas fa-times"></i> Close</button>
+  </div>
+  <div id="search-results-body"></div>
+</div>
 
   <!-- ── Sidebar (dir tree + quick links) ───────────────── -->
   <div id="sidebar">
@@ -156,6 +178,7 @@
 <script src="/drive_static/js/drive_utils.js"></script>
 <script src="/drive_static/js/drive_state.js"></script>
 <script src="/drive_static/js/drive_ui.js"></script>
+<script src="/drive_static/js/drive_search.js"></script>
 <script src="/drive_static/js/drive_core.js"></script>
 <script src="/drive_static/js/drive_quicklinks.js"></script>
 <script src="/drive_static/js/drive_main.js"></script>

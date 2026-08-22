@@ -27,7 +27,7 @@ Endpoints:
 from flask import Blueprint, request, jsonify
 from hecos.core.logging import logger
 
-mail_bp = Blueprint("mail", __name__, url_prefix="/api/mail")
+mail_bp = Blueprint("mail", __name__, url_prefix="/api/mail", template_folder="web/templates")
 
 
 def register_routes(app):

@@ -1,0 +1,227 @@
+{
+    "tag": "NOTIFICATIONS",
+    "name": "Notifications Center",
+    "version": "1.0.0",
+    "description": "Event notification system for Hecos. Sends notifications via MAIL or MESSENGER when system events occur (boot, errors, Flow completion, etc.). Requires at least one of the MAIL or MESSENGER plugins installed.",
+    "lazy_load": false,
+    "is_class_based": true,
+    "commands": {
+        "list_destinations": "Lists all configured notification destinations.",
+        "add_destination": "Adds a new notification destination (MAIL, CONTACT, or MESSENGER).",
+        "remove_destination": "Removes a notification destination by name.",
+        "list_rules": "Lists all system events and their bound destinations.",
+        "bind_event_destination": "Binds a destination to a system event.",
+        "unbind_event_destination": "Removes a destination from a system event.",
+        "set_event_template": "Configures an HTML template for a system event.",
+        "send_notification": "Sends an ad-hoc notification immediately."
+    },
+    "tool_schema": [
+        {
+            "type": "function",
+            "function": {
+                "name": "NOTIFICATIONS__list_destinations",
+                "description": "Lists all configured notification destinations. Use when the user asks 'show my notification destinations', 'chi riceve le notifiche?', 'lista destinatari notifiche'.",
+                "parameters": {
+                    "type": "object"
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "NOTIFICATIONS__add_destination",
+                "description": "Adds a new notification destination. Use when the user says 'add a notification destination', 'aggiungi destinatario notifica', 'send notifications to X'.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "name",
+                        "uri"
+                    ],
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Friendly name for the destination (e.g. 'admin_email', 'team_telegram')."
+                        },
+                        "uri": {
+                            "type": "string",
+                            "description": "Destination URI. Formats: MAIL:user@example.com, CONTACT:<uuid>, MESSENGER:Telegram:@username."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "NOTIFICATIONS__remove_destination",
+                "description": "Removes a notification destination by name. Use when the user says 'remove notification destination', 'rimuovi destinatario'.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "name"
+                    ],
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "The name of the destination to remove."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "NOTIFICATIONS__list_rules",
+                "description": "Lists all system events and which destinations are bound to each. Use when the user asks 'show notification rules', 'quali eventi hanno notifiche?', 'mostra regole notifiche'.",
+                "parameters": {
+                    "type": "object"
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "NOTIFICATIONS__bind_event_destination",
+                "description": "Binds a destination to a system event so notifications are sent there. Use when the user says 'notify admin on system boot', 'manda notifica a X quando succede Y'.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "event",
+                        "destination_name"
+                    ],
+                    "properties": {
+                        "event": {
+                            "type": "string",
+                            "description": "Event type: system_boot, system_shutdown, system_error, flow_started, flow_completed, flow_failed, package_installed, package_updated, package_removed, security_login_failed, security_new_device, backup_started, backup_completed, backup_failed, custom."
+                        },
+                        "destination_name": {
+                            "type": "string",
+                            "description": "Name of an existing destination to bind."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "NOTIFICATIONS__unbind_event_destination",
+                "description": "Removes a destination from a system event. Use when the user says 'stop notifying X on event Y', 'rimuovi notifica per evento'.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "event",
+                        "destination_name"
+                    ],
+                    "properties": {
+                        "event": {
+                            "type": "string",
+                            "description": "The event type string (e.g. 'system_boot')."
+                        },
+                        "destination_name": {
+                            "type": "string",
+                            "description": "The destination name to unbind."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "NOTIFICATIONS__set_event_template",
+                "description": "Configures an HTML template and its variables for a given event. Use when the user says 'set template for system boot', 'usa questo template per le notifiche'.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "event"
+                    ],
+                    "properties": {
+                        "event": {
+                            "type": "string",
+                            "description": "The event type string (e.g. 'system_boot')."
+                        },
+                        "template_id": {
+                            "type": "string",
+                            "description": "UUID of the template to use. Pass empty string to clear."
+                        },
+                        "variables": {
+                            "type": "string",
+                            "description": "JSON string of key-value pairs for template variables (e.g. '{\"subject\":\"Hello\",\"message\":\"World\"}')."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "NOTIFICATIONS__send_notification",
+                "description": "Sends an ad-hoc notification immediately. Use when the user says 'send a notification', 'manda una notifica', 'notify admin that X happened', 'avvisa che'.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "subject",
+                        "message"
+                    ],
+                    "properties": {
+                        "subject": {
+                            "type": "string",
+                            "description": "Notification subject line."
+                        },
+                        "message": {
+                            "type": "string",
+                            "description": "Notification body text."
+                        },
+                        "destination": {
+                            "type": "string",
+                            "description": "Optional destination URI (e.g. 'MAIL:user@example.com'). If omitted, sends to all configured destinations."
+                        },
+                        "template_id": {
+                            "type": "string",
+                            "description": "Optional template UUID to render the message with."
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "slash_commands": [
+        {
+            "id": "notify",
+            "aliases": ["/notify"],
+            "description": "Manage notifications: list rules, add/remove destinations, bind events, or send ad-hoc alerts.",
+            "usage": "/notify [list rules | bind <event> to <dest> | add <name> <uri> | send <subject>]",
+            "example": "/notify list rules",
+            "icon": "🔔",
+            "category": "SISTEMA",
+            "output_target": "chat",
+            "requires_args": False
+        },
+        {
+            "id": "alert",
+            "aliases": ["/alert"],
+            "description": "Send an immediate notification to all configured destinations.",
+            "usage": "/alert <message>",
+            "example": "/alert System backup completed!",
+            "icon": "🔔",
+            "category": "SISTEMA",
+            "output_target": "chat",
+            "requires_args": True
+        }
+    ],
+    "icon": "fas fa-bell",
+    "config_panel": {
+        "tab_id": "notifications",
+        "tab_label": "Notifications",
+        "tab_icon": "fas fa-bell",
+        "template_file": "web/templates/hpm_notifications.html",
+        "js_file": "web/assets/js/notifications.js",
+        "css_file": null,
+        "category": "SISTEMA",
+        "api_routes_file": "web/routes.py",
+        "config_api_get": "/hecos/api/plugins/notifications/config",
+        "config_api_post": "/hecos/api/plugins/notifications/config"
+    }
+}

@@ -476,3 +476,96 @@ def drive_list_drives():
     except Exception as e:
         logger.error(f"[Drive] Drives list error: {e}")
     return jsonify({"ok": True, "drives": drives})
+
+
+# ─── SEARCH ────────────────────────────────────────────────────────────────
+
+@drive_bp.route("/drive/api/search")
+@login_required
+def drive_search():
+    """
+    GET /drive/api/search?q=<query>&path=<rel_path>&limit=<n>
+    Recursive case-insensitive filename search within the allowed root.
+    Returns up to `limit` (default 100) matching entries.
+    """
+    from hecos_drive_main import get_plugin
+    plugin  = get_plugin()
+    root    = plugin.get_root()
+    q       = (request.args.get("q", "")).strip().lower()
+    rel     = request.args.get("path", "")
+    limit   = min(int(request.args.get("limit", 100)), 500)
+
+    if not q:
+        return jsonify({"ok": True, "results": [], "query": q})
+
+    start = _safe_path(root, rel)
+    if start is None:
+        return jsonify({"ok": False, "error": "Forbidden path."}), 403
+    if not os.path.isdir(start):
+        # Fallback to root if the given path is not a directory
+        start = root
+
+    results = []
+    try:
+        # Determine the allowed boundary for this search
+        allowed_boundary = os.path.abspath(start)
+        
+        for dirpath, dirnames, filenames in os.walk(start):
+            # Safety: ensure we never escape the start directory (e.g. via symlinks)
+            if not os.path.abspath(dirpath).startswith(allowed_boundary):
+                dirnames.clear()
+                continue
+
+            # Search in folder names
+            for dname in dirnames:
+                if q in dname.lower():
+                    full = os.path.join(dirpath, dname)
+                    try:
+                        rel_entry = os.path.relpath(full, root).replace("\\", "/")
+                    except ValueError:
+                        rel_entry = full.replace("\\", "/")
+                    results.append({
+                        "name": dname,
+                        "path": rel_entry,
+                        "is_dir": True,
+                        "size": None,
+                        "modified": int(os.stat(full).st_mtime)
+                    })
+                    if len(results) >= limit:
+                        break
+
+            if len(results) >= limit:
+                break
+
+            # Search in file names
+            for fname in filenames:
+                if q in fname.lower():
+                    full = os.path.join(dirpath, fname)
+                    try:
+                        rel_entry = os.path.relpath(full, root).replace("\\", "/")
+                    except ValueError:
+                        rel_entry = full.replace("\\", "/")
+                    try:
+                        stat = os.stat(full)
+                        size = stat.st_size
+                        mtime = int(stat.st_mtime)
+                    except Exception:
+                        size, mtime = None, 0
+                    results.append({
+                        "name": fname,
+                        "path": rel_entry,
+                        "is_dir": False,
+                        "size": size,
+                        "modified": mtime
+                    })
+                    if len(results) >= limit:
+                        break
+
+            if len(results) >= limit:
+                break
+
+    except Exception as e:
+        logger.error(f"[Drive] Search error: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+    return jsonify({"ok": True, "query": q, "count": len(results), "results": results})

@@ -9,8 +9,10 @@ from hecos.core.logging import logger
 def init_plugin_routes(app, cfg_mgr=None, root_dir=None, log=None, get_sm=None):
     """Registers all API routes for the Notifications Center plugin."""
     from flask import jsonify, request as flask_request
+    from flask_login import login_required
 
     @app.route('/hecos/api/plugins/notifications/config', methods=['GET'])
+    @login_required
     def get_notifications_config():
         try:
             from hecos.hpm.notifications.config import load_config
@@ -21,6 +23,7 @@ def init_plugin_routes(app, cfg_mgr=None, root_dir=None, log=None, get_sm=None):
             return jsonify({"status": "error", "message": str(e)}), 500
 
     @app.route('/hecos/api/plugins/notifications/config', methods=['POST'])
+    @login_required
     def update_notifications_config():
         try:
             from hecos.hpm.notifications.config import save_config
@@ -36,6 +39,7 @@ def init_plugin_routes(app, cfg_mgr=None, root_dir=None, log=None, get_sm=None):
             return jsonify({"status": "error", "message": str(e)}), 500
 
     @app.route('/hecos/api/plugins/notifications/test', methods=['POST'])
+    @login_required
     def test_notification():
         try:
             from hecos.hpm.notifications.dispatcher import _dispatch_async
@@ -89,7 +93,82 @@ def init_plugin_routes(app, cfg_mgr=None, root_dir=None, log=None, get_sm=None):
             logger.error(f"[NOTIFICATIONS API] test error: {e}")
             return jsonify({"status": "error", "message": str(e)}), 500
 
+    @app.route('/hecos/api/plugins/notifications/dispatch', methods=['POST'])
+    @login_required
+    def custom_dispatch():
+        try:
+            data = flask_request.get_json(silent=True) or {}
+            logger.info(f"[NOTIFICATIONS API] /dispatch called. Raw data: {data}")
+            
+            subject = data.get("subject", "Hecos Notification")
+            message = data.get("message", "")
+            template_id = data.get("template_id")
+            variables = data.get("variables", {})
+            destinations = data.get("destinations", [])
+            # Accept both list (new) and single string (legacy)
+            sender_accounts = data.get("sender_accounts") or data.get("sender_account")
+            if isinstance(sender_accounts, str):
+                sender_accounts = [sender_accounts] if sender_accounts else None
+            
+            logger.info(f"[NOTIFICATIONS API] Parsed — subject='{subject}', dests={destinations}, template={template_id}, sender_accounts={sender_accounts}")
+            
+            if not destinations:
+                logger.warning("[NOTIFICATIONS API] /dispatch called with empty destinations list!")
+                return jsonify({"status": "error", "message": "No destinations provided"}), 400
+                
+            from hecos.hpm.notifications.dispatcher import notify
+            from hecos.hpm.notifications.event_types import SystemEvent
+            
+            logger.info(f"[NOTIFICATIONS API] Calling notify() with {len(destinations)} destination(s)...")
+            notify(
+                event=SystemEvent.CUSTOM,
+                subject=subject,
+                message=message,
+                template_id=template_id,
+                variables=variables,
+                destinations=destinations,
+                sender_accounts=sender_accounts
+            )
+            logger.info("[NOTIFICATIONS API] notify() returned — thread spawned.")
+            return jsonify({"status": "success", "message": "Notification dispatched"})
+        except Exception as e:
+            logger.error(f"[NOTIFICATIONS API] custom dispatch error: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+
+    @app.route('/hecos/api/plugins/notifications/mail_accounts', methods=['GET'])
+    @login_required
+    def get_mail_accounts():
+        try:
+            # Read directly from the MAIL plugin's own config store
+            from hecos.hpm.mail.mail_config.config_manager import get_config as get_mail_config
+            mail_cfg = get_mail_config()
+            accounts_raw = mail_cfg.get("accounts", [])
+            active_id = mail_cfg.get("active_account_id", "")
+
+            accounts = []
+            for acc in accounts_raw:
+                acc_id = acc.get("id", "")
+                email = acc.get("mail_address", "")
+                name = acc.get("name", acc_id)
+                if acc_id:
+                    accounts.append({
+                        "id": acc_id,
+                        "email": email,
+                        "name": name,
+                        "is_active": (acc_id == active_id)
+                    })
+
+            return jsonify(accounts)
+        except Exception as e:
+            logger.error(f"[NOTIFICATIONS API] mail_accounts error: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return jsonify([])
+
+
     @app.route('/hecos/api/plugins/notifications/history', methods=['GET'])
+    @login_required
     def get_notifications_history():
         try:
             from hecos.hpm.notifications.history import get_history
@@ -99,6 +178,7 @@ def init_plugin_routes(app, cfg_mgr=None, root_dir=None, log=None, get_sm=None):
             return jsonify([]), 500
 
     @app.route('/hecos/api/plugins/notifications/history/clear', methods=['POST'])
+    @login_required
     def clear_notifications_history():
         try:
             from hecos.hpm.notifications.history import clear_history
@@ -109,6 +189,7 @@ def init_plugin_routes(app, cfg_mgr=None, root_dir=None, log=None, get_sm=None):
             return jsonify({"status": "error"}), 500
 
     @app.route('/hecos/api/plugins/notifications/available_plugins', methods=['GET'])
+    @login_required
     def get_available_plugins():
         """
         Returns the list of messaging plugins currently installed and loaded.

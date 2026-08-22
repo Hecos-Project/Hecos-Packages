@@ -20,6 +20,7 @@ tag = "MAIL"
 lazy_load = true
 is_class_based = true
 api_routes_file = "web/routes.py"
+signature = "U7H9N2CZosqlptev7pSYxfhE2KiSFYrdki46+ROhCacGhUyT5InW5E+EwSZRnRrk58mJaA2mgmqGsK/+8cr1Cw=="
 
 [commands]
 sync_emails = "Synchronizes the mailbox by fetching new messages via IMAP."
@@ -57,14 +58,12 @@ type = "function"
 
 [tool_schema.function]
 name = "MAIL__send_email"
-description = "Sends an email to one or more recipients. Use when the user says 'send an email', 'manda una mail', 'scrivi a [name]', 'write to [email]'. Supports plain text and HTML body, CC, BCC."
+description = "Sends an email to one or more recipients. Use when the user says 'send an email', 'manda una mail', 'scrivi a [name]', 'write to [email]'. Supports plain text, HTML body, CC, BCC, and template-based emails. IMPORTANT: When the user asks to use a template, you MUST set template_id (partial name is fine, e.g. 'all purpose') and template_vars with a JSON of the template variables (e.g. subject, message). The 'All Purpose' template variables are: subject (email subject line) and message (the HTML body content). When using a template, you can leave body empty."
 
 [tool_schema.function.parameters]
 type = "object"
 required = [
     "to",
-    "subject",
-    "body",
 ]
 
 [tool_schema.function.parameters.properties.to]
@@ -86,6 +85,22 @@ description = "Optional: CC recipients (comma-separated email addresses)."
 [tool_schema.function.parameters.properties.bcc]
 type = "string"
 description = "Optional: BCC recipients (comma-separated email addresses)."
+
+[tool_schema.function.parameters.properties.account_id]
+type = "string"
+description = "Optional: ID of the mail account to send from."
+
+[tool_schema.function.parameters.properties.template_id]
+type = "string"
+description = "Optional: ID or partial Name of a Template to use. Fuzzy matching is supported: 'all purpose' will match 'Hecos — Generic Template (All Purpose)'. If provided, the template HTML is rendered and used as body."
+
+[tool_schema.function.parameters.properties.template_vars]
+type = "string"
+description = "Required when template_id is set. JSON string of variables to inject. For 'All Purpose' template: {\"subject\": \"Headline\", \"subtitle\": \"Sub\", \"message\": \"HTML text\", \"image_main\": \"URL for big image\", \"image_avatar\": \"URL for small avatar\"}. Images are optional; omitting them uses defaults."
+
+[tool_schema.function.parameters.properties.attachments]
+type = "string"
+description = "Optional: JSON list or comma-separated list of absolute file paths to attach to the email."
 
 [[tool_schema]]
 type = "function"
@@ -147,3 +162,26 @@ name = "/send"
 description = "Send a new email. Example: '/send an email to Tony saying hi' or just '/send' to start an interactive drafting process."
 action_type = "llm_agent"
 prompt_template = "I want to send an email. Please help me draft and send it using the send_email tool. Request: {{user_input}}"
+
+[file_hashes]
+"api.py" = "7b1410b6acffd71d58eac3f2f1c9ad64ae763eba7e5ecb38941d235519008492"
+"credential_helper.py" = "a65eb124c4caa689a46ff92d8ab2569a3bcf0a80050a203575ce91b60ee0cf1c"
+"hooks.py" = "0d5aaf7a1fa86835a22dee2ca63f8a330bdc9b1dbab69bee04737b57768c0f7a"
+"imap_client.py" = "2cfe42e6ecf2a777c09c2efed00ec745e59ff47a8042eb632af55737c4d68292"
+"main.py" = "ac313b1a344dcfb1f1e00c691e95ef74f7b735fdc10b88052421ea14280481f4"
+"manifest.json" = "244f1208170f5c04a50367d75fee716e9980fdecabc7033c6f83ace94815b101"
+"models.py" = "5bcba5f1a4bfde5333b1f002da538a71a08b3985679eef749208603e4900e416"
+"README.md" = "dfd66dd9876b8bb8fb13fe75edb477350f11199ed0e5c2b1666f2b0ee954b4ce"
+"smtp_client.py" = "bdd7afe673206fb58d889a92894bda99bd9f2f33aea1fc999ce1f75091e21d1e"
+"store.py" = "1f067306c4ec7056b02b0af6523f397b1de9631635914a96351ccbf230d2a836"
+"mail_config/config_manager.py" = "84469e4d8e5bc34f91f72e6b322aa555020c380f5f11de4edadb5ae65ac7543b"
+"mail_config/defaults.toml" = "fbc3c41f82c1d2882133b680d9407a5c9dec12bddf4e1d164cf7c1ffc04a97fe"
+"mail_config/__init__.py" = "2fe4669d493e101f39f18fe3ce75c9ce6d0c9cd5be252d825efb8e44f82e18b1"
+"web/routes.py" = "50a4292b39a31dc2b5f03fe6011118864a17bdea9ec7aec8533a6ce8c035b1c6"
+"web/static/js/mail.js" = "0e50e830f30b38782fcd9b174da4fa373947d6587ac2714bf870efc118ce45ab"
+"web/templates/config_mail.html" = "a4dacc8b28c8cc93c84bec2d6781b995079b1142ba398f60caaa1eef97e467b2"
+"web/templates/modules/mail/_mail_compose.html" = "8c478a99a7cd461be5fe6b827c5efb1bed71f460c44a274b08321cbcf4a5fece"
+"web/templates/modules/mail/_mail_config.html" = "282cd5f85384114eaf201188708cc92313c730712a31829075a36311f25a35f7"
+"web/templates/modules/mail/_mail_grid.html" = "ae3d949ecbabb0d1aa8454b136012b3495f5e2dbfc126f41e19e0c593370b30b"
+"web/templates/modules/mail/_mail_logic.html" = "4b6aaa07fea4bfca0f25a20a4ebe98bdf0daa5a1891b613113f4065b8078173b"
+"web/templates/modules/mail/_mail_styles.html" = "40d66551fa825d68deea13385db3a6528291df6118e4281e638f23e64f464423"

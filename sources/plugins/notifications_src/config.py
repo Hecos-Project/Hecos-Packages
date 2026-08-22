@@ -5,8 +5,8 @@ Uses HPMBaseConfigManager — same pattern as Calendar, Global Backup, etc.
 No YAML, no JSON, no central hecos/config/data files touched.
 """
 from pathlib import Path
-from typing import Dict, List
-from pydantic import BaseModel, Field
+from typing import Dict, List, Any
+from pydantic import BaseModel, Field, field_validator
 
 try:
     from hecos.core.logging import logger
@@ -24,7 +24,6 @@ except ImportError:
 # ── Pydantic schema ────────────────────────────────────────────────────────────
 
 class NotificationsConfig(BaseModel):
-    enabled: bool = False
     destinations: Dict[str, str] = Field(default_factory=dict)
     rules: Dict[str, List[str]] = Field(default_factory=lambda: {
         "system_boot":           [],
@@ -43,7 +42,19 @@ class NotificationsConfig(BaseModel):
         "backup_failed":         [],
         "custom":                [],
     })
-    event_templates: Dict[str, str] = Field(default_factory=dict)
+    event_templates: Dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator('event_templates', mode='before')
+    def migrate_event_templates(cls, v):
+        if not isinstance(v, dict):
+            return {}
+        migrated = {}
+        for k, val in v.items():
+            if isinstance(val, str):
+                migrated[k] = {"template_id": val, "variables": {}}
+            elif isinstance(val, dict):
+                migrated[k] = val
+        return migrated
 
 
 # ── Config file path (same dir as this file) ──────────────────────────────────

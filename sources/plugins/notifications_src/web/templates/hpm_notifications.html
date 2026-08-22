@@ -32,6 +32,16 @@
 
     <hr style="border:0; border-top:1px solid var(--border); margin:25px 0;">
 
+    <!-- Global Settings -->
+    <div style="margin-bottom: 25px;">
+      <h3 style="margin-bottom:10px; font-size:14px; color:var(--accent);"><i class="fas fa-cog"></i> Global Settings</h3>
+      <label class="config-label">Default Mail Sender Accounts</label>
+      <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">Check one or more accounts to use by default. Notifications will be sent from each checked account.</div>
+      <div id="ntf-default-mail-accounts-list" style="display:flex; flex-direction:column; gap:6px; padding:8px 10px; background:rgba(0,0,0,0.15); border:1px solid var(--border); border-radius:8px; min-height:38px;">
+        <div style="font-size:12px; color:var(--muted); font-style:italic;">Loading accounts...</div>
+      </div>
+    </div>
+
     <!-- Event Rules -->
     <div>
       <h3 style="margin-bottom:10px; font-size:14px; color:var(--accent);"><i class="fas fa-project-diagram"></i> Event Rules</h3>
@@ -101,7 +111,10 @@
 
     <!-- Footer: Test + Save Status -->
     <div style="display:flex; align-items:center; gap:15px; margin-top:20px;">
-      <button class="btn btn-secondary" onclick="window.ntfTest()"><i class="fas fa-vial"></i> Send Test Notification</button>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary" onclick="window.ntfOpenAdHocComposer()"><i class="fas fa-paper-plane"></i> Quick Compose</button>
+        <button class="btn btn-secondary" onclick="window.ntfTest()"><i class="fas fa-vial"></i> Test</button>
+      </div>
       <span id="ntf-save-status" style="font-size:11px; color:var(--muted);"></span>
     </div>
   </div>
@@ -126,7 +139,7 @@
 <div id="ntf-test-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
   <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:28px 32px; max-width:440px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
     <h3 style="margin-top:0; font-size:15px;"><i class="fas fa-vial"></i> Send Test Notification</h3>
-    <p style="font-size:13px; color:var(--muted); margin-bottom:18px;">A test notification will be sent to all currently configured destinations.</p>
+    <p style="font-size:13px; color:var(--muted); margin-bottom:18px;">A test notification will be sent to all currently configured destinations. It will be sent using the global default mail accounts.</p>
     <div style="margin-bottom:14px;">
       <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:5px;">Template (optional)</label>
       <select id="ntf-test-template-select" class="config-input">
@@ -136,6 +149,41 @@
     <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
       <button class="btn btn-secondary" onclick="document.getElementById('ntf-test-modal').style.display='none'">Cancel</button>
       <button class="btn btn-primary" onclick="window.ntfSendTest()"><i class="fas fa-paper-plane"></i> Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notification Composer Modal -->
+<div id="ntf-compose-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
+  <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:28px 32px; max-width:600px; width:90%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <h3 id="ntf-compose-title" style="margin-top:0; font-size:15px;"><i class="fas fa-paper-plane"></i> Notification Composer</h3>
+    
+    <div style="overflow-y:auto; flex:1; padding-right:10px;">
+        <div id="ntf-compose-destinations-section" style="margin-bottom:14px;">
+          <label class="config-label">Destinations (Ad-Hoc)</label>
+          <div id="ntf-compose-dests" class="config-input" style="width:100%; min-height:80px; max-height:150px; overflow-y:auto; padding:4px;"></div>
+        </div>
+        <div style="margin-bottom:14px;" id="ntf-compose-sender-section">
+          <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:5px;">Sender Mail Accounts (Override — leave all unchecked for Global Default)</label>
+          <div id="ntf-compose-sender-list" style="display:flex; flex-direction:column; gap:5px; padding:6px 8px; background:rgba(0,0,0,0.15); border:1px solid var(--border); border-radius:6px; min-height:34px;">
+            <div style="font-size:12px; color:var(--muted); font-style:italic;">Loading...</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:5px;">Template</label>
+          <select id="ntf-compose-template" class="config-input" style="width:100%;" onchange="window.ntfComposeTemplateChanged(this.value)">
+          </select>
+        </div>
+        
+        <div id="ntf-compose-variables-container" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
+        </div>
+    </div>
+
+    <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px; padding-top:15px; border-top:1px solid var(--border);">
+      <button class="btn btn-secondary" onclick="document.getElementById('ntf-compose-modal').style.display='none'">Cancel</button>
+      <button id="ntf-compose-btn-bind" class="btn btn-secondary" style="display:none; color:var(--accent); border-color:var(--accent);" onclick="window.ntfBindCompose()"><i class="fas fa-save"></i> Save Binding</button>
+      <button id="ntf-compose-btn-send" class="btn btn-primary" onclick="window.ntfSendCompose()"><i class="fas fa-paper-plane"></i> Send Now</button>
     </div>
   </div>
 </div>

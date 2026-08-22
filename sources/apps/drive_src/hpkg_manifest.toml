@@ -1,7 +1,7 @@
 id = "drive"
 manifest_version = "1"
 name = "Hecos Drive"
-version = "1.0.0"
+version = "1.4.2"
 author = "Hecos Community"
 license = "GPL-3.0"
 description = "Native file manager and editor for Hecos. Provides Web UI interface to browse, upload, download, and edit files on the server."

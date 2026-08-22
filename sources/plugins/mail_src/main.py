@@ -24,9 +24,9 @@ class MailTools:
         """Returns the MAIL section of the current config."""
         return self._cfg.get("plugins", {}).get("MAIL", self._cfg)
 
-    def _smtp(self, username: str = "admin"):
+    def _smtp(self, username: str = "admin", account_id: str = None):
         from hecos.hpm.mail.smtp_client import build_smtp_client
-        return build_smtp_client(self._mail_cfg(), username, account_id=self._active_account_id())
+        return build_smtp_client(self._mail_cfg(), username, account_id=account_id or self._active_account_id())
 
     def _imap(self, username: str = "admin"):
         from hecos.hpm.mail.imap_client import build_imap_client
@@ -34,28 +34,106 @@ class MailTools:
 
     # â”€â”€ LLM Tools â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-    def send_email(self, to: str, subject: str, body: str,
+    def send_email(self, to: str, subject: str = "", body: str = "",
                    cc: str = "", bcc: str = "",
-                   is_html: bool = False) -> str:
-        """Sends an email to one or more recipients."""
+                   is_html: bool = False,
+                   account_id: str = None,
+                   template_id: str = None,
+                   template_vars: str = None,
+                   attachments: str = None) -> str:
+        """Sends an email to one or more recipients, optionally using a template."""
         try:
             from hecos.hpm.mail.hooks import resolve_to_addresses
             # Resolve contact names to actual email addresses
             resolved_to  = ", ".join(resolve_to_addresses(to))
             resolved_cc  = ", ".join(resolve_to_addresses(cc))  if cc  else ""
             resolved_bcc = ", ".join(resolve_to_addresses(bcc)) if bcc else ""
+            
+            # Handle templates if specified
+            if template_id:
+                try:
+                    from hecos.hpm.libraries.templates.store import list_templates, render_template
+                    import json
+                    all_tpls = list_templates()
+                    target = None
 
-            client = self._smtp()
+                    # 1. Try exact match by ID or name (case-insensitive)
+                    for t in all_tpls:
+                        if t["id"] == template_id or t["name"].lower() == template_id.lower():
+                            target = t
+                            break
+
+                    # 2. Fuzzy match: check if all words of the query appear
+                    #    in the template name (e.g. "all purpose" matches
+                    #    "Hecos — Generic Template (All Purpose)")
+                    if not target:
+                        query_words = template_id.lower().split()
+                        for t in all_tpls:
+                            tname = t["name"].lower()
+                            if all(w in tname for w in query_words):
+                                target = t
+                                break
+
+                    # 3. Substring match: query is contained in name
+                    if not target:
+                        q = template_id.lower()
+                        for t in all_tpls:
+                            if q in t["name"].lower():
+                                target = t
+                                break
+
+                    # 4. Tag match
+                    if not target:
+                        q = template_id.lower()
+                        for t in all_tpls:
+                            if q in [tag.lower() for tag in t.get("tags", [])]:
+                                target = t
+                                break
+
+                    if target:
+                        v_dict = json.loads(template_vars) if template_vars else {}
+                        
+                        # Provide default images for the All Purpose template if omitted
+                        if target["id"] == "00000000-0000-0000-0000-000000000001":
+                            if "image_main" not in v_dict:
+                                v_dict["image_main"] = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Assets/main/Urania_9800_Contact.png"
+                            if "image_avatar" not in v_dict:
+                                v_dict["image_avatar"] = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Assets/main/Urania_9800_Close_up_01.jpg"
+                        
+                        rendered = render_template(target["id"], v_dict)
+                        body = rendered.get("body_html") or rendered.get("body_text", body)
+                        subject = rendered.get("subject") or subject
+                        is_html = bool(rendered.get("body_html"))
+                    else:
+                        return f"⚠️ Template '{template_id}' non trovato."
+                except Exception as e:
+                    from hecos.core.logging import logger
+                    logger.error(f"[MAIL] Template render error: {e}")
+                    return f"⚠️ Error rendering template: {e}"
+
+            # Parse attachments (JSON list of paths or comma separated)
+            attach_paths = []
+            if attachments:
+                import json
+                try:
+                    attach_paths = json.loads(attachments)
+                    if not isinstance(attach_paths, list):
+                        attach_paths = [attachments]
+                except:
+                    attach_paths = [x.strip() for x in attachments.split(",") if x.strip()]
+
+            client = self._smtp(account_id=account_id)
             ok, msg = client.send(
                 to=resolved_to, subject=subject, body=body,
-                cc=resolved_cc, bcc=resolved_bcc, is_html=is_html
+                cc=resolved_cc, bcc=resolved_bcc, is_html=is_html,
+                attach_paths=attach_paths
             )
             if ok:
-                return f"ðŸ“§ {msg}"
-            return f"âš ï¸ {msg}"
+                return f"📮 {msg}"
+            return f"⚠️ {msg}"
         except Exception as e:
             logger.error(f"[MAIL] send_email error: {e}")
-            return f"âš ï¸ Error sending email: {e}"
+            return f"⚠️ Error sending email: {e}"
 
     def read_inbox(self, folder: str = "INBOX", limit: int = 10,
                    unread_only: bool = False) -> str:
@@ -71,11 +149,11 @@ class MailTools:
             msgs = store.list_folder(account_id=self._active_account_id(), folder=folder.upper(), limit=limit,
                                      unread_only=unread_only)
             if not msgs:
-                return f"ðŸ“­ No messages found in {folder}."
+                return f"📭 No messages found in {folder}."
 
-            lines = [f"ðŸ“§ **{folder} ({len(msgs)} messages):**\n"]
+            lines = [f"📮 **{folder} ({len(msgs)} messages):**\n"]
             for m in msgs:
-                status = "ðŸ”µ " if not m.get("read") else "   "
+                status = "🔵 " if not m.get("read") else "   "
                 star   = "â­ " if m.get("starred") else ""
                 lines.append(
                     f"{status}{star}**{m.get('subject', '(no subject)')}**\n"
@@ -94,7 +172,7 @@ class MailTools:
             from hecos.hpm.mail import store
             msgs = store.search_messages(account_id=self._active_account_id(), query=query, folder=folder, limit=limit)
             if not msgs:
-                return f"ðŸ“­ No emails found matching '{query}'."
+                return f"📭 No emails found matching '{query}'."
 
             lines = [f"ðŸ” **Search results for '{query}' ({len(msgs)}):**\n"]
             for m in msgs:
@@ -132,7 +210,7 @@ class MailTools:
             )
             if ok:
                 store.mark_read(msg["id"], True)
-                return f"ðŸ“§ Reply sent to **{to_addr}**."
+                return f"📮 Reply sent to **{to_addr}**."
             return f"âš ï¸ Reply failed: {result}"
         except Exception as e:
             logger.error(f"[MAIL] reply_email error: {e}")
@@ -161,7 +239,7 @@ class MailTools:
             client = self._smtp()
             ok, result = client.send(to=resolved, subject=subject, body=fwd_body)
             if ok:
-                return f"ðŸ“§ Email forwarded to **{resolved}**."
+                return f"📮 Email forwarded to **{resolved}**."
             return f"âš ï¸ Forward failed: {result}"
         except Exception as e:
             logger.error(f"[MAIL] forward_email error: {e}")
@@ -279,4 +357,4 @@ def on_load(config):
         if app:
             register_routes(app)
     except Exception as e:
-
+        logger.error(f"[MAIL] Failed to register routes: {e}")
