@@ -164,10 +164,24 @@ class DocsTools:
                 page = context.new_page()
                 
                 try:
-                    page.set_content(final_html, wait_until="networkidle")
+                    import tempfile
+                    temp_html_path = None
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w", encoding="utf-8") as tmp:
+                        tmp.write(final_html)
+                        temp_html_path = tmp.name
+
+                    # Use file:/// URL for the temp file to allow local file access
+                    file_url = "file:///" + os.path.normpath(temp_html_path).replace("\\", "/")
+                    page.goto(file_url, wait_until="networkidle")
+                    
                     # Generate PDF with backgrounds and standard margins
                     page.pdf(path=output_path, format="A4", print_background=True)
                 finally:
+                    if temp_html_path and os.path.exists(temp_html_path):
+                        try:
+                            os.remove(temp_html_path)
+                        except Exception as e:
+                            logger.error(f"[DOCS] Failed to delete temp HTML: {e}")
                     page.close()
                     context.close()
                 return output_path
