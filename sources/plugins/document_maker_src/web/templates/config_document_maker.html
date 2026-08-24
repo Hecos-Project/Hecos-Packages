@@ -43,4 +43,60 @@
     </div>
   </div>
 
+  <!-- Generation Defaults Card -->
+  <div class="card" style="margin-top:14px;">
+    <div class="card-title"><i class="fas fa-cogs"></i> Generation Defaults</div>
+    <p style="color:var(--muted); font-size:12px; margin-bottom:12px; line-height:1.5;">
+      Choose which document formats are generated when the AI uses the document maker.
+    </p>
+
+    <div class="field" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+      <label for="docs-generate-html" style="margin:0; font-size:13px;">Generate HTML</label>
+      <label class="toggle-switch" style="flex-shrink:0;">
+        <input type="checkbox" id="docs-generate-html" checked onchange="docsDebounceSave()">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="field" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+      <label for="docs-generate-pdf" style="margin:0; font-size:13px;">Generate PDF</label>
+      <label class="toggle-switch" style="flex-shrink:0;">
+        <input type="checkbox" id="docs-generate-pdf" checked onchange="docsDebounceSave()">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- AI Behavior Overrides Card -->
+  <div class="card" style="margin-top:14px;">
+    <div class="card-title"><i class="fas fa-robot"></i> AI Behavior Overrides</div>
+    <p style="color:var(--muted); font-size:12px; margin-bottom:12px; line-height:1.5;">
+      These directives are appended to the tool descriptions sent to the AI. Use them to control how the AI responds after generating a document (e.g. avoid outputting raw code, avoid duplicate links).
+    </p>
+
+    <!-- Enable toggle -->
+    <div class="field" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+      <label for="docs-override-enabled" style="margin:0; font-size:13px;">Enable Response Override</label>
+      <label class="toggle-switch" style="flex-shrink:0;">
+        <input type="checkbox" id="docs-override-enabled" checked onchange="docsDebounceSave()">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <!-- Directive textarea -->
+    <div class="field">
+      <label for="docs-override-generate-pdf" style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">Response Directive</label>
+      <textarea
+        id="docs-override-generate-pdf"
+        class="config-input"
+        rows="5"
+        style="resize:vertical; font-family:'JetBrains Mono', monospace; font-size:11px; line-height:1.5;"
+        oninput="docsDebounceSave()"
+      >IMPORTANT: After writing or generating the file, DO NOT output the raw content (HTML/code) or duplicate images/links in your chat response. The UI automatically renders a rich preview and file card when you output the file path. Just provide a brief confirmation message containing the file path.</textarea>
+      <p style="color:var(--muted); font-size:11px; margin-top:5px;">
+        This directive is injected into the AI's tool instructions when document generation is enabled. It controls how the AI formats its response after creating a file.
+      </p>
+    </div>
+  </div>
+
 </div>

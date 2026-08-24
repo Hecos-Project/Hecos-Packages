@@ -132,65 +132,96 @@ class DocsTools:
             bg_pattern = r'(url\([\'"]?)(.*?)([\'"]?\))'
             final_html = re.sub(bg_pattern, resolve_img_path, final_html)
 
+            # Get generation defaults
+            gen_html = True
+            gen_pdf = True
+            if os.path.exists(self.config_file):
+                try:
+                    with open(self.config_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        gen_html = data.get("generate_html", True)
+                        gen_pdf = data.get("generate_pdf", True)
+                except Exception as e:
+                    logger.error(f"[DOCS] Failed to read config defaults: {e}")
+
             # 2. Determine output path
             if not filename:
-                filename = f"document_{uuid.uuid4().hex[:8]}.pdf"
-            if not filename.endswith(".pdf"):
-                filename += ".pdf"
+                filename = f"document_{uuid.uuid4().hex[:8]}"
+            else:
+                if filename.lower().endswith(".pdf") or filename.lower().endswith(".html"):
+                    filename = filename.rsplit(".", 1)[0]
             
             output_dir = self._get_save_dir()
-            output_path = os.path.join(output_dir, filename)
+            pdf_output_path = os.path.join(output_dir, filename + ".pdf")
+            html_output_path = os.path.join(output_dir, filename + ".html")
 
-            # 3. Call browser_automation engine
-            try:
-                from hecos.modules.browser_automation.plugin import engine
-            except ImportError:
-                return "Error: browser_automation core module is required for PDF generation."
+            results = []
 
-            # Define the task to run on the browser thread
-            def _pdf_task():
-                # Make sure browser is running. 
-                # Since we are on the browser thread, we can't call public engine.launch() which uses queue.
-                if not engine._state.get("browser") or not engine._state["browser"].is_connected():
-                    # We must launch manually since engine._launch_internal() might be broken
-                    from playwright.sync_api import sync_playwright
-                    if not engine._state.get("pw_instance"):
-                        engine._state["pw_instance"] = sync_playwright().start()
-                    engine._state["browser"] = engine._state["pw_instance"].chromium.launch(headless=True)
-                
-                # Get the browser and create a new temporary page directly
-                browser = engine._state["browser"]
-                context = browser.new_context()
-                page = context.new_page()
-                
+            # Generate HTML if requested
+            if gen_html:
                 try:
-                    import tempfile
-                    temp_html_path = None
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w", encoding="utf-8") as tmp:
-                        tmp.write(final_html)
-                        temp_html_path = tmp.name
+                    with open(html_output_path, "w", encoding="utf-8") as f:
+                        f.write(final_html)
+                    results.append(f"HTML: {html_output_path}")
+                except Exception as e:
+                    logger.error(f"[DOCS] Failed to save HTML: {e}")
 
-                    # Use file:/// URL for the temp file to allow local file access
-                    file_url = "file:///" + os.path.normpath(temp_html_path).replace("\\", "/")
-                    page.goto(file_url, wait_until="networkidle")
+            if gen_pdf:
+                # 3. Call browser_automation engine
+                try:
+                    from hecos.modules.browser_automation.plugin import engine
+                except ImportError:
+                    return "Error: browser_automation core module is required for PDF generation."
+
+                # Define the task to run on the browser thread
+                def _pdf_task():
+                    # Make sure browser is running. 
+                    # Since we are on the browser thread, we can't call public engine.launch() which uses queue.
+                    if not engine._state.get("browser") or not engine._state["browser"].is_connected():
+                        # We must launch manually since engine._launch_internal() might be broken
+                        from playwright.sync_api import sync_playwright
+                        if not engine._state.get("pw_instance"):
+                            engine._state["pw_instance"] = sync_playwright().start()
+                        engine._state["browser"] = engine._state["pw_instance"].chromium.launch(headless=True)
                     
-                    # Generate PDF with backgrounds and standard margins
-                    page.pdf(path=output_path, format="A4", print_background=True)
-                finally:
-                    if temp_html_path and os.path.exists(temp_html_path):
-                        try:
-                            os.remove(temp_html_path)
-                        except Exception as e:
-                            logger.error(f"[DOCS] Failed to delete temp HTML: {e}")
-                    page.close()
-                    context.close()
-                return output_path
+                    # Get the browser and create a new temporary page directly
+                    browser = engine._state["browser"]
+                    context = browser.new_context()
+                    page = context.new_page()
+                    
+                    try:
+                        import tempfile
+                        temp_html_path = None
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w", encoding="utf-8") as tmp:
+                            tmp.write(final_html)
+                            temp_html_path = tmp.name
 
-            # Run the task on the dedicated browser thread
-            result_path = engine._run_on_browser_thread(_pdf_task)
-            
-            logger.info(f"[DOCS] Generated PDF successfully at {result_path}")
-            return result_path
+                        # Use file:/// URL for the temp file to allow local file access
+                        file_url = "file:///" + os.path.normpath(temp_html_path).replace("\\", "/")
+                        page.goto(file_url, wait_until="networkidle")
+                        
+                        # Generate PDF with backgrounds and standard margins
+                        page.pdf(path=pdf_output_path, format="A4", print_background=True)
+                    finally:
+                        if temp_html_path and os.path.exists(temp_html_path):
+                            try:
+                                os.remove(temp_html_path)
+                            except Exception as e:
+                                logger.error(f"[DOCS] Failed to delete temp HTML: {e}")
+                        page.close()
+                        context.close()
+                    return pdf_output_path
+
+                # Run the task on the dedicated browser thread
+                result_path = engine._run_on_browser_thread(_pdf_task)
+                
+                logger.info(f"[DOCS] Generated PDF successfully at {result_path}")
+                results.append(f"PDF: {result_path}")
+
+            if not results:
+                return "Error: Neither HTML nor PDF generation was enabled, or generation failed."
+
+            return "\n".join(results)
 
         except Exception as e:
             logger.error(f"[DOCS] Failed to generate PDF: {e}")

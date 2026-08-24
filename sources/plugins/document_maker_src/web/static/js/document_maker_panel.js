@@ -4,6 +4,9 @@
  * Also hooks into Hecos global saveConfig() so the hub footer Save button works too.
  */
 
+// Default override directive text
+const DOCS_DEFAULT_OVERRIDE = "IMPORTANT: After writing or generating the file, DO NOT output the raw content (HTML/code) or duplicate images/links in your chat response. The UI automatically renders a rich preview and file card when you output the file path. Just provide a brief confirmation message containing the file path.";
+
 // ── Autosave debouncer ────────────────────────────────────────────────────────
 let _docsSaveTimer = null;
 
@@ -18,8 +21,25 @@ window.loadDocsConfig = async function() {
         const res = await fetch('/hecos/api/plugins/document_maker/config');
         if (!res.ok) return;
         const data = await res.json();
-        const el = document.getElementById('docs-pdf-save-path');
-        if (el) el.value = data.pdf_save_path || 'media/documents';
+        const pathEl = document.getElementById('docs-pdf-save-path');
+        if (pathEl) pathEl.value = data.pdf_save_path || 'media/documents';
+
+        const enabledEl = document.getElementById('docs-override-enabled');
+        if (enabledEl) enabledEl.checked = data.override_enabled !== false; // default true
+
+        const htmlEl = document.getElementById('docs-generate-html');
+        if (htmlEl) htmlEl.checked = data.generate_html !== false; // default true
+
+        const pdfEl = document.getElementById('docs-generate-pdf');
+        if (pdfEl) pdfEl.checked = data.generate_pdf !== false; // default true
+
+        const directiveEl = document.getElementById('docs-override-generate-pdf');
+        if (directiveEl) {
+            // If override_directive is missing (first load), populate with the default
+            directiveEl.value = (data.override_directive !== undefined)
+                ? data.override_directive
+                : DOCS_DEFAULT_OVERRIDE;
+        }
     } catch(e) {
         console.warn('[DocsMaker] Failed to load config:', e);
     }
@@ -30,8 +50,17 @@ window.saveDocsConfig = async function(silent = false) {
     const pathEl = document.getElementById('docs-pdf-save-path');
     if (!pathEl) return;
 
+    const enabledEl = document.getElementById('docs-override-enabled');
+    const htmlEl = document.getElementById('docs-generate-html');
+    const pdfEl = document.getElementById('docs-generate-pdf');
+    const directiveEl = document.getElementById('docs-override-generate-pdf');
+
     const payload = {
-        pdf_save_path: pathEl.value.trim() || 'media/documents'
+        pdf_save_path: pathEl.value.trim() || 'media/documents',
+        override_enabled: enabledEl ? enabledEl.checked : true,
+        generate_html: htmlEl ? htmlEl.checked : true,
+        generate_pdf: pdfEl ? pdfEl.checked : true,
+        override_directive: directiveEl ? directiveEl.value.trim() : DOCS_DEFAULT_OVERRIDE
     };
 
     try {

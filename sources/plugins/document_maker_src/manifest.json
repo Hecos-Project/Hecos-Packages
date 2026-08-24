@@ -49,15 +49,16 @@
             "description": "Genera un documento PDF da un testo HTML o da un template Hecos"
         }
     ],
-    "icon": "fa-file-pdf",
+    "icon": "<i class=\"fas fa-file-pdf\"></i>",
     "config_panel": {
         "tab_id": "docs",
         "tab_label": "Document Maker",
         "tab_icon": "<i class=\"fas fa-file-pdf\"></i>",
         "template_file": "web/templates/config_document_maker.html",
-        "category": "PLUGINS",
-        "api_routes_file": "web/routes.py",
         "js_file": "web/static/js/document_maker_panel.js",
+        "css_file": null,
+        "category": "MULTIMEDIA",
+        "api_routes_file": null,
         "config_api_get": "/hecos/api/plugins/document_maker/config",
         "config_api_post": "/hecos/api/plugins/document_maker/config"
     }

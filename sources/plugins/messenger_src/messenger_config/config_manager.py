@@ -52,24 +52,44 @@ _THIS_DIR = Path(__file__).parent.resolve()
 # Save config in the persistent Hecos user-data directory so it survives
 # package reinstalls and source-code syncs.
 def _resolve_config_file() -> Path:
-    # Primary: Hecos standard data dir (works when installed inside Hecos)
+    # Primary: use CONFIG_DATA_DIR from core constants — guaranteed canonical path
     try:
-        from hecos.core.config import get_data_dir
-        data_dir = Path(get_data_dir()) / "plugins"
+        from hecos.core.constants import CONFIG_DATA_DIR
+        data_dir = Path(CONFIG_DATA_DIR) / "plugins"
     except Exception:
-        # Fallback: walk up from this file to find hecos/config/data
-        candidate = _THIS_DIR
-        found = None
-        for _ in range(10):
-            probe = candidate / "config" / "data" / "plugins"
-            if probe.parent.exists():
-                found = probe
-                break
-            candidate = candidate.parent
-        data_dir = found if found else _THIS_DIR
+        # Secondary: try legacy get_data_dir import
+        try:
+            from hecos.core.config import get_data_dir
+            data_dir = Path(get_data_dir()) / "plugins"
+        except Exception:
+            # Last-resort fallback: walk up from this file to find the hecos-level
+            # config/data folder. We match only when the candidate itself is named
+            # "hecos" to avoid landing in intermediate hpm/config/data directories.
+            candidate = _THIS_DIR
+            found = None
+            for _ in range(15):
+                probe = candidate / "config" / "data" / "plugins"
+                if probe.parent.exists() and candidate.name == "hecos":
+                    found = probe
+                    break
+                candidate = candidate.parent
+            data_dir = found if found else (_THIS_DIR / "config" / "data" / "plugins")
 
     data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir / "messenger.toml"
+    target = data_dir / "messenger.toml"
+
+    # ── Auto-migration: if the file was previously saved in the wrong hpm/config/data/
+    # directory, move it to the correct hecos/config/data/ directory now. ──────────────
+    try:
+        _wrong_dir = _THIS_DIR.parent.parent.parent / "config" / "data" / "plugins"
+        _wrong_file = _wrong_dir / "messenger.toml"
+        if _wrong_file.exists() and not target.exists() and _wrong_dir != data_dir:
+            import shutil
+            shutil.copy2(str(_wrong_file), str(target))
+    except Exception:
+        pass
+
+    return target
 
 _CONFIG_FILE = _resolve_config_file()
 
