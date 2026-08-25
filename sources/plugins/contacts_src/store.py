@@ -250,6 +250,67 @@ def find_by_name(name: str) -> dict | None:
     return results[0] if results else None
 
 
+def resolve_for_platform(name_or_id: str, platform: str) -> dict | None:
+    """
+    Resolves a contact name/ID to a platform-specific address.
+    Returns: {"contact": {...}, "address": "...", "field_type": "..."} or None.
+    """
+    c = get_by_id(name_or_id)
+    if not c:
+        c = find_by_name(name_or_id)
+    if not c:
+        return None
+        
+    fields = c.get("fields", [])
+    platform = platform.lower().strip()
+    
+    if platform == "telegram":
+        # 1. Try telegram_id (numeric chat ID)
+        for f in fields:
+            if f["field_type"] == "telegram_id":
+                return {"contact": c, "address": f["value"], "field_type": "telegram_id"}
+        # 2. Try telegram (@username)
+        for f in fields:
+            if f["field_type"] == "telegram":
+                return {"contact": c, "address": f["value"], "field_type": "telegram"}
+                
+    elif platform == "whatsapp":
+        # 1. Try whatsapp
+        for f in fields:
+            if f["field_type"] == "whatsapp":
+                return {"contact": c, "address": f["value"], "field_type": "whatsapp"}
+        # 2. Try phone
+        for f in fields:
+            if f["field_type"] == "phone":
+                return {"contact": c, "address": f["value"], "field_type": "phone"}
+                
+    else:
+        # Generic lookup for any other platform (discord, email, pippochat...)
+        for f in fields:
+            if f["field_type"] == platform:
+                return {"contact": c, "address": f["value"], "field_type": platform}
+                
+    return None
+
+
+def find_by_platform_value(field_type: str, value: str) -> dict | None:
+    """Reverse lookup: find a contact by a specific field type and value."""
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            "SELECT contact_id FROM contact_fields WHERE field_type = ? AND value = ? LIMIT 1",
+            (field_type, value)
+        ).fetchone()
+        if not row:
+            return None
+        return get_by_id(row["contact_id"])
+    finally:
+        conn.close()
+
+
+
+
+
 # ── Multi-value Fields ─────────────────────────────────────────────────────────
 
 def add_field(contact_id: str, field_type: str, value: str,

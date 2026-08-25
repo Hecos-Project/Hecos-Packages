@@ -1,11 +1,11 @@
 id = "contacts"
-manifest_version = "1"
+manifest_version = "1.4.2"
 name = "Contacts"
-version = "1.0.0"
-hecos_min_version = "0.34.0"
+version = "1.4.2"
+hecos_min_version = "0.48.0"
 type = "plugin"
 author = "Antonio Meloni"
-description = "Address Book plugin for Hecos with rich metadata and WhatsApp integration."
+description = "Optimized Address Book plugin for Hecos with rich metadata, WhatsApp integration, and modular structure."
 target_dir = "hpm"
 plugin_dir = "."
 lazy_load = true
@@ -14,38 +14,7 @@ on_load = true
 tag = "CONTACTS"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
 readme = "README.md"
-signature = "pZd6lR1Tu4M/P5Oi/7LecgAIZaVtVUnRdXNN3JS42NPhpCJZWD+SA8uSWdzC+rd2TcdfRA0IVeduyVllADM9BQ=="
-
-[backup]
-enabled = true
-backup_endpoint = "/api/contacts/backup"
-restore_endpoint = "/api/contacts/restore"
-icon = "📒"
-
-[config_panel]
-tab_id = "contacts"
-tab_label = "Contacts"
-tab_icon = "fas fa-address-book"
-template_file = "web_ui/templates/config_contacts.html"
-api_routes_file = "api.py"
-category = "CONNETTIVITÀ"
-
-[capabilities]
-llm_tools = [
-    "find_contact",
-    "add_contact",
-    "update_contact",
-    "delete_contact",
-    "list_contacts",
-    "send_whatsapp_to_contact",
-]
-slash_commands = []
-has_widget = false
-has_config_panel = true
-has_api_routes = true
-has_system_calls = false
-syscall_notes = ""
-notes = ""
+signature = "bbaqhqnz+xlkymuwbsfKc7liZgoumh3vgw+lCupa4tyQBcVKhTVljdWaSTS7qu/CPTTWH88ruByI/2n8CAWaCA=="
 
 [[tool_schema]]
 type = "function"
@@ -208,3 +177,88 @@ description = "The EXACT contact ID from the address book (get it via find_conta
 [tool_schema.function.parameters.properties.message]
 type = "string"
 description = "The content of the message to send."
+
+[backup]
+enabled = true
+backup_endpoint = "/api/contacts/backup"
+restore_endpoint = "/api/contacts/restore"
+icon = "📒"
+
+[config_panel]
+tab_id = "contacts"
+tab_label = "Contacts"
+tab_icon = "fas fa-address-book"
+template_file = "web_ui/templates/config_contacts.html"
+api_routes_file = "web_ui/routes.py"
+category = "CONNETTIVITÀ"
+
+[capabilities]
+llm_tools = [
+    "find_contact",
+    "add_contact",
+    "update_contact",
+    "delete_contact",
+    "list_contacts",
+    "send_whatsapp_to_contact",
+]
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = ""
+
+[file_hashes]
+"api.py" = "c455e16d0928af1d0497e7771e3f952e47ecc8f6330ae3ebfed00fc335516ecb"
+"hooks.py" = "f72c71e0cde006223aeffd9fee0542000badc265b178724d9fd1cc8edf3b405e"
+"main.py" = "056bd7eef52c3fbbb6dca341de3f40a2b703ca4529fbdd738a3886abd60e20ed"
+"manifest.json" = "9b091099f932a427b7b3f8fcd6b473c45b8f6139e7eea8358d19ed70dd698637"
+"README.md" = "14d7374493eb2a29340746580a17dd7f2095f9175b742785b9f15f67c58b6ae4"
+"store.py" = "39a2a86b0e6a3d44490881b7bf156488ee23a289d5e1a80f06c032351ce12d8e"
+"__init__.py" = "670a63e9242f8ef023664a8fdd9f3785b2c0a374eeb2d727bec570d54993d111"
+"data/urania_9800_example.json" = "3e0830e6aed22dedfa650df2b382b485d62c431dae27d9c7fc19a65aad78e342"
+"locales/en.json" = "97ae8375afbe9215d261f9af1f438bf54df7da0a8ffe483fb3722eb1e016b9fe"
+"locales/es.json" = "66248daa80d96a944acf22daa04d8436d2de0780fa7bde759bab4d6332043572"
+"locales/it.json" = "e6b40e716f1147d00c9b25f54438fc926a0f69a8bf1da6fa80ba645b209a56d5"
+"web_ui/routes.py" = "fc11d8d4856f1b86d698a6a483329f6fe785fb07e94362ed1295a119f9ad6395"
+"web_ui/__init__.py" = "261b3326b8be109518b3766f823df6c7b6a96760d8a64c26f8c09b52ecd08d9a"
+"web_ui/static/css/contacts.css" = "86d02acd96177b7e3b36996417d06613f1ac8133ca9abd0d66c98783f119b7f2"
+"web_ui/static/js/contacts_backup.js" = "95895e2b513dbecca1a37e18e6d6b7bfcfc1230060953b2819d69f8ac2ba5ef0"
+"web_ui/static/js/contacts_core.js" = "175149593683c8fdb5a89bd4cf533edd97103941f619ed749d952f0f0bb23da2"
+"web_ui/static/js/contacts_form.js" = "1ea75b63fda689f2a0f7dd63b62068885a18984315a88c55f7e1714667c10503"
+"web_ui/static/js/contacts_main.js" = "281ee2dc7a89735aa39c44eeee5ba6ed2f268bb1226c7a0cd683eb43e2278720"
+"web_ui/static/js/contacts_photo.js" = "f7f0fdbc7360c687af701504560d1055124204b857e1b966a6dbf1abd1c485d5"
+"web_ui/static/js/contacts_ui.js" = "79eef0be634d775faa01444f7ed5cccbed0986e08233110d77ca4cea6f940b15"
+"web_ui/templates/config_contacts.html" = "c13a3cbe0f93adbc8f9342491c318b600d19f0cfc9838f7b85ba8bc60c4c8240"
+"web_ui/templates/modules/contacts/_contacts_grid.html" = "86b8ba0bc4dcfa430bdd6d3e4e35a65ee6c13bd954ada3b880f7670682672379"
+"web_ui/templates/modules/contacts/_contacts_logic.html" = "713f852b75667f9fc9b7d05c51e42e42b9238ac827c00c6c2372eaa9ba4f48ca"
+"web_ui/templates/modules/contacts/_contacts_modal.html" = "e43625eb521f4edad5b263abbbb9d75952804f79d60b6084d4600da00bd646a3"
+"web_ui/templates/modules/contacts/_contacts_styles.html" = "4fc5d8de0e7b4910f3ea7cb5b68b4ed6dd9f847edbd8fd607a56f912cc43e7bc"
+
+[hashes]
+"api.py" = "93fd60ab85ece8917358b097de1d75981cbeaffdfa3d5b38fe59554049c52bd1"
+"hooks.py" = "f72c71e0cde006223aeffd9fee0542000badc265b178724d9fd1cc8edf3b405e"
+"main.py" = "056bd7eef52c3fbbb6dca341de3f40a2b703ca4529fbdd738a3886abd60e20ed"
+"manifest.json" = "4ffb61bcfd9ed61579ac0af6ef2046e318882e41c0acc6280a1f93b101e35114"
+"README.md" = "14d7374493eb2a29340746580a17dd7f2095f9175b742785b9f15f67c58b6ae4"
+"store.py" = "39a2a86b0e6a3d44490881b7bf156488ee23a289d5e1a80f06c032351ce12d8e"
+"__init__.py" = "670a63e9242f8ef023664a8fdd9f3785b2c0a374eeb2d727bec570d54993d111"
+"data/urania_9800_example.json" = "3e0830e6aed22dedfa650df2b382b485d62c431dae27d9c7fc19a65aad78e342"
+"locales/en.json" = "4646221863edc0b02afbb9c1fb708bce9c33eab1c22fb5f6fb545845bcbcf522"
+"locales/es.json" = "69c8967a2d5487443f468089802f822d03efcd0472204df0c4e7a06bec6bea21"
+"locales/it.json" = "83520018a0f5aaf09575e26201c3718db371e74727c262fb74979ef69d25bff7"
+"web_ui/routes.py" = "fc11d8d4856f1b86d698a6a483329f6fe785fb07e94362ed1295a119f9ad6395"
+"web_ui/__init__.py" = "261b3326b8be109518b3766f823df6c7b6a96760d8a64c26f8c09b52ecd08d9a"
+"web_ui/static/css/contacts.css" = "86d02acd96177b7e3b36996417d06613f1ac8133ca9abd0d66c98783f119b7f2"
+"web_ui/static/js/contacts_backup.js" = "c55931d01592fb4ae88b987d0a2ebe81fd97ae0923e112708076543d82d3445c"
+"web_ui/static/js/contacts_core.js" = "0e301168775b7f6f45d10bd06a0d156b245a4484dbd7ea7b3b37fea3dc9b7f12"
+"web_ui/static/js/contacts_form.js" = "70c9b144f22fa3332e6886fabc2b52230bc5b3a60a9d6f2856bfbbca74c3f62b"
+"web_ui/static/js/contacts_main.js" = "9d07589a2f12180b2ed737671b8028b1d5df3e60600dbb1732e6c764606dffab"
+"web_ui/static/js/contacts_photo.js" = "9d3466e38cb3425f4576daa5f410310ff71a51c4b0d362e00535c1a841434b76"
+"web_ui/static/js/contacts_ui.js" = "79eef0be634d775faa01444f7ed5cccbed0986e08233110d77ca4cea6f940b15"
+"web_ui/templates/config_contacts.html" = "c13a3cbe0f93adbc8f9342491c318b600d19f0cfc9838f7b85ba8bc60c4c8240"
+"web_ui/templates/modules/contacts/_contacts_grid.html" = "86b8ba0bc4dcfa430bdd6d3e4e35a65ee6c13bd954ada3b880f7670682672379"
+"web_ui/templates/modules/contacts/_contacts_logic.html" = "713f852b75667f9fc9b7d05c51e42e42b9238ac827c00c6c2372eaa9ba4f48ca"
+"web_ui/templates/modules/contacts/_contacts_modal.html" = "bfddc5dff4c07f81565d508ca01a3ee3fec4825d490718f8dcf01a7c92ea221b"
+"web_ui/templates/modules/contacts/_contacts_styles.html" = "4fc5d8de0e7b4910f3ea7cb5b68b4ed6dd9f847edbd8fd607a56f912cc43e7bc"

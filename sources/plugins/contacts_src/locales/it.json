@@ -28,5 +28,13 @@
     "ext_contacts_address": "Indirizzo Fisico",
     "ext_contacts_add_phone": "Aggiungi Telefono",
     "ext_contacts_add_email": "Aggiungi Email",
-    "ext_contacts_label": "Etichetta (es. Casa)"
+    "ext_contacts_label": "Etichetta (es. Casa)",
+    "ext_contacts_add_address": "Aggiungi Indirizzo",
+    "ext_contacts_custom_fields": "Campi Personalizzati",
+    "ext_contacts_add_custom": "Aggiungi Campo",
+    "ext_contacts_gallery": "Galleria Foto",
+    "ext_contacts_add_photos": "Aggiungi Foto",
+    "ext_contacts_value": "Valore",
+    "ext_contacts_profile_pic": "Foto Profilo",
+    "chat_btn_close": "Chiudi"
 }

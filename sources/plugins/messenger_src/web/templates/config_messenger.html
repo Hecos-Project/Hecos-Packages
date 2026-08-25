@@ -201,6 +201,19 @@
                         </label>
                     </div>
                 </div>
+
+                <div style="display:flex; gap:16px; align-items:center; margin-bottom:12px; background:var(--bg1); padding:10px; border-radius:8px; border-left:3px solid #ffcc00;">
+                    <div style="flex:1;">
+                        <div style="font-weight:600; font-size:12px; color:var(--text); margin-bottom:4px;">Primary Bot (Default)</div>
+                        <div style="font-size:10px; color:var(--muted);">If enabled, this bot will be used as the default for sending Telegram messages when no specific bot is requested. (Only one can be primary)</div>
+                    </div>
+                    <div>
+                        <label class="switch is-small">
+                            <input type="checkbox" ${bot.is_primary ? 'checked' : ''} onchange="setPrimaryBot(${index}); saveMessengerConfig()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
                 
                 ${!bot.is_admin ? `
                 <div style="background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.2); border-radius:8px; padding:12px;">
@@ -231,11 +244,23 @@
             bot_token: "",
             default_chat_id: "",
             is_admin: telegramBots.length === 0, // Il primo bot di solito è admin
+            is_primary: telegramBots.length === 0,
             group_mode: "mention",
             group_keywords: "urania,hecos"
         });
         renderTelegramBots();
         saveMessengerConfig();
+    }
+
+    function setPrimaryBot(index) {
+        // Only one bot can be primary
+        const isChecked = telegramBots[index].is_primary = !telegramBots[index].is_primary;
+        if (isChecked) {
+            telegramBots.forEach((b, i) => {
+                if (i !== index) b.is_primary = false;
+            });
+        }
+        renderTelegramBots();
     }
 
     function removeTelegramBot(index) {

@@ -1,7 +1,7 @@
 id = "messenger"
-manifest_version = "1"
+manifest_version = "1.1.0"
 name = "Messenger"
-version = "1.0.2"
+version = "1.1.0"
 author = "Antonio Meloni"
 license = "GPL-3.0"
 description = "Send and receive messages via Telegram, WhatsApp, and Discord.\n\n**Guida ai Comandi Rapidi:**\n- `/msg <piattaforma>:<destinatario> <testo>`: Invia un messaggio diretto scavalcando l'IA. Es: `/msg whatsapp:+393331234567 Ciao!`\n- `/send`: Alias esatto di `/msg`.\n"
@@ -9,7 +9,7 @@ type = "plugin"
 pip_isolation = "shared"
 target_dir = "hpm"
 plugin_dir = "."
-hecos_min_version = "0.40.0"
+hecos_min_version = "1.1.0"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
 readme = "README.md"
 readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/messenger_src/README.md"
@@ -22,6 +22,7 @@ tag = "MESSENGER"
 lazy_load = false
 is_class_based = true
 api_routes_file = "web/routes.py"
+signature = "PnaHFufLGw49tBQ/t5HJJefSXdpesQGu+HMs/mKoofp0/G9DzWev36avQfKi0sQV0ZZJLXXRI8ZhuuUwuMWnDw=="
 
 [commands]
 send_message = "Sends a text message to a contact or channel on the specified platform."
@@ -42,6 +43,7 @@ config_api_post = "/hecos/api/plugins/messenger/config"
 
 [capabilities]
 llm_tools = [
+    "resolve_contact_address",
     "send_message",
     "list_accounts",
     "check_connection",
@@ -61,7 +63,7 @@ notes = ""
 
 [[slash_commands]]
 id = "msg"
-manifest_version = "1"
+manifest_version = "1.1.0"
 aliases = [
     "/msg",
     "/send",
@@ -176,3 +178,25 @@ description = "The absolute path to the local image file to send."
 [tool_schema.function.parameters.properties.caption]
 type = "string"
 description = "Optional: Text caption to attach to the image."
+
+[file_hashes]
+"dispatcher.py" = "ef058fa80a9e63e89f8ff6aaf1131bbc8220bad8b62f8b09a5b47ef192b4f12a"
+"main.py" = "17f4a588acd1023cbbf2ac2fc1d4b2a16dfc41f84333121be4676acd030d4f8e"
+"manifest.json" = "751f7eb57efdcee070c92cfaabc7abf177fbad9c881233e3a30dec506b1f2bd3"
+"manifest_runtime_patch.json" = "68efefeb5cf12bc0f31afa2ece8b6ef98fb0df70ba20ea73a703b80cd4a624dc"
+"preview_1.png" = "60d7e4d177c96c0d7febe004419a8860570b765c0105e76389047e0a425eaf8c"
+"README.md" = "4b4fd0e185870ddcf0e75c636ff3d9ca94b0c445139685cadfa82fa137471cca"
+"requirements.txt" = "96f6dddc2e5a3e62abcfccfb853d44dbbae53df59de0554351bf04ac6e8b669b"
+"adapters/discord.py" = "b194cb6b91faea8673fe58e4e10f4e918b721b33d1160bee11ffe63d4655c11f"
+"adapters/telegram.py" = "e7d3de00ec2fe8bdd43c9afe4bbe156f14dc98b94a5d739cbf46309fcb3f805d"
+"adapters/whatsapp.py" = "710800746046542fffffaa86d725861ae24cbe2519fb75e15f6d1cd276236f58"
+"adapters/whatsapp_cdp_worker.py" = "f1e4804f322369a1e37dcbb1ed3677096857a2cdb5152a075d5d47e3dbefe55e"
+"adapters/__init__.py" = "ed2c3a54e175773c07bccf662a40a031d6017ddbcf2b3d11859b12507152b12f"
+"locales/en.json" = "f87a2d96b69e47cf8286cffe0ab2faa144ce634e8b30c33cd45e972bc215eee4"
+"locales/es.json" = "e3ca58fed72e74bfdf356aef24566f985cbe7c0cdf1a24c1e6ffb0fa44e42f3a"
+"locales/it.json" = "e3364ee983a81367137999f546e803ea0ba4f886982e18354e30f807fbe4b369"
+"messenger_config/config_manager.py" = "9953167d23a5f2039a380de14f58f3ac9a60a32b76e3c7d6744f4c2713fbf69a"
+"messenger_config/messenger.toml" = "433e0cec8133a4b558d4a92555e0df78d9ef0fd0778f88bc363ee53799273b49"
+"messenger_config/__init__.py" = "6bc3916cdcd1f082b3bd10e9feef7bf338023fdcf2335ff6fbf09c379988dde0"
+"web/routes.py" = "1fe7ce468733f36f8deb2e24b1fd527b04133c706747328ff0b2ed5507bbef69"
+"web/templates/config_messenger.html" = "a70ee19d4d42f8800d09c1dff275f38d54cd8489a4bae6f895c09d6b09ef3c0c"

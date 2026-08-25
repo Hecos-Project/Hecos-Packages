@@ -35,9 +35,14 @@ def _get_bot_config(cfg, bot_name: str | None = None):
                 return b
         raise ValueError(f"Telegram bot '{bot_name}' not found.")
     
+    # Fallback: check for primary bot first
+    for b in cfg.bots:
+        if getattr(b, "is_primary", False) and getattr(b, "enabled", True):
+            return b
+            
     # Fallback to first enabled bot
     for b in cfg.bots:
-        if b.enabled:
+        if getattr(b, "enabled", True):
             return b
     raise ValueError("No enabled Telegram bots found.")
 
@@ -160,6 +165,45 @@ def send_reply_photo(bot_name: str, chat_id: str, image_path: str, caption: str 
             logger.info("MESSENGER/Telegram", f"[{bot_name}] Photo reply sent to {chat_id}")
         except Exception as e:
             logger.error("MESSENGER/Telegram", f"[{bot_name}] send_reply_photo failed: {e}")
+            raise e
+    else:
+        raise RuntimeError(f"No active listener loop for bot '{bot_name}'")
+
+def send_reply_document(bot_name: str, chat_id: str, document_path: str, caption: str = ""):
+    with _registry_lock:
+        state = _active_bots.get(bot_name)
+    
+    if state and state["loop"] and not state["loop"].is_closed():
+        async def _do_send():
+            with open(document_path, "rb") as f:
+                await state["bot"].send_document(chat_id=chat_id, document=f, caption=caption)
+        future = asyncio.run_coroutine_threadsafe(_do_send(), state["loop"])
+        try:
+            future.result(timeout=60) # documents might take longer to upload
+            logger.info("MESSENGER/Telegram", f"[{bot_name}] Document reply sent to {chat_id}")
+        except Exception as e:
+            logger.error("MESSENGER/Telegram", f"[{bot_name}] send_reply_document failed: {e}")
+            raise e
+    else:
+        raise RuntimeError(f"No active listener loop for bot '{bot_name}'")
+
+def send_reply_video(bot_name: str, chat_id: str, video_path: str, caption: str = ""):
+    with _registry_lock:
+        state = _active_bots.get(bot_name)
+    
+    if state and state["loop"] and not state["loop"].is_closed():
+        async def _do_send():
+            with open(video_path, "rb") as f:
+                await state["bot"].send_video(chat_id=chat_id, video=f, caption=caption)
+        future = asyncio.run_coroutine_threadsafe(_do_send(), state["loop"])
+        try:
+            future.result(timeout=120) # videos might take longer to upload
+            logger.info("MESSENGER/Telegram", f"[{bot_name}] Video reply sent to {chat_id}")
+        except Exception as e:
+            logger.error("MESSENGER/Telegram", f"[{bot_name}] send_reply_video failed: {e}")
+            raise e
+    else:
+        raise RuntimeError(f"No active listener loop for bot '{bot_name}'")
 
 # ── Background Listeners ───────────────────────────────────────────────────────
 

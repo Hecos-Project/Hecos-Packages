@@ -1,0 +1,199 @@
+{
+    "tag": "CONTACTS",
+    "name": "Contacts",
+    "version": "1.4.2",
+    "description": "Optimized Address Book plugin for Hecos with rich metadata, WhatsApp integration, and modular structure.",
+    "lazy_load": true,
+    "is_class_based": true,
+    "commands": {},
+    "tool_schema": [
+        {
+            "type": "function",
+            "function": {
+                "name": "CONTACTS__find_contact",
+                "description": "Searches the address book and returns matching contacts. Use when the user asks 'chi è X?', 'find the number of Y', 'qual è il telefono di Z', 'cerca il contatto', 'who is...'.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Name, phone number, email, company or tag to search for."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "CONTACTS__add_contact",
+                "description": "Creates a new contact in the address book. Use when the user says 'aggiungi contatto', 'salva questo numero', 'add a contact', 'registra il numero di X'.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "first_name": {
+                            "type": "string",
+                            "description": "First name."
+                        },
+                        "last_name": {
+                            "type": "string",
+                            "description": "Last name."
+                        },
+                        "display_name": {
+                            "type": "string",
+                            "description": "Optional custom display name. Defaults to 'First Last'."
+                        },
+                        "company": {
+                            "type": "string",
+                            "description": "Company or organization name."
+                        },
+                        "role": {
+                            "type": "string",
+                            "description": "Job title or role."
+                        },
+                        "phone": {
+                            "type": "string",
+                            "description": "Primary phone number."
+                        },
+                        "email": {
+                            "type": "string",
+                            "description": "Primary email address."
+                        },
+                        "birthday": {
+                            "type": "string",
+                            "description": "Birthday, preferably in DD/MM/YYYY or YYYY-MM-DD format."
+                        },
+                        "address": {
+                            "type": "string",
+                            "description": "Physical address."
+                        },
+                        "notes": {
+                            "type": "string",
+                            "description": "Additional notes."
+                        },
+                        "tags": {
+                            "type": "string",
+                            "description": "Comma-separated tags (e.g. 'family, work, VIP')."
+                        },
+                        "label_color": {
+                            "type": "string",
+                            "description": "Hex color for UI label (e.g. '#FF0000')."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "CONTACTS__update_contact",
+                "description": "Updates fields of an existing contact. IMPORTANT: ALWAYS use find_contact first to get the exact ID or display name before calling this.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "id_or_name": {
+                            "type": "string",
+                            "description": "The Exact ID or Display Name of the contact to update."
+                        },
+                        "first_name": {
+                            "type": "string"
+                        },
+                        "last_name": {
+                            "type": "string"
+                        },
+                        "display_name": {
+                            "type": "string"
+                        },
+                        "company": {
+                            "type": "string"
+                        },
+                        "role": {
+                            "type": "string"
+                        },
+                        "birthday": {
+                            "type": "string"
+                        },
+                        "address": {
+                            "type": "string"
+                        },
+                        "notes": {
+                            "type": "string"
+                        },
+                        "label_color": {
+                            "type": "string"
+                        },
+                        "tags": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "CONTACTS__delete_contact",
+                "description": "Permanently deletes a contact.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "id_or_name": {
+                            "type": "string",
+                            "description": "The Exact ID or Display Name of the contact to delete."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "CONTACTS__list_contacts",
+                "description": "Lists all contacts. Use 'query' to filter by a specific tag, name, or company.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Optional filter string."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "CONTACTS__send_whatsapp_to_contact",
+                "description": "Sends a WhatsApp message to a specific contact from the address book. If the contact has no whatsapp number it will fallback to their mobile phone number.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "contact_id": {
+                            "type": "string",
+                            "description": "The EXACT contact ID from the address book (get it via find_contact first!). Do NOT pass a phone number here."
+                        },
+                        "message": {
+                            "type": "string",
+                            "description": "The content of the message to send."
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "slash_commands": [],
+    "icon": "fas fa-address-book",
+    "config_panel": {
+        "tab_id": "contacts",
+        "tab_label": "Contacts",
+        "tab_icon": "fas fa-address-book",
+        "template_file": "web_ui/templates/config_contacts.html",
+        "js_file": null,
+        "css_file": null,
+        "category": "CONNETTIVITÀ",
+        "api_routes_file": "web_ui/routes.py",
+        "config_api_get": null,
+        "config_api_post": null
+    }
+}

@@ -28,5 +28,13 @@
     "ext_contacts_address": "Physical Address",
     "ext_contacts_add_phone": "Add Phone",
     "ext_contacts_add_email": "Add Email",
-    "ext_contacts_label": "Label (e.g. Work)"
+    "ext_contacts_label": "Label (e.g. Work)",
+    "ext_contacts_add_address": "Add Address",
+    "ext_contacts_custom_fields": "Custom Fields",
+    "ext_contacts_add_custom": "Add Custom Field",
+    "ext_contacts_gallery": "Photo Gallery",
+    "ext_contacts_add_photos": "Add Photos",
+    "ext_contacts_value": "Value",
+    "ext_contacts_profile_pic": "Profile Picture",
+    "chat_btn_close": "Close"
 }

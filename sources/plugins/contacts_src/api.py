@@ -23,13 +23,6 @@ import os, pathlib, uuid as _uuid
 contacts_bp = Blueprint("contacts", __name__, url_prefix="/api/contacts")
 
 
-def init_plugin_routes(app, cfg_mgr, hecos_root, log):
-    """Registers the contacts blueprint on the Flask app (idempotent)."""
-    if "contacts" not in app.blueprints:
-        app.register_blueprint(contacts_bp)
-        logger.debug("CONTACTS", "API blueprint registered at /api/contacts")
-
-
 # ── Contact CRUD ───────────────────────────────────────────────────────────────
 
 @contacts_bp.route("", methods=["GET"])
@@ -75,8 +68,11 @@ def create_contact():
         for em in data.get("emails", []):
             store.add_field(c["id"], "email", em["value"], label=em.get("label", "personal"),
                             is_primary=em.get("is_primary", False))
-        for soc in data.get("socials", []):
-            store.add_field(c["id"], soc["type"], soc["value"], label=soc.get("label"))
+        for cu in data.get("customs", []):
+            store.add_field(c["id"], cu.get("field_type", "custom"), cu["value"], label=cu.get("label"))
+        for addr in data.get("addresses", []):
+            store.add_field(c["id"], "address", addr["value"], label=addr.get("label", "Main"),
+                            is_primary=addr.get("is_primary", False))
         return jsonify({"ok": True, "contact": store.get_by_id(c["id"])}), 201
     except Exception as e:
         logger.debug("CONTACTS", f"POST /api/contacts error: {e}")
@@ -111,7 +107,8 @@ def update_contact(contact_id):
                     ft = f["field_type"]
                     if ("phones" in data and ft == "phone") or \
                        ("emails" in data and ft == "email") or \
-                       ("socials" in data and ft not in ["phone", "email"]):
+                       ("addresses" in data and ft == "address") or \
+                       ("customs" in data and ft not in ["phone", "email", "address", "photo"]):
                         store.remove_field(f["id"])
                 
                 # add new fields
@@ -123,10 +120,14 @@ def update_contact(contact_id):
                     for em in data["emails"]:
                         if em.get("value"):
                             store.add_field(contact_id, "email", em["value"], label=em.get("label", "personal"), is_primary=em.get("is_primary", False))
-                if "socials" in data:
-                    for soc in data["socials"]:
-                        if soc.get("type") and soc.get("value"):
-                            store.add_field(contact_id, soc["type"], soc["value"], label=soc.get("label"))
+                if "customs" in data:
+                    for cu in data["customs"]:
+                        if cu.get("field_type") and cu.get("value"):
+                            store.add_field(contact_id, cu["field_type"], cu["value"], label=cu.get("label"))
+                if "addresses" in data:
+                    for addr in data["addresses"]:
+                        if addr.get("value"):
+                            store.add_field(contact_id, "address", addr["value"], label=addr.get("label", "Main"), is_primary=addr.get("is_primary", False))
                             
             updated = True # Ensure we return success if only fields changed
 
@@ -198,6 +199,71 @@ def get_photo(contact_id):
     if not path.exists():
         return jsonify({"ok": False, "error": "File missing"}), 404
     return send_file(str(path))
+
+
+# ── Gallery ────────────────────────────────────────────────────────────────────
+
+@contacts_bp.route("/<contact_id>/gallery", methods=["POST"])
+def upload_gallery_photo(contact_id):
+    import uuid
+    from hecos.hpm.contacts import store
+    c = store.get_by_id(contact_id)
+    if not c:
+        return jsonify({"ok": False, "error": "Contact not found"}), 404
+
+    if "photo" not in request.files:
+        return jsonify({"ok": False, "error": "No file uploaded (field: 'photo')"}), 400
+
+    f = request.files["photo"]
+    ext = pathlib.Path(f.filename).suffix.lower()
+    if ext not in _ALLOWED_EXT:
+        return jsonify({"ok": False, "error": f"Unsupported image format: {ext}"}), 400
+
+    _PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{contact_id}_gal_{uuid.uuid4().hex[:8]}{ext}"
+    dest = _PHOTOS_DIR / filename
+    f.save(str(dest))
+
+    field = store.add_field(contact_id, "photo", filename, label="gallery")
+    return jsonify({"ok": True, "field": field})
+
+
+@contacts_bp.route("/<contact_id>/gallery/<filename>", methods=["GET"])
+def get_gallery_photo(contact_id, filename):
+    import re
+    # Basic security check
+    if not re.match(r'^[\w\-\.]+$', filename):
+        return jsonify({"ok": False, "error": "Invalid filename"}), 400
+        
+    path = _PHOTOS_DIR / filename
+    if not path.exists():
+        return jsonify({"ok": False, "error": "File missing"}), 404
+    return send_file(str(path))
+
+
+@contacts_bp.route("/<contact_id>/gallery/<field_id>", methods=["DELETE"])
+def delete_gallery_photo(contact_id, field_id):
+    from hecos.hpm.contacts import store
+    c = store.get_by_id(contact_id)
+    if not c:
+        return jsonify({"ok": False, "error": "Contact not found"}), 404
+
+    fields = c.get("fields", [])
+    target = next((f for f in fields if f["id"] == field_id and f["field_type"] == "photo"), None)
+    
+    if not target:
+        return jsonify({"ok": False, "error": "Photo not found in gallery"}), 404
+
+    # Remove the physical file
+    path = _PHOTOS_DIR / target["value"]
+    try:
+        path.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+    # Remove the field entry
+    store.remove_field(field_id)
+    return jsonify({"ok": True})
 
 
 # ── Multi-value Fields ─────────────────────────────────────────────────────────

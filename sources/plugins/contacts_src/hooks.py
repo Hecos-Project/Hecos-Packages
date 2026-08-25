@@ -9,67 +9,58 @@ DESCRIPTION: Bridge layer between the Contacts plugin and other Hecos modules.
 from hecos.core.logging import logger
 
 
-# ── WhatsApp / Messenger Bridge ───────────────────────────────────────────────
+# ── Universal Messenger Bridge ────────────────────────────────────────────────
+
+def send_to_contact(name_or_id: str, message: str, platform: str, bot_name: str = None, attachments: list = None) -> str:
+    """
+    Universal bridge: resolves contact → platform address, then dispatches via Messenger.
+    """
+    from hecos.hpm.contacts import store
+    resolution = store.resolve_for_platform(name_or_id, platform)
+    
+    if not resolution:
+        c = store.get_by_id(name_or_id) or store.find_by_name(name_or_id)
+        cname = c.get("display_name", name_or_id) if c else name_or_id
+        return f"⚠️ No valid {platform} address found for **{cname}**. Add one via the address book."
+
+    cname = resolution["contact"].get("display_name", name_or_id)
+    address = resolution["address"]
+    
+    try:
+        from hecos.core.system.module_state import get_plugin_module
+        messenger_module = get_plugin_module("MESSENGER")
+        if not messenger_module or not hasattr(messenger_module, "tools"):
+            return "⚠️ Messenger plugin is not available or not enabled."
+        
+        # Build the 'to' string: e.g. "telegram:bot_name:chat_id" or "whatsapp:number"
+        target = f"{platform}:{address}"
+        if bot_name and platform.lower() == "telegram":
+            target = f"{platform}:{bot_name}:{address}"
+            
+        result = messenger_module.tools.send_message(
+            to=target, 
+            text=message, 
+            attachments=attachments
+        )
+        
+        if result and result.startswith("❌"):
+            return result
+            
+        return f"✅ Message sent to **{cname}** on {platform} ({address})."
+    except ImportError:
+        return "⚠️ Messenger plugin is not available or not enabled."
+    except Exception as e:
+        logger.debug("CONTACTS", f"send_to_contact error: {e}")
+        return f"⚠️ Failed to send via {platform}: {e}"
+
+
+# ── Legacy Wrappers ─────────────────────────────────────────────────────────
 
 def send_whatsapp(contact_id: str, message: str) -> str:
-    """
-    Sends a WhatsApp message to a contact by looking up their WhatsApp number.
-    Delegates to hecos.plugins.messenger. Returns a human-readable result string.
-    """
-    from hecos.hpm.contacts import store
-    number = store.get_primary_field(contact_id, "whatsapp")
-    if not number:
-        # Fall back to primary phone number
-        number = store.get_primary_field(contact_id, "phone")
-    if not number:
-        c = store.get_by_id(contact_id)
-        name = c.get("display_name", contact_id) if c else contact_id
-        return (f"⚠️ No WhatsApp number found for **{name}**. "
-                f"Add one via the address book or use the `add_field` API.")
-    try:
-        from hecos.core.system.module_state import get_plugin_module
-        messenger_module = get_plugin_module("MESSENGER")
-        if not messenger_module or not hasattr(messenger_module, "tools"):
-            return "⚠️ Messenger plugin is not available or not enabled."
-        
-        result = messenger_module.tools.send_message(to=number, text=message, platform="whatsapp")
-        if result and result.startswith("❌"):
-            return result
-        c = store.get_by_id(contact_id)
-        name = c.get("display_name", contact_id) if c else contact_id
-        return f"💬 WhatsApp message sent to **{name}** ({number})."
-    except ImportError:
-        return "⚠️ Messenger plugin is not available or not enabled."
-    except Exception as e:
-        logger.debug("CONTACTS", f"send_whatsapp error: {e}")
-        return f"⚠️ Failed to send WhatsApp: {e}"
-
+    return send_to_contact(contact_id, message, "whatsapp")
 
 def send_telegram(contact_id: str, message: str) -> str:
-    """Sends a Telegram message to a contact by looking up their Telegram handle."""
-    from hecos.hpm.contacts import store
-    handle = store.get_primary_field(contact_id, "telegram")
-    if not handle:
-        c = store.get_by_id(contact_id)
-        name = c.get("display_name", contact_id) if c else contact_id
-        return f"⚠️ No Telegram handle found for **{name}**."
-    try:
-        from hecos.core.system.module_state import get_plugin_module
-        messenger_module = get_plugin_module("MESSENGER")
-        if not messenger_module or not hasattr(messenger_module, "tools"):
-            return "⚠️ Messenger plugin is not available or not enabled."
-        
-        result = messenger_module.tools.send_message(to=handle, text=message, platform="telegram")
-        if result and result.startswith("❌"):
-            return result
-        c = store.get_by_id(contact_id)
-        name = c.get("display_name", contact_id) if c else contact_id
-        return f"✈️ Telegram message sent to **{name}** (@{handle})."
-    except ImportError:
-        return "⚠️ Messenger plugin is not available or not enabled."
-    except Exception as e:
-        logger.debug("CONTACTS", f"send_telegram error: {e}")
-        return f"⚠️ Failed to send Telegram: {e}"
+    return send_to_contact(contact_id, message, "telegram")
 
 
 # ── Mail Bridge (stub — ready for future Mail plugin) ─────────────────────────

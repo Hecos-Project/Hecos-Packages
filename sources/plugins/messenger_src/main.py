@@ -47,15 +47,22 @@ class MessengerTools:
             self._cfg = get_config_obj()
         return self._cfg
 
-    def send_message(self, to: str, text: str, platform: str = None, skip_default_template: bool = False, is_app_open: bool = False) -> str:
+    def send_message(self, to: str, text: str, platform: str = None, skip_default_template: bool = False, is_app_open: bool = False, bot_name: str = None, attachments: list = None) -> str:
         """
         Send a message to a contact or channel.
+        Use 'contact:Nome Contatto' as the 'to' target to dynamically resolve the address.
+        Optionally specify 'bot_name' to select which configured bot sends the message (e.g., 'urania').
+        Optionally specify 'attachments' as a list of absolute file paths to send alongside the text.
         """
         cfg = self._require_config()
         try:
             plat, recipient = dispatcher.parse_target(to, platform)
         except ValueError as e:
             return f"❌ {e}"
+
+        # If a specific bot_name was requested, encode it in the recipient for the dispatcher
+        if bot_name and plat == "telegram" and ":" not in recipient:
+            recipient = f"{bot_name}:{recipient}"
 
         # Check explicit template via config
         explicit_template_id = ""
@@ -90,32 +97,84 @@ class MessengerTools:
             except Exception as e:
                 logger.warning("MESSENGER", f"Error applying template: {e}")
 
-        return dispatcher.dispatch_send(plat, recipient, text, cfg, is_app_open)
+        return dispatcher.dispatch_send(plat, recipient, text, cfg, is_app_open, attachments=attachments)
+
+    def resolve_contact_address(self, name: str, platform: str) -> str:
+        """
+        Looks up a contact in the address book and returns their platform-specific address (e.g., chat ID).
+        Does NOT send a message. Use this to verify addresses before sending.
+        """
+        try:
+            from hecos.hpm.contacts import store
+            resolution = store.resolve_for_platform(name, platform)
+            if not resolution:
+                return f"⚠️ No '{platform}' address found for contact '{name}'."
+            c = resolution["contact"]
+            return f"✅ Resolved '{name}' ({c['display_name']}) → {platform} address: {resolution['address']} (field_type: {resolution['field_type']})"
+        except ImportError:
+            return "⚠️ Contacts plugin is not available."
+        except Exception as e:
+            return f"⚠️ Error resolving contact: {e}"
 
     def send_photo(self, to: str, image_path: str, caption: str = "") -> str:
         """
         Send a photo to a contact or channel (Telegram only for now).
+        If a Telegram listener is already running for the target bot, routes
+        through that active connection to avoid asyncio event loop conflicts.
         """
+        import os
         cfg = self._require_config()
         try:
             plat, recipient = dispatcher.parse_target(to, "telegram")
         except ValueError as e:
             return f"❌ {e}"
-        
+
         if plat != "telegram":
             return "❌ send_photo is currently only supported on telegram."
 
+        # Parse optional 'botname:chat_id' format inside the recipient
         bot_name = None
         if ":" in recipient:
             parts = recipient.split(":", 1)
             bot_name = parts[0].strip()
             recipient = parts[1].strip()
 
+        if not os.path.isfile(image_path):
+            return f"❌ Errore: file immagine non trovato ({image_path})"
+
+        from .adapters import telegram as tg
+
+        # ── Resolve bot and chat_id ───────────────────────────────────────────
+        # If no explicit bot_name pick the first configured admin bot.
+        if not bot_name:
+            for b in (cfg.telegram.bots or []):
+                if b.enabled and b.bot_token:
+                    bot_name = b.name
+                    break
+
+        # If recipient is empty, fall back to that bot's default_chat_id
+        if not recipient and bot_name:
+            for b in (cfg.telegram.bots or []):
+                if b.name == bot_name and b.default_chat_id:
+                    recipient = str(b.default_chat_id)
+                    break
+
+        if not recipient:
+            return "❌ Impossibile determinare il destinatario. Specifica 'telegram:<chat_id>'."
+
+        # ── Prefer the already-running listener loop ──────────────────────────
+        # send_reply_photo injects into the existing polling event loop,
+        # avoiding asyncio.run() conflicts.
         try:
-            import os
-            from .adapters import telegram as tg
-            if not os.path.isfile(image_path):
-                return f"❌ Errore: file immagine non trovato ({image_path})"
+            active = tg._active_bots.get(bot_name) if bot_name else None
+            if active and active.get("loop") and not active["loop"].is_closed():
+                tg.send_reply_photo(bot_name, recipient, image_path, caption or "")
+                return f"✅ Foto inviata a `{recipient}` via `{bot_name}`."
+        except Exception as e:
+            logger.warning("MESSENGER", f"send_photo via listener failed, falling back: {e}")
+
+        # ── Fallback: fresh bot connection ────────────────────────────────────
+        try:
             return tg.send_photo(cfg.telegram, recipient, image_path, caption, bot_name=bot_name)
         except Exception as e:
             return f"❌ Errore durante l'invio della foto: {e}"
@@ -136,9 +195,15 @@ class MessengerTools:
 
         # Telegram
         tg_status = "✅ Abilitato" if getattr(cfg.telegram, 'enabled', False) else "⛔ Disabilitato"
-        tg_tk = getattr(cfg.telegram, 'bot_token', "")
-        tg_id = f"(Token: {'***' + tg_tk[-6:] if tg_tk else 'non impostato'})"
-        lines.append(f"📨 **Telegram**: {tg_status} {tg_id}")
+        lines.append(f"📨 **Telegram**: {tg_status}")
+        if getattr(cfg.telegram, 'enabled', False) and getattr(cfg.telegram, 'bots', []):
+            for b in cfg.telegram.bots:
+                tk = getattr(b, 'bot_token', "")
+                b_status = "✅" if getattr(b, 'enabled', False) else "⛔"
+                tk_str = f"***{tk[-6:]}" if tk else "non impostato"
+                lines.append(f"  └─ {b_status} {b.name} (Token: {tk_str})")
+        elif getattr(cfg.telegram, 'enabled', False):
+            lines.append("  └─ (Nessun bot configurato)")
 
         # WhatsApp
         wa_status = "✅ Abilitato [BETA]" if getattr(cfg.whatsapp, 'enabled', False) else "⛔ Disabilitato"
@@ -223,8 +288,24 @@ def on_load(config: dict = None):
                 from .adapters import telegram as tg
                 def on_msg(platform, chat_id, text, bot_name=None):
                     try:
-                        # ── Remote Access Pro: intercetta comandi /slash ─────
+                        # ── Built-in Commands & Remote Access Pro ────────────
                         if text and text.strip().startswith("/"):
+                            cmd = text.strip().lower()
+                            if cmd == "/id" or cmd == "/getid":
+                                if bot_name:
+                                    tg.send_reply(bot_name, chat_id, f"🆔 Il tuo ID Telegram (Chat ID) è:\n\n`{chat_id}`")
+                                    # Auto-save to contacts
+                                    try:
+                                        from hecos.hpm.contacts import store as contact_store
+                                        existing = contact_store.find_by_platform_value("telegram_id", chat_id)
+                                        if not existing:
+                                            # We don't have the full sender name here from the adapter easily,
+                                            # but we can try looking up by standard telegram field if they have it
+                                            tg.send_reply(bot_name, chat_id, "ℹ️ ID generato. Aggiungilo alla tua rubrica per abilitare l'invio messaggi verso di te.")
+                                    except Exception as ce:
+                                        logger.warning("MESSENGER", f"Failed to auto-save chat_id: {ce}")
+                                return
+
                             try:
                                 from hecos.hpm.remote_access_pro.main import handle_remote_command
                                 result = handle_remote_command(text)
@@ -245,16 +326,28 @@ def on_load(config: dict = None):
                         video_response, clean_voice = process_exchange(text, voice_status="telegram", sm=None)
                         reply = clean_voice or video_response or "..."
 
-                        # ── Rilevamento immagini: se la risposta contiene un path file immagine ──
+                        # ── Rilevamento immagini e documenti (tutti i file nella risposta) ──
                         import re, os
-                        img_match = re.search(r'([A-Za-z]:[/\\].+?\.(png|jpg|jpeg|webp))', reply, re.IGNORECASE)
-                        if img_match:
-                            img_path = img_match.group(1).replace("\\", "/")
-                            caption = re.sub(r'([A-Za-z]:[/\\].+?\.(png|jpg|jpeg|webp))', '', reply, flags=re.IGNORECASE).strip()
-                            if os.path.isfile(img_path):
-                                if bot_name:
-                                    tg.send_reply_photo(bot_name, chat_id, img_path, caption or "")
-                                return
+                        FILE_RE = re.compile(r'([A-Za-z]:[/\\][^\s"\'<>]+?\.[a-zA-Z0-9]{2,5})')
+                        all_paths = FILE_RE.findall(reply)
+                        real_files = [p for p in all_paths if os.path.isfile(p)]
+                        if real_files:
+                            # Build caption: reply text with all file paths stripped out
+                            caption = FILE_RE.sub('', reply).strip()
+                            if bot_name:
+                                # Send the text caption first (only if there's something to say)
+                                if caption:
+                                    tg.send_reply(bot_name, chat_id, caption)
+                                # Then send each file with the correct method
+                                for fp in real_files:
+                                    ext = os.path.splitext(fp)[1].lower()
+                                    if ext in ['.png', '.jpg', '.jpeg', '.webp', '.gif']:
+                                        tg.send_reply_photo(bot_name, chat_id, fp)
+                                    elif ext in ['.mp4', '.mov', '.avi', '.mkv', '.webm']:
+                                        tg.send_reply_video(bot_name, chat_id, fp)
+                                    else:
+                                        tg.send_reply_document(bot_name, chat_id, fp)
+                            return
 
                         if bot_name:
                             tg.send_reply(bot_name, chat_id, reply)

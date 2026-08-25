@@ -16,11 +16,26 @@ def parse_target(to: str, platform: str = None) -> tuple[str, str]:
     Parse the target string and return (platform, recipient).
 
     Accepts:
-        - 'telegram:@username'  → ('telegram', '@username')
-        - 'discord:#general'    → ('discord', '#general')
-        - '+393331234567'       → if platform='whatsapp' → ('whatsapp', '+393331234567')
-        - 'just a name'         → (platform, 'just a name')  if platform is given
+        - 'contact:Antonio Meloni' → resolves through contacts store
+        - 'telegram:@username'     → ('telegram', '@username')
+        - 'discord:#general'       → ('discord', '#general')
+        - '+393331234567'          → if platform='whatsapp' → ('whatsapp', '+393331234567')
     """
+    to_lower = to.strip().lower()
+    if to_lower.startswith("contact:"):
+        contact_name = to.split(":", 1)[1].strip()
+        if not platform:
+            raise ValueError("Platform must be specified when using 'contact:' prefix.")
+        
+        try:
+            from hecos.hpm.contacts import store
+            resolution = store.resolve_for_platform(contact_name, platform)
+            if not resolution:
+                raise ValueError(f"No valid {platform} address found for contact '{contact_name}'.")
+            return platform.lower(), resolution["address"]
+        except ImportError:
+            raise ValueError("Contacts plugin is not available. Cannot resolve 'contact:' prefix.")
+            
     if ":" in to:
         prefix, _, recipient = to.partition(":")
         prefix = prefix.strip().lower()
@@ -33,19 +48,20 @@ def parse_target(to: str, platform: str = None) -> tuple[str, str]:
 
     raise ValueError(
         f"Cannot determine platform from '{to}'. "
-        f"Use a prefix like 'telegram:@username' or pass platform= argument."
+        f"Use a prefix like 'telegram:@username', 'contact:Name', or pass platform= argument."
     )
 
 
 def dispatch_send(platform: str, recipient: str, text: str, config,
                   is_app_open: bool = False,
                   template_id: str = "",
-                  template_vars: dict = None) -> str:
+                  template_vars: dict = None,
+                  attachments: list = None) -> str:
     """
     Send a message via the appropriate adapter.
 
     If *template_id* is provided, the template is rendered first and its
-    body_text is used as the message content (messenger platforms are plain-text).
+    body_text is used as the message content.
 
     :returns: Result string from the adapter.
     """
@@ -61,7 +77,7 @@ def dispatch_send(platform: str, recipient: str, text: str, config,
         except Exception as e:
             logger.warning("MESSENGER", f"Template render error: {e}")
 
-    logger.info("MESSENGER", f"Dispatching send → [{platform}] {recipient}")
+    logger.info("MESSENGER", f"Dispatching send → [{platform}] {recipient} (Attachments: {len(attachments or [])})")
 
     if platform == "telegram":
         from .adapters import telegram as tg

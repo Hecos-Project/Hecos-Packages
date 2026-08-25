@@ -2,7 +2,7 @@
 <div id="contact-modal" class="modal-overlay" aria-modal="true" role="dialog">
     <div class="card contact-modal-card">
         <div class="card-title" id="contact-modal-title">{{ t('ext_contacts_modal_title') }}</div>
-        <button class="contact-modal-close" onclick="contactsUI.closeForm()" aria-label="Close">
+        <button class="contact-modal-close" onclick="contactsUI.save()" aria-label="Close">
             <i class="fas fa-times"></i>
         </button>
 
@@ -14,9 +14,7 @@
                 <i class="fas fa-user contact-avatar-icon"></i>
             </div>
             <div>
-                <label
-                    style="font-size:12px; color:var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{{
-                    t('ext_contacts_photo') }}</label>
+                <label style="font-size:12px; color:var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{{ t('ext_contacts_profile_pic') }}</label>
                 <input type="file" id="c-photo-input" accept="image/*" style="display:none;"
                     onchange="contactsUI.previewPhoto(this)">
                 <div style="display:flex; gap:8px; margin-top:6px;">
@@ -51,10 +49,15 @@
             <input type="text" id="c-display" class="form-control" placeholder="Es. Mario Rossi">
         </div>
 
-        <!-- Address Row (New) -->
-        <div class="field">
-            <label><i class="fas fa-map-marker-alt" style="color:var(--muted); width:14px;"></i> {{ t('ext_contacts_address') or 'Address' }}</label>
-            <input type="text" id="c-address" class="form-control" placeholder="Via Roma 1, Milano">
+        <!-- Address List -->
+        <div style="margin-bottom:16px;">
+            <label style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:8px; display:block;">
+                <i class="fas fa-map-marker-alt" style="width:14px;"></i> {{ t('ext_contacts_address') }}
+            </label>
+            <div id="c-addresses-container" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+            <button class="btn btn-sm btn-secondary" onclick="contactsUI.addAddressField()" style="width:100%; border-style:dashed;">
+                <i class="fas fa-plus"></i> {{ t('ext_contacts_add_address') }}
+            </button>
         </div>
 
         <!-- Phone List -->
@@ -78,6 +81,31 @@
                 <i class="fas fa-plus"></i> {{ t('ext_contacts_add_email') or 'Add Email' }}
             </button>
         </div>
+
+        <!-- Custom Fields List -->
+        <div style="margin-bottom:16px;">
+            <label style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:8px; display:block;">
+                <i class="fas fa-cube" style="width:14px;"></i> {{ t('ext_contacts_custom_fields') }}
+            </label>
+            <div id="c-customs-container" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+            <button class="btn btn-sm btn-secondary" onclick="contactsUI.addCustomField()" style="width:100%; border-style:dashed;">
+                <i class="fas fa-plus"></i> {{ t('ext_contacts_add_custom') }}
+            </button>
+        </div>
+
+        <!-- Gallery -->
+        <div style="margin-bottom:16px;">
+            <label style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:8px; display:block;">
+                <i class="fas fa-images" style="width:14px;"></i> {{ t('ext_contacts_gallery') or 'Photo Gallery' }}
+            </label>
+            <div id="c-gallery-container" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; align-items:center;"></div>
+            <input type="file" id="c-gallery-input" accept="image/*" multiple style="display:none;" onchange="contactsUI.addGalleryPhotos(this)">
+            <button class="btn btn-sm btn-secondary" onclick="document.getElementById('c-gallery-input').click()" style="width:100%; border-style:dashed;">
+                <i class="fas fa-plus"></i> {{ t('ext_contacts_add_photos') or 'Add Photos' }}
+            </button>
+        </div>
+
+
 
         <!-- Company / Role -->
         <div style="display:flex; gap:10px;">
@@ -114,11 +142,27 @@
             <textarea id="c-notes" class="form-control" rows="2" style="resize:vertical;"></textarea>
         </div>
 
-        <!-- Label Color (Aesthetic Picker) -->
+        <!-- Label Color -->
         <div class="field">
-            <label><i class="fas fa-palette" style="color:var(--muted); width:14px;"></i> {{ t('ext_contacts_color')
-                }}</label>
-            <div id="c-color-picker-container" class="contact-color-picker-wrap"></div>
+            <label><i class="fas fa-palette" style="color:var(--muted); width:14px;"></i> {{ t('ext_contacts_color') }}</label>
+            <select id="c-color-select" class="form-control" onchange="contactsUI._setColor(this.value)">
+                <option value="">{{ t('option_auto') or 'Default' }}</option>
+                <option value="#ef4444">Red</option>
+                <option value="#f97316">Orange</option>
+                <option value="#f59e0b">Amber</option>
+                <option value="#84cc16">Lime</option>
+                <option value="#22c55e">Green</option>
+                <option value="#06b6d4">Cyan</option>
+                <option value="#3b82f6">Blue</option>
+                <option value="#6366f1">Indigo</option>
+                <option value="#8b5cf6">Violet</option>
+                <option value="#d946ef">Fuchsia</option>
+                <option value="#f43f5e">Rose</option>
+                <option value="#94a3b8">Slate</option>
+                <option value="custom">Custom...</option>
+            </select>
+            <input type="color" id="c-color-native" style="display:none; margin-top:8px; width:100%; height:40px; cursor:pointer; border:none; border-radius:4px;" value="#6366f1" onchange="contactsUI._setColor(this.value, true)">
+            <div id="c-color-picker" class="contact-color-picker-wrap" style="display:none;"></div>
         </div>
 
         <!-- Actions -->
@@ -129,8 +173,7 @@
                 </button>
             </div>
             <div style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" onclick="contactsUI.closeForm()">{{ t('ext_contacts_btn_cancel') }}</button>
-                <button class="btn btn-primary" onclick="contactsUI.save()"><i class="fas fa-save"></i> {{ t('ext_contacts_btn_save') }}</button>
+                <button class="btn btn-secondary" onclick="contactsUI.save()">{{ t('chat_btn_close') }}</button>
             </div>
         </div>
     </div>

@@ -116,18 +116,35 @@ class ContactsTools:
             logger.debug("CONTACTS", f"list_contacts error: {e}")
             return f"⚠️ Error listing contacts: {e}"
 
-    def send_whatsapp_to_contact(self, name: str, message: str) -> str:
-        """Sends a WhatsApp message to a contact via the Messenger plugin."""
-        from hecos.hpm.contacts import store, hooks
+    def send_message_to_contact(self, name: str, message: str, platform: str, bot_name: str = None, attachments: list = None) -> str:
+        """Sends a message to a contact via the Messenger plugin. Platform e.g., 'telegram', 'whatsapp'."""
+        from hecos.hpm.contacts import hooks
         try:
-            c = store.find_by_name(name)
-            if not c:
-                return f"⚠️ No contact found matching '{name}'."
-            result = hooks.send_whatsapp(c["id"], message)
+            result = hooks.send_to_contact(name, message, platform, bot_name=bot_name, attachments=attachments)
             return result
         except Exception as e:
-            logger.debug("CONTACTS", f"send_whatsapp_to_contact error: {e}")
-            return f"⚠️ Error sending WhatsApp: {e}"
+            logger.debug("CONTACTS", f"send_message_to_contact error: {e}")
+            return f"⚠️ Error sending message: {e}"
+
+    def add_contact_field(self, id_or_name: str, field_type: str, value: str, label: str = None) -> str:
+        """Adds a multi-value field (e.g., 'telegram_id', 'email', 'pippochat') to a contact."""
+        from hecos.hpm.contacts import store
+        try:
+            c = self._resolve(id_or_name)
+            if not c:
+                return f"⚠️ No contact found matching '{id_or_name}'."
+            
+            store.add_field(c["id"], field_type, value, label=label or field_type)
+            return f"✅ Added {field_type} '{value}' to **{c['display_name']}**."
+        except Exception as e:
+            logger.debug("CONTACTS", f"add_contact_field error: {e}")
+            return f"⚠️ Error adding field: {e}"
+
+    # ── Legacy Wrappers ────────────────────────────────────────────────────────
+
+    def send_whatsapp_to_contact(self, name: str, message: str) -> str:
+        """(Legacy) Sends a WhatsApp message to a contact."""
+        return self.send_message_to_contact(name, message, "whatsapp")
 
     # ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -152,7 +169,7 @@ class ContactsTools:
             lines.append(f"  📍 {c['address']}")
         for f in c.get("fields", []):
             icon = {"phone": "📞", "email": "✉️", "whatsapp": "💬",
-                    "telegram": "✈️", "instagram": "📸", "linkedin": "💼",
+                    "telegram": "✈️", "telegram_id": "🤖", "instagram": "📸", "linkedin": "💼",
                     "twitter": "🐦"}.get(f["field_type"], "🔗")
             label = f.get("label") or f["field_type"]
             lines.append(f"  {icon} [{label}] {f['value']}")
