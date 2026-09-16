@@ -30,6 +30,17 @@ except ImportError:
     _HAS_TOMLI_W = False
 
 
+class LocalConfig(BaseModel):
+    """Configuration for local image generation backends (SwarmUI, ComfyUI, etc.)."""
+    enabled: bool = True   # Always on - no UI toggle, controlled here only
+    backend: str = "swarmui"                # "swarmui" | "comfyui" | "a1111" (future)
+    url: str = "http://localhost:7801"
+    timeout: int = 120
+    auto_discover_models: bool = True
+    default_model: str = ""
+    auth_token: str = ""                    # For SwarmUI with accounts enabled
+
+
 class ImageGenConfig(BaseModel):
     # ── Core ──────────────────────────────────────────────────────────────────
     enabled: bool = True
@@ -62,6 +73,8 @@ class ImageGenConfig(BaseModel):
     enrich_keywords: str = ""
     style: str = "none"
     optimize_for_flux: bool = True
+    vae: str = ""                           # Selected VAE
+    loras: list = Field(default_factory=list) # Selected LoRAs (names)
     flux_refiner_instructions: str = (
         "Convert keywords into a descriptive natural language paragraph for Flux. "
         "Output ONLY the optimised prompt, no preamble."
@@ -81,6 +94,9 @@ class ImageGenConfig(BaseModel):
     horde_api_key: str = ""              # Empty = anonymous (key 0000000000)
     horde_nsfw: bool = True              # Enable NSFW content (main advantage of Horde)
     horde_worker_blacklist: str = ""     # Comma-separated worker names to exclude
+
+    # ── Local Generation ──────────────────────────────────────────────────
+    local: Dict[str, Any] = Field(default_factory=lambda: LocalConfig().model_dump(mode='json'))
 
 
 _THIS_DIR = Path(__file__).parent.resolve()
@@ -151,7 +167,14 @@ def save_config(data: dict) -> bool:
     if _ROOT_KEY not in data:
         return False
     try:
-        obj = ImageGenConfig.model_validate(data[_ROOT_KEY])
+        incoming = data[_ROOT_KEY]
+        # Preserve the existing [local] block – the UI has no controls for it,
+        # so if the incoming payload doesn't supply it, keep whatever is on disk.
+        if "local" not in incoming:
+            existing_local = get_image_gen_config().get("local", {})
+            if existing_local:
+                incoming["local"] = existing_local
+        obj = ImageGenConfig.model_validate(incoming)
         return _write_toml(obj.model_dump(mode='json'))
     except Exception as e:
         logger.error(f"[IMAGE_GEN_CONFIG] Validation error on save: {e}")

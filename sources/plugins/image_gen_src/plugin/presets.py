@@ -106,6 +106,15 @@ BUILTIN_PRESETS: dict[str, dict[str, Any]] = {
     },
 }
 
+# ── Import local presets ──────────────────────────────────────────────────
+try:
+    from .local.presets import LOCAL_BUILTIN_PRESETS
+except ImportError:
+    LOCAL_BUILTIN_PRESETS = {}
+
+# Merge local presets into the built-in set
+BUILTIN_PRESETS.update(LOCAL_BUILTIN_PRESETS)
+
 
 def get_all_presets(user_presets: dict) -> dict[str, dict]:
     combined = dict(BUILTIN_PRESETS)

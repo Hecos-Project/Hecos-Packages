@@ -10,7 +10,7 @@
       </div>
       <div>
         <div style="font-weight:700; color:var(--text); font-size:0.95em;">Image Generation</div>
-        <div style="font-size:0.72em; color:var(--muted);">AI-powered text-to-image</div>
+        <div style="font-size:0.72em; color:var(--muted);">Local SwarmUI backend &amp; cloud AI providers</div>
       </div>
     </div>
     <div style="display:flex; gap:8px; align-items:center;">
@@ -46,12 +46,10 @@
 
 <script>
 window._openIgenGallery = async function() {
-  // Use the shared HecosMediaPlayer gallery if available
   if (typeof window.openChatGallery === 'function') {
     window.openChatGallery(null);
     return;
   }
-  // Fallback: try to lazy-load the media player
   try {
     const res = await fetch('/api/images');
     if (!res.ok) { if(window.showToast) window.showToast('No images found', 'info'); return; }
@@ -60,7 +58,6 @@ window._openIgenGallery = async function() {
       if (window.showToast) window.showToast('No images generated yet', 'info');
       return;
     }
-    // Load chat_image_viewer.js on demand then open
     if (!document.querySelector('script[src*="chat_image_viewer"]')) {
       await new Promise((res, rej) => {
         const s = document.createElement('script');
@@ -80,51 +77,180 @@ window._openIgenGallery = async function() {
 
 <!-- Preset & Provider Card -->
 <div class="card">
-  <div class="card-title"><i class="fas fa-bolt"></i> Presets & Provider</div>
+  <div class="card-title"><i class="fas fa-bolt"></i> Provider &amp; Generation</div>
 
-  <!-- Preset Toolbar -->
-  <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; padding:12px 14px; background:var(--bg3); border:1px solid var(--border); border-radius:12px; flex-wrap:wrap;">
-    <select id="igen-preset" onchange="loadIgenPreset()" class="config-input" style="flex:1; min-width:180px; padding:6px 12px; font-size:13px;">
-      <option value="">— Select a preset —</option>
-    </select>
-    <button id="igen-preset-update-btn" onclick="updateIgenPreset()" title="Update selected user preset with current values" style="display:none; padding:7px 14px; border-radius:8px; border:1px solid var(--accent); background:rgba(var(--accent-rgb),0.1); color:var(--accent); cursor:pointer; font-size:12px; font-weight:700; white-space:nowrap;"><i class="fas fa-sync"></i> Update</button>
-    <button onclick="saveIgenPreset()" title="Save current config as a new preset" class="btn btn-sm" style="white-space:nowrap;"><i class="fas fa-save"></i> Save As</button>
-    <button id="igen-preset-delete-btn" onclick="deleteIgenPreset()" title="Delete selected user preset" class="btn btn-sm btn-danger" style="white-space:nowrap; padding:6px 12px;"><i class="fas fa-trash"></i> Delete</button>
+  <!-- CLOUD PROVIDERS TOGGLE — controls whether cloud options are available -->
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding:8px 12px; background:rgba(var(--accent-rgb),0.04); border:1px solid var(--border); border-radius:10px;">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <i class="fas fa-cloud" style="color:var(--muted); font-size:13px;"></i>
+      <span style="font-size:12.5px; font-weight:600; color:var(--text);">Enable Cloud Providers</span>
+      <span style="font-size:10.5px; color:var(--muted);">(disable to force local-only generation)</span>
+    </div>
+    <label class="switch" style="margin:0;">
+      <input type="checkbox" id="igen-cloud-enabled" data-igen-managed onchange="window._onCloudToggle && window._onCloudToggle(this.checked)">
+      <span class="slider round"></span>
+    </label>
   </div>
 
-  <!-- Provider & Model -->
-  <div class="grid-2" style="margin-top:12px;">
-    <div class="field">
-      <label>Provider</label>
-      <select id="igen-provider" onchange="onProviderChanged(true)" class="config-input" data-igen-managed>
-        <!-- Populated dynamically -->
-      </select>
+  <!-- 1. PROVIDER SELECTOR — at the top, full width -->
+  <div class="field" style="margin-bottom:0;">
+    <label>Provider</label>
+    <select id="igen-provider" onchange="onProviderChanged(true)" class="config-input" data-igen-managed style="width:100%;">
+      <!-- Populated dynamically — Local Backends first, then Cloud -->
+    </select>
+  </div>
+
+  <!-- TABS: Model | Presets | VAE | LoRAs -->
+  <div style="margin-top:16px;">
+    <!-- Tab bar -->
+    <div id="igen-tab-bar" style="display:flex; gap:4px; border-bottom:2px solid var(--border); margin-bottom:0;">
+      <button class="igen-tab-btn igen-tab-active" data-target="igen-tab-model" onclick="switchIgenTab('igen-tab-model', this)" type="button">
+        <i class="fas fa-cube"></i> Model
+      </button>
+      <button class="igen-tab-btn" data-target="igen-tab-presets" onclick="switchIgenTab('igen-tab-presets', this)" type="button">
+        <i class="fas fa-bolt"></i> Presets
+      </button>
+      <button class="igen-tab-btn igen-tab-local" id="igen-tab-btn-vae" data-target="igen-tab-vae" onclick="switchIgenTab('igen-tab-vae', this)" type="button" style="display:none;">
+        <i class="fas fa-database"></i> VAE
+      </button>
+      <button class="igen-tab-btn igen-tab-local" id="igen-tab-btn-loras" data-target="igen-tab-loras" onclick="switchIgenTab('igen-tab-loras', this)" type="button" style="display:none;">
+        <i class="fas fa-layer-group"></i> LoRAs
+      </button>
     </div>
-    <div class="field">
-      <label>Model
-        <button type="button" onclick="refreshImageModels()" style="margin-left:8px;padding:2px 10px;font-size:11px;border:1px solid var(--border);background:var(--bg3);color:var(--text);border-radius:6px;cursor:pointer;"><i class="fas fa-sync-alt"></i> Refresh</button>
-        <button type="button" id="igen-model-remove-btn" onclick="removeSelectedHFModel()" style="display:none; margin-left:8px; padding:2px 6px; font-size:11px; border:1px solid #e74c3c; color:#e74c3c; border-radius:4px; background:rgba(231,231,231,0.1); cursor:pointer;" title="Remove this custom model"><i class="fas fa-times"></i> Delete</button>
-      </label>
-      <select id="igen-model" onchange="checkCustomModelSelect()" class="config-input" data-igen-managed><option>flux</option></select>
-      <span id="igen-model-status" style="font-size:11px;color:var(--muted);"></span>
+
+    <!-- Tab: Model -->
+    <div id="igen-tab-model" class="igen-tab-pane igen-tab-pane-active" style="padding-top:14px;">
+      <div class="field">
+        <label>Model
+          <button type="button" onclick="refreshImageModels()" style="margin-left:8px;padding:2px 10px;font-size:11px;border:1px solid var(--border);background:var(--bg3);color:var(--text);border-radius:6px;cursor:pointer;"><i class="fas fa-sync-alt"></i> Refresh</button>
+          <button type="button" id="igen-model-remove-btn" onclick="removeSelectedHFModel()" style="display:none; margin-left:8px; padding:2px 6px; font-size:11px; border:1px solid #e74c3c; color:#e74c3c; border-radius:4px; background:rgba(231,231,231,0.1); cursor:pointer;" title="Remove this custom model"><i class="fas fa-times"></i> Delete</button>
+        </label>
+        <select id="igen-model" onchange="checkCustomModelSelect(); if(window.updateLoRACompatibility) window.updateLoRACompatibility();" class="config-input" data-igen-managed><option>flux</option></select>
+        <span id="igen-model-status" style="font-size:11px;color:var(--muted);"></span>
+      </div>
+
+      <!-- HF sub-provider (shown only for HuggingFace) -->
+      <div class="field" id="igen-hf-provider-wrapper" style="display:none; margin-top:10px;">
+        <label>Hugging Face Target Server</label>
+        <select id="igen-hf-provider" class="config-input" data-igen-managed>
+          <option value="hf-inference">Default (Hugging Face Free Tier)</option>
+          <option value="fal-ai">Fal AI (Through HF SDK)</option>
+          <option value="together">Together AI (Through HF SDK)</option>
+          <option value="replicate">Replicate (Through HF SDK)</option>
+          <option value="nebius">Nebius AI (Through HF SDK)</option>
+          <option value="black-forest-labs">Black Forest Labs (Through HF SDK)</option>
+        </select>
+        <p style="color:var(--muted); font-size:11px; margin-top:4px;">Some models require external GPU partners. HuggingFace acts as a bridge with your HF token.</p>
+      </div>
+
+      <!-- HF Hub search (shown only for HuggingFace) -->
+      <details id="igen-hf-explorer-wrapper" style="margin-top:10px; display:none; background:var(--glass-b); padding:10px; border-radius:12px; border:1px solid var(--border);">
+        <summary style="cursor:pointer; font-weight:600; color:var(--text); list-style:none; display:flex; align-items:center; gap:6px;">
+          <span style="font-size:13px;">Search Hugging Face Hub <small style="font-weight:400; color:var(--muted);">— find custom models</small></span>
+        </summary>
+        <div style="margin-top:10px; background:rgba(231,76,60,0.06); border-left:3px solid #e74c3c; padding:8px; font-size:11px; color:var(--text); line-height:1.4;">
+          <strong><i class="fas fa-exclamation-triangle"></i> Limitation:</strong> Free HF Inference API only supports a fraction of models.
+        </div>
+        <div style="margin-top:10px;">
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="igen-hf-search-q" class="config-input" placeholder="Model name, style, or tag..." style="flex:1;" onkeydown="if(event.key==='Enter') searchHFHub()">
+            <button type="button" onclick="searchHFHub()" style="padding:6px 15px; border-radius:7px; border:1px solid var(--border); background:var(--accent); color:#fff; cursor:pointer; font-weight:600;">Search</button>
+          </div>
+          <div id="igen-hf-results" style="margin-top:10px; max-height:180px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; background:var(--bg2);">
+             <div style="padding:10px; text-align:center; color:var(--muted); font-size:12px;">Enter a query to find text-to-image models.</div>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <!-- Tab: Presets -->
+    <div id="igen-tab-presets" class="igen-tab-pane" style="display:none; padding-top:14px;">
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <select id="igen-preset" onchange="loadIgenPreset()" class="config-input" style="flex:1; min-width:180px; padding:6px 12px; font-size:13px;">
+          <option value="">— Select a preset —</option>
+        </select>
+        <button id="igen-preset-update-btn" onclick="updateIgenPreset()" title="Update selected user preset with current values" style="display:none; padding:7px 14px; border-radius:8px; border:1px solid var(--accent); background:rgba(var(--accent-rgb),0.1); color:var(--accent); cursor:pointer; font-size:12px; font-weight:700; white-space:nowrap;"><i class="fas fa-sync"></i> Update</button>
+        <button onclick="saveIgenPreset()" title="Save current config as a new preset" class="btn btn-sm" style="white-space:nowrap;"><i class="fas fa-save"></i> Save As</button>
+        <button id="igen-preset-delete-btn" onclick="deleteIgenPreset()" title="Delete selected user preset" class="btn btn-sm btn-danger" style="white-space:nowrap; padding:6px 12px;"><i class="fas fa-trash"></i> Delete</button>
+      </div>
+    </div>
+
+    <!-- Tab: VAE (local only) -->
+    <div id="igen-tab-vae" class="igen-tab-pane" style="display:none; padding-top:14px;">
+      <div class="field">
+        <label>VAE (Optional)</label>
+        <select id="igen-vae" class="config-input" data-igen-managed>
+          <option value="">Default (Automatic)</option>
+        </select>
+        <p style="font-size:11px; color:var(--muted); margin-top:4px;">Select a VAE override. Leave empty to use the model's embedded VAE.</p>
+      </div>
+    </div>
+
+    <!-- Tab: LoRAs (local only) -->
+    <div id="igen-tab-loras" class="igen-tab-pane" style="display:none; padding-top:14px;">
+      <!-- Hidden select for data-igen-managed save/load (invisible to user) -->
+      <select id="igen-loras" data-igen-managed multiple style="display:none;"></select>
+
+      <!-- Filter bar -->
+      <div style="display:flex; gap:8px; margin-bottom:10px; align-items:center;">
+        <input type="text" id="igen-lora-search" placeholder="Filter LoRAs..." class="config-input" style="flex:1; padding:6px 10px; font-size:12px;" oninput="window.filterLoRAList ? window.filterLoRAList(this.value) : null">
+        <span id="igen-lora-count" style="font-size:11px; color:var(--muted); white-space:nowrap;"></span>
+      </div>
+
+      <!-- Compat legend -->
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; font-size:11px; color:var(--muted);">
+        <span><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#34d399; margin-right:4px;"></span>Compatible</span>
+        <span><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b; margin-right:4px;"></span>Unknown arch</span>
+        <span><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#e74c3c; margin-right:4px;"></span>Not compatible</span>
+      </div>
+
+      <!-- LoRA cards container (scrollable, resizable) -->
+      <div id="igen-loras-list" style="max-height:320px; min-height:120px; overflow-y:auto; resize:vertical; border:1px solid var(--border); border-radius:10px; background:var(--bg2); padding:4px;">
+        <div style="padding:20px; text-align:center; color:var(--muted); font-size:12px;">
+          <i class="fas fa-spinner fa-spin"></i> Loading LoRAs...
+        </div>
+      </div>
+
+      <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
+        <p style="font-size:11px; color:var(--muted); margin:0;">Click to select · Ctrl+Click for multiple · Drag bottom edge to resize</p>
+        <button type="button" onclick="if(window.clearLoRASelection) window.clearLoRASelection()" style="padding:3px 10px; font-size:11px; border-radius:6px; border:1px solid var(--border); background:var(--bg3); color:var(--muted); cursor:pointer;">Clear all</button>
+      </div>
     </div>
   </div>
-  
-  <div class="field" id="igen-hf-provider-wrapper" style="display:none; margin-top:10px;">
-    <label>Hugging Face Target Server</label>
-    <select id="igen-hf-provider" class="config-input" data-igen-managed>
-      <option value="hf-inference">Default (Hugging Face Free Tier)</option>
-      <option value="fal-ai">Fal AI (Through HF SDK)</option>
-      <option value="together">Together AI (Through HF SDK)</option>
-      <option value="replicate">Replicate (Through HF SDK)</option>
-      <option value="nebius">Nebius AI (Through HF SDK)</option>
-      <option value="black-forest-labs">Black Forest Labs (Through HF SDK)</option>
-    </select>
-    <p style="color:var(--muted); font-size:11px; margin-top:4px;">Some models require external GPU partners. HuggingFace acts as a bridge with your HF token.</p>
+
+  <!-- LOCAL BACKEND SECTION — SwarmUI status & test -->
+  <div id="igen-local-backend-wrapper" style="display:none; margin-top:16px; padding:14px; background:linear-gradient(135deg, rgba(16,185,129,0.06), var(--bg3)); border:1px solid rgba(16,185,129,0.2); border-radius:12px;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+      <div style="width:32px; height:32px; border-radius:9px; background:linear-gradient(135deg,#059669,#34d399); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+        <i class="fas fa-desktop" style="color:#fff; font-size:13px;"></i>
+      </div>
+      <div>
+        <div style="font-weight:700; font-size:13px; color:var(--text);">SwarmUI — Local GPU Backend</div>
+        <div style="font-size:11px; color:var(--muted);">Connects to your local SwarmUI instance on port 7801</div>
+      </div>
+      <div id="igen-local-status-badge" style="margin-left:auto; display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; background:rgba(255,255,255,0.05); border:1px solid var(--border); font-size:11px; color:var(--muted); font-weight:600;">
+        <i class="fas fa-circle" style="font-size:7px;"></i>
+        <span id="igen-local-status-text">Not tested</span>
+      </div>
+    </div>
+
+    <!-- Test SwarmUI button -->
+    <button id="igen-local-test-btn" type="button" onclick="testSwarmUIBackend()"
+      style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:9px;
+             border:1px solid rgba(16,185,129,0.3); background:rgba(16,185,129,0.08);
+             color:#34d399; font-weight:600; font-size:13px; cursor:pointer;
+             transition:all .2s ease;"
+      onmouseover="this.style.background='rgba(16,185,129,0.15)'"
+      onmouseout="this.style.background='rgba(16,185,129,0.08)'"
+      title="Test connectivity to your local SwarmUI instance">
+      <i class="fas fa-stethoscope"></i>
+      Test SwarmUI Connection
+    </button>
+    <div id="igen-local-test-results" style="display:none; margin-top:10px; padding:10px; background:var(--bg2); border:1px solid var(--border); border-radius:8px; font-size:12px;"></div>
   </div>
 
   <!-- AI Horde Settings Block -->
-  <div id="igen-horde-wrapper" style="display:none; margin-top:10px; padding:14px; background:var(--bg3); border:1px solid var(--border); border-radius:10px;">
+  <div id="igen-horde-wrapper" style="display:none; margin-top:16px; padding:14px; background:var(--bg3); border:1px solid var(--border); border-radius:10px;">
     <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
       <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,#6d28d9,#a78bfa); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
         <i class="fas fa-network-wired" style="color:#fff; font-size:12px;"></i>
@@ -154,20 +280,20 @@ window._openIgenGallery = async function() {
 
     <!-- Horde API Key -->
     <div class="field" style="margin-bottom:10px;">
-      <label>Horde API Key <small style="color:var(--muted); font-weight:400;">(opzionale — lascia vuoto per accesso anonimo)</small></label>
+      <label>Horde API Key <small style="color:var(--muted); font-weight:400;">(optional — leave empty for anonymous access)</small></label>
       <div style="display:flex; gap:6px;">
-        <input type="password" id="horde-api-key" class="config-input" data-igen-managed placeholder="Lascia vuoto per usare la chiave anonima gratuita..." style="flex:1;">
-        <button type="button" onclick="saveKeyToEnv()" style="padding:6px 10px; font-size:11px; border-radius:6px; border:1px solid var(--accent); background:rgba(var(--accent-rgb), 0.1); color:var(--accent); cursor:pointer;" title="Salva questa chiave globalmente per non perderla agli aggiornamenti">Salva globale</button>
-        <button type="button" onclick="checkHordeAccount()" style="padding:6px 12px; font-size:12px; border-radius:6px; border:1px solid #6d28d9; background:rgba(109,40,217,0.1); color:#a78bfa; cursor:pointer; white-space:nowrap; font-weight:600;" title="Verifica account e saldo Kudos">
-          <i class="fas fa-user-check"></i> Verifica
+        <input type="password" id="horde-api-key" class="config-input" data-igen-managed placeholder="Leave empty for free anonymous key..." style="flex:1;">
+        <button type="button" onclick="saveKeyToEnv()" style="padding:6px 10px; font-size:11px; border-radius:6px; border:1px solid var(--accent); background:rgba(var(--accent-rgb), 0.1); color:var(--accent); cursor:pointer;" title="Save this key globally to .env">Save globally</button>
+        <button type="button" onclick="checkHordeAccount()" style="padding:6px 12px; font-size:12px; border-radius:6px; border:1px solid #6d28d9; background:rgba(109,40,217,0.1); color:#a78bfa; cursor:pointer; white-space:nowrap; font-weight:600;" title="Check account and Kudos balance">
+          <i class="fas fa-user-check"></i> Check
         </button>
       </div>
     </div>
 
-    <!-- Horde Worker Blacklist (Hidden because not supported correctly) -->
+    <!-- Horde Worker Blacklist (hidden) -->
     <div class="field" style="margin-bottom:10px; display:none;">
-      <label>Horde Worker Blacklist <small style="color:var(--muted); font-weight:400;">(ID dei worker da evitare separati da virgola)</small></label>
-      <input type="text" id="horde-worker-blacklist" class="config-input" data-igen-managed placeholder="es: worker_id_1, worker_id_2">
+      <label>Horde Worker Blacklist <small style="color:var(--muted); font-weight:400;">(comma separated worker IDs to exclude)</small></label>
+      <input type="text" id="horde-worker-blacklist" class="config-input" data-igen-managed placeholder="e.g. worker_id_1, worker_id_2">
     </div>
 
     <!-- Account Info Box -->
@@ -175,30 +301,48 @@ window._openIgenGallery = async function() {
       <span id="horde-account-text" style="color:var(--muted);"></span>
     </div>
 
-    <!-- Info note -->
     <div style="margin-top:10px; padding:8px 10px; background:rgba(109,40,217,0.07); border-left:3px solid #6d28d9; border-radius:0 6px 6px 0; font-size:11px; color:var(--muted); line-height:1.5;">
       <i class="fas fa-info-circle" style="color:#a78bfa; margin-right:4px;"></i>
-      Senza API key: priorità minima (anonima). Registrati su <b><a href="https://aihorde.net" target="_blank" style="color:#a78bfa;">aihorde.net</a></b> e contribuisci compute per guadagnare <b>Kudos</b> e scalare la coda. La generazione richiede 15–60 secondi a seconda del carico del cluster.
+      Without API key: minimum priority (anonymous). Register at <b><a href="https://aihorde.net" target="_blank" style="color:#a78bfa;">aihorde.net</a></b> and contribute compute to earn <b>Kudos</b> and skip the queue. Generation takes 15–60 seconds depending on cluster load.
     </div>
   </div>
 
-  <!-- API Key Injection Box -->
-  <div class="field" style="margin-top:10px; padding:10px; background:var(--bg3); border:1px solid var(--border); border-radius:8px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-      <label style="margin:0;">API Key for selected provider (Optional)</label>
-      <span id="igen-key-status" style="font-size:11px; padding:3px 7px; border-radius:4px; background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid var(--border);" title="Shows where Hecos is currently reading the key from for this provider">
-        <i class="fas fa-key" style="margin-right:4px;"></i><span id="igen-key-source-text">Checking...</span>
-      </span>
+  <!-- CLOUD PROVIDERS — API Key & Enable Toggle -->
+  <div id="igen-cloud-wrapper" style="margin-top:16px; padding:14px; background:var(--bg3); border:1px solid var(--border); border-radius:10px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,#3b82f6,#60a5fa); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+          <i class="fas fa-cloud" style="color:#fff; font-size:12px;"></i>
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:13px; color:var(--text);">Cloud Providers</div>
+          <div style="font-size:11px; color:var(--muted);">Pollinations, Gemini, OpenAI, HuggingFace, etc.</div>
+        </div>
+      </div>
+      <label class="switch" title="Enable or disable all cloud providers. Disable to force local-only generation.">
+        <input type="checkbox" id="igen-cloud-enabled" data-igen-managed checked onchange="onCloudEnabledChanged()">
+        <span class="slider"></span>
+      </label>
     </div>
-    <div style="display:flex; gap:6px;">
+
+    <!-- API Key Injection Box (cloud only, hidden for local providers) -->
+    <div id="igen-api-key-wrapper">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="margin:0;">API Key for selected provider <small style="color:var(--muted); font-weight:400;">(Optional)</small></label>
+        <span id="igen-key-status" style="font-size:11px; padding:3px 7px; border-radius:4px; background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid var(--border);" title="Shows where Hecos is currently reading the key from for this provider">
+          <i class="fas fa-key" style="margin-right:4px;"></i><span id="igen-key-source-text">Checking...</span>
+        </span>
+      </div>
+      <div style="display:flex; gap:6px;">
         <input type="password" id="igen-api-key" class="config-input" placeholder="Overrides global key. Leave empty to use system key..." style="flex:1;">
         <button type="button" onclick="saveKeyToEnv()" style="padding:6px 10px; font-size:11px; border-radius:6px; border:1px solid var(--accent); background:rgba(var(--accent-rgb), 0.1); color:var(--accent); cursor:pointer;" title="Save this key globally to .env">Save globally</button>
+      </div>
+      <p style="color:var(--muted);font-size:11px;margin-top:6px;line-height:1.4;">If provided here, it overrides the global key. Hecos automatically reads global keys from <b>Key Manager</b> or the <b>.env</b> file.<br><b>Pollinations and Airforce are FREE and require NO key.</b></p>
     </div>
-    <p style="color:var(--muted);font-size:11px;margin-top:6px;line-height:1.4;">If provided here, it overrides the global key. Hecos automatically reads global keys from <b>Key Manager</b> or the <b>.env</b> file.<br><b>Pollinations and Airforce are FREE and require NO key.</b></p>
   </div>
 
-  <!-- Probe Button -->
-  <div style="margin-top:14px;">
+  <!-- Test Providers Button (cloud) -->
+  <div id="igen-cloud-probe-wrapper" style="margin-top:14px;">
     <button id="igen-probe-btn" type="button" onclick="runIgenProbe()"
       style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:9px;
              border:1px solid var(--border); background:var(--bg3);
@@ -206,31 +350,13 @@ window._openIgenGallery = async function() {
              transition:all .2s ease;"
       onmouseover="this.style.background='var(--bg2)'"
       onmouseout="this.style.background='var(--bg3)'"
-      title="Test all available providers and HuggingFace servers">
+      title="Test all available cloud providers and HuggingFace servers">
       <i class="fas fa-stethoscope" style="color:var(--accent);"></i>
-      Test Providers
+      Test Cloud Providers
     </button>
     <div id="igen-probe-results" style="display:none; margin-top:10px; padding:10px; background:var(--bg2); border:1px solid var(--border); border-radius:8px; font-size:12px;"></div>
   </div>
 
-  <!-- HF Hub Explorer -->
-  <details id="igen-hf-explorer-wrapper" style="margin-top:10px; display:none; background:var(--glass-b); padding:10px; border-radius:12px; border:1px solid var(--border);">
-    <summary style="cursor:pointer; font-weight:600; color:var(--text); list-style:none; display:flex; align-items:center; gap:6px;">
-      <span style="font-size:13px;">Search Hugging Face Hub <small style="font-weight:400; color:var(--muted);">— find custom models</small></span>
-    </summary>
-    <div style="margin-top:10px; background:rgba(231,76,60,0.06); border-left:3px solid #e74c3c; padding:8px; font-size:11px; color:var(--text); line-height:1.4;">
-      <strong><i class="fas fa-exclamation-triangle"></i> Limitation:</strong> Free HF Inference API only supports a fraction of models.
-    </div>
-    <div style="margin-top:10px;">
-      <div style="display:flex; gap:8px;">
-        <input type="text" id="igen-hf-search-q" class="config-input" placeholder="Model name, style, or tag..." style="flex:1;" onkeydown="if(event.key==='Enter') searchHFHub()">
-        <button type="button" onclick="searchHFHub()" style="padding:6px 15px; border-radius:7px; border:1px solid var(--border); background:var(--accent); color:#fff; cursor:pointer; font-weight:600;">Search</button>
-      </div>
-      <div id="igen-hf-results" style="margin-top:10px; max-height:180px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; background:var(--bg2);">
-         <div style="padding:10px; text-align:center; color:var(--muted); font-size:12px;">Enter a query to find text-to-image models.</div>
-      </div>
-    </div>
-  </details>
 </div>
 
 <!-- Image Parameters Card -->
@@ -386,7 +512,7 @@ window._openIgenGallery = async function() {
     <label class="switch"><input type="checkbox" id="igen-show-metadata" data-igen-managed><span class="slider"></span></label>
   </div>
 
-  <!-- Save Button — replaced by auto-save; status shown here -->
+  <!-- Save status -->
   <div style="margin-top:20px; display:flex; justify-content:flex-end; align-items:center;">
     <span id="igen-save-status" style="font-size:12px; color:var(--muted); transition:color 0.3s;"></span>
   </div>

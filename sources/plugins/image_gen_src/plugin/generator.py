@@ -130,6 +130,11 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
         provider    = provider_override.strip().lower() if provider_override else cfg.get("provider", "pollinations")
         provider    = provider.replace("-", "_")
         if provider == "pollination": provider = "pollinations"
+        if provider in ("swarm", "local_swarmui", "swarm_ui", "local"): provider = "swarmui"
+
+        cloud_enabled = cfg.get("cloud_enabled", False)
+        if not cloud_enabled and provider != "swarmui":
+            raise Exception(f"Cloud providers are currently disabled. Cannot use '{provider}'. Enable them in the Image Gen settings.")
 
         model       = model_override.strip() if model_override else cfg.get("model", "flux")
         hf_provider = hf_server_override.strip() if hf_server_override else cfg.get("hf_provider", "hf-inference")
@@ -170,6 +175,10 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
         horde_nsfw            = cfg.get("horde_nsfw", True)
         horde_worker_blacklist = cfg.get("horde_worker_blacklist", "")
 
+        # ── SwarmUI-specific config ───────────────────────────────────────────
+        vae                   = cfg.get("vae", "")
+        loras                 = cfg.get("loras", [])
+
         if provider_override or model_override or hf_server_override:
             logger.info(f"[GENERATOR] Override attivo — provider={provider}, model={model}, hf_provider={hf_provider}")
 
@@ -195,7 +204,7 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
             # Pass the globally configured provider so pinned_key is only used for that provider
             api_key = _get_api_key(provider, current_pinned, configured_provider=cfg.get("provider", ""))
 
-            if not api_key and provider not in ("pollinations", "airforce", "horde"):
+            if not api_key and provider not in ("pollinations", "airforce", "horde", "swarmui"):
                 msg = (f"No API key available for '{provider}'. "
                        "Add at least one valid key in Key Manager or configuration.")
                 if last_error:
@@ -212,6 +221,8 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
                     hf_provider=hf_provider,
                     horde_nsfw=horde_nsfw,
                     horde_worker_blacklist=horde_worker_blacklist,
+                    vae=vae,
+                    loras=loras,
                 )
 
                 clean_prompt = final_prompt.strip()

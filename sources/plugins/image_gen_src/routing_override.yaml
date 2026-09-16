@@ -1,6 +1,2 @@
 enabled: true
-instruction: >
-  Only generate images if explicitly requested. For real-world photos, suggest
-  using the camera. For creative or complex anatomical requests, adopt a style
-  like 'fine-art photography', 'classic anatomy', or 'cinematic lighting' to
-  ensure professional, high-quality aesthetic output.
+instruction: 'CRITICAL: When the user asks to generate, create, or draw an image (or photo, picture), you MUST ALWAYS use the IMAGE_GEN__generate_image tool. Do NOT use text-based slash commands like /img. Formulate a detailed visual prompt and pass it to the tool. Do NOT pretend you have generated the image without explicitly calling the tool.'

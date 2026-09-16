@@ -20,6 +20,7 @@ from .stability import StabilityProvider
 from .airforce import AirforceProvider
 from .huggingface import HuggingFaceProvider
 from .horde import HordeProvider
+from .swarmui import SwarmUIProvider
 
 PROVIDERS = {
     "pollinations":  PollinationsProvider,
@@ -30,6 +31,7 @@ PROVIDERS = {
     "airforce":      AirforceProvider,
     "huggingface":   HuggingFaceProvider,
     "horde":         HordeProvider,
+    "swarmui":       SwarmUIProvider,
 }
 
 
@@ -50,7 +52,8 @@ def generate_image(prompt: str, provider: str, model: str, width: int, height: i
                    seed: int = -1, sampler: str = "", scheduler: str = "",
                    hf_provider: str = "hf-inference",
                    horde_nsfw: bool = True,
-                   horde_worker_blacklist: str = "") -> str:
+                   horde_worker_blacklist: str = "",
+                   vae: str = "", loras: list = None) -> str:
     """
     Main entry point. Returns the filename of the saved image, raises Exception on failure.
     Note: prompt enrichment should be applied BEFORE calling this (via prompt_engine.py).
@@ -68,6 +71,9 @@ def generate_image(prompt: str, provider: str, model: str, width: int, height: i
             elif provider == "horde":
                 extra_kwargs["horde_nsfw"] = horde_nsfw
                 extra_kwargs["horde_worker_blacklist"] = horde_worker_blacklist
+            elif provider == "swarmui":
+                extra_kwargs["vae"] = vae
+                extra_kwargs["loras"] = loras or []
             filename = cls.generate(
                 prompt=prompt, width=width, height=height, model=model, api_key=api_key,
                 negative_prompt=negative_prompt, guidance_scale=guidance_scale,

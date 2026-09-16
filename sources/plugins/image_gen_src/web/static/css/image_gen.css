@@ -1,2 +1,131 @@
-/* CSS isolato per il plugin Image Gen */
-/* Qui puoi aggiungere stili personalizzati per il pannello di configurazione del plugin */
+/* Image Gen plugin — isolated styles */
+
+/* ── Tab bar ─────────────────────────────────────────────── */
+#igen-tab-bar {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+
+.igen-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+  transition: color .15s, border-color .15s, background .15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.igen-tab-btn:hover {
+  color: var(--text);
+  background: rgba(255,255,255,0.04);
+}
+.igen-tab-btn.igen-tab-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.06);
+}
+
+.igen-tab-pane {
+  display: none;
+}
+.igen-tab-pane-active {
+  display: block;
+}
+
+/* ── Cloud enabled toggle feedback ──────────────────────── */
+#igen-cloud-wrapper.cloud-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+#igen-cloud-wrapper.cloud-disabled label.switch {
+  pointer-events: auto;
+}
+
+/* ── LoRA card list ──────────────────────────────────────── */
+.igen-lora-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .12s, border-color .12s;
+  border: 1px solid transparent;
+  margin-bottom: 3px;
+  user-select: none;
+}
+.igen-lora-card:hover:not(.incompatible) {
+  background: rgba(255,255,255,0.05);
+  border-color: var(--border);
+}
+.igen-lora-card.selected {
+  background: rgba(var(--accent-rgb), 0.12);
+  border-color: rgba(var(--accent-rgb), 0.35);
+}
+.igen-lora-card.incompatible {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.igen-lora-card.incompatible:hover {
+  background: rgba(231,76,60,0.06);
+  border-color: rgba(231,76,60,0.2);
+}
+.igen-lora-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.igen-lora-name {
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.igen-lora-card.incompatible .igen-lora-name {
+  color: var(--muted);
+}
+.igen-lora-badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.igen-lora-trigger {
+  font-size: 10px;
+  color: var(--muted);
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+  flex-shrink: 1;
+}
+.igen-lora-checkmark {
+  font-size: 13px;
+  color: var(--accent);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity .1s;
+}
+.igen-lora-card.selected .igen-lora-checkmark {
+  opacity: 1;
+}

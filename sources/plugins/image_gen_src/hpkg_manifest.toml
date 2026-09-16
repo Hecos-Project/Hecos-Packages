@@ -1,10 +1,10 @@
 id = "image_gen"
 manifest_version = "1"
 name = "Image Generation"
-version = "1.5.1"
+version = "2.0.1"
 author = "Antonio Meloni"
 license = "GPL-3.0"
-description = "AI Image Generation - Generates images from text prompts using multiple providers (Pollinations, Gemini, OpenAI DALL-E, Stability AI, HuggingFace). Fully autonomous package with its own TOML configuration. The easiest way to get started is to select Hugging Face as the provider and use one or more API keys, which you can obtain by logging in with an account."
+description = "AI Image Generation - Generates images from text prompts with priority support for local backends (SwarmUI/ComfyUI on port 7801). Additionally supports cloud AI providers including Pollinations, Gemini, OpenAI DALL-E, Stability AI, and HuggingFace. Fully autonomous package with its own TOML configuration."
 icon = "🎨"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/.github/main/profile/Urania_9800_Logo.png"
 screenshots = []
@@ -27,10 +27,10 @@ pip_requirements = [
     "Pillow>=10.0.0",
 ]
 python_requires = ">=3.11"
-signature = "nyokjzzh85DDbfN+Lp7fNCfJuPXwOVaXFKZAYEs09FvetbYgZHUo12I0REta0piI8WytLaAqAtdfG8u0gaoXDg=="
+signature = "/ifR8vJuJ6ZFSYFQLkg6QWDHG7mPzwzwlhAQY5VBdnrLBYdQ6Eo1TE4gK/r2DKec4VN590XPDcwGJHEXWPv/DQ=="
 
 [routing]
-instructions = "[IMAGE_GEN: generate_image:description] - Generate an image from a textual prompt. Only use this if the user explicitly asks to create, draw, or generate an image."
+instructions = "[IMAGE_GEN: generate_image:description] - Generate an image from a textual prompt. Only use this if the user explicitly asks to create, draw, or generate an image. IMPORTANT: Do NOT pass provider or model overrides — always leave provider and model parameters empty so the user's configured defaults are used automatically."
 
 [[slash_commands]]
 id = "img"
@@ -64,7 +64,7 @@ description = "Detailed description of the image or photo to generate. Translate
 
 [tool_schema.parameters.properties.provider]
 type = "string"
-description = "Optional: override the configured provider for this call only. Values: 'huggingface', 'pollinations', 'gemini', 'openai', 'stability', 'airforce'."
+description = "Optional: override the configured provider for this call only. Values: 'swarmui' (local SwarmUI backend), 'huggingface', 'pollinations', 'gemini', 'openai', 'stability', 'airforce', 'horde'. Leave empty to use the provider configured by the user."
 
 [tool_schema.parameters.properties.model]
 type = "string"
@@ -86,13 +86,30 @@ required = []
 type = "string"
 description = "Optional HuggingFace API key to use for the probe. Leave empty to use the one from configuration."
 
+[[tool_schema]]
+name = "IMAGE_GEN__check_local_status"
+description = "Checks the status of the local image generation backend (SwarmUI). Returns a diagnostic report including connectivity, version, available models, and supported samplers/schedulers. Use when the user asks about local generation status, wants to list local models, or troubleshoot local issues."
+
+[tool_schema.parameters]
+type = "object"
+required = []
+
 [config_panel]
 tab_id = "igen"
 tab_label = "Image Gen"
 category = "MULTIMEDIA"
 tab_icon = "<i class=\"fas fa-image\"></i>"
 template_file = "web/templates/config_panel.html"
-js_file = "web/static/js/igen_panel.js"
+js_files = [
+    "web/static/js/igen_core.js",
+    "web/static/js/igen_providers.js",
+    "web/static/js/igen_config.js",
+    "web/static/js/igen_presets.js",
+    "web/static/js/igen_hf.js",
+    "web/static/js/igen_probe.js",
+    "web/static/js/igen_horde.js",
+    "web/static/js/igen_loras.js",
+]
 css_file = "web/static/css/image_gen.css"
 api_routes_file = "web/routes.py"
 config_api_get = "/hecos/api/plugins/image_gen/config"
@@ -102,6 +119,7 @@ config_api_post = "/hecos/api/plugins/image_gen/config"
 llm_tools = [
     "IMAGE_GEN__generate_image",
     "IMAGE_GEN__probe_providers",
+    "IMAGE_GEN__check_local_status",
 ]
 slash_commands = [
     "/img",
@@ -114,30 +132,51 @@ has_config_panel = true
 has_api_routes = true
 has_system_calls = false
 syscall_notes = ""
-notes = "Supports multiple AI providers: Pollinations (free, default), Gemini, OpenAI DALL-E, Stability AI, HuggingFace (hf-inference, fal-ai, together, replicate, nebius, black-forest-labs). Requires network access. Provider and model are configurable."
+notes = "Supports multiple AI providers: Pollinations (free, default), Gemini, OpenAI DALL-E, Stability AI, HuggingFace, and Local Generation via SwarmUI (ComfyUI backend). Local generation connects to http://localhost:7801 and supports auto-discovery of models."
 
 [file_hashes]
 "main.py" = "f7b5bec89f3e1e62eea6395cb98aee6e95dcaea33fa1e904e554acab024b5667"
+"manifest.json" = "f38e3489e086d21273aa6158be843f3f80bea6d41ac39b1cbaf1226d9cce80e9"
 "preview.png" = "f6a55570c8c0298b9b655cd248e95e49f018fcc6b193a8ff179e88fa02a844fd"
 "README.md" = "48c6d0c6cf2744787e5518ad0284aab913f03b82f32a009322cca87d7f10274c"
-"igen_config/config_manager.py" = "e4491c6d08a4937b512d6fc0684b955631cc87ec48d7872c64d37c8ddd1a9b31"
-"igen_config/defaults.toml" = "c7ebaaada55b389ea45d375d1b86655bc5627e4a979ca9b6638658781c58dce1"
+"routing_override.yaml" = "cbe05c268649bd907af7b604e3a583d5bec4d05cf65eae386177272843ffac3c"
+"igen_config/config_manager.py" = "307054af6d359c99e1f47100fd727dbfd53f02e27f41ea39e9faf59474c08f90"
+"igen_config/image_gen.toml" = "b1264537cf2396d628dd09786280122441f07ff85b629d6d2477dfb38b096914"
 "igen_config/__init__.py" = "e3300b082c5f4b2cce28d981fd8f91d40d225213e908eaca6e4275b2b256cb1a"
+"locales/en.json" = "3f22394d227326362195e30d5dc19cea86c72cfd214b5580b3b8f010dd221d46"
+"locales/es.json" = "affc8c16b74fc10f29c07e64151123f1ab18af07434932ce2fd5e26d4541ac31"
+"locales/it.json" = "228f46a9b882de0a05409c5bada7640afb96eb2fd74bc5552aa1d05241857ee8"
 "plugin/dimensions.py" = "ac68f98fddf2fbe9e35f3ada5b552f574ec5201e83420e2b0f427afc9f63b8f7"
-"plugin/generator.py" = "8dfca81f31aa53373e5fada6aceb7173ef4d0505dc6d6ac22a5d86312de3b444"
-"plugin/main.py" = "0a9d07f6ea2185240baf033b643e33465a298a79c7193d77bbf03ed8a4a6bc56"
-"plugin/presets.py" = "491b6ec3359ea8a4538c571aff11ea32bc6d5e7f5781e5dd79a00190b0795cd9"
-"plugin/prompt_engine.py" = "4ea9245052911ccfb46320403203672c08b3afc6a01b9f4e46cb409a0b1c551b"
+"plugin/generator.py" = "9d5809f809c61d6d34ff321f6dea950ce2620cf3869f70d4020b2558ea326afe"
+"plugin/main.py" = "29d61b545f468175c25836da4c2f886570617222d29c4d32883a814ce8a5a06b"
+"plugin/presets.py" = "e220440570ddc9cb1fc11eeaa85b40aebb6c84abd5abe5d518d3de6544b82bb1"
+"plugin/prompt_engine.py" = "1d5acda66304754eee74989ab0ff7a3f03e9759cc38ed67820d80f6d126615dc"
 "plugin/__init__.py" = "e3300b082c5f4b2cce28d981fd8f91d40d225213e908eaca6e4275b2b256cb1a"
+"plugin/local/client.py" = "44cf604f33e09c5544e73c142a82fb29f67fc31f2a355f85d480d9324605533b"
+"plugin/local/health.py" = "fe7cf773917d1e7c023c24447c3cc0396c40430892385e801074681b2aed1979"
+"plugin/local/models.py" = "97fbd0e0012d92a12e448d3e099e794c831c6a6f08d3fe95c8531449998dd67f"
+"plugin/local/params.py" = "4576d2a1c119c0fd2071ace748e1e6c3ff86a961582ba5274a9f1fbfe0816773"
+"plugin/local/presets.py" = "040d3e22e9f7f251e2e41c4066e2ab8d3ae9bf67514877e22aed48ca7c402782"
+"plugin/local/__init__.py" = "dda28f8671175df55946de224d3cbdb3e2f411365b7feb5551f6bb38b6982ffb"
 "plugin/providers/airforce.py" = "3031344a256e0e46d985c1ebab0c9499f9f4cec1573de7b71e94283c2b928627"
-"plugin/providers/gemini.py" = "a531cc628a95f74068eb218cce24ebe7fa5dac0bcfed3598db0972ae7754b6ec"
-"plugin/providers/huggingface.py" = "abf3b51e06a7142325797184dee4cc8959b836670eddea8fe74677789787c0f1"
+"plugin/providers/gemini.py" = "f66b33118b93f141c7fc3eed836860b8dbae59de1b1a229cce38cfe58b015b3f"
+"plugin/providers/horde.py" = "97adeff8e95823d52874cd54c4e02f3b928a7f031b5672b2cbf02fb4240bda43"
+"plugin/providers/huggingface.py" = "f750eb796ea0790ccca28d4fa54c609abba21b90d16d5641a333ad3ff654680d"
 "plugin/providers/openai.py" = "56fad495dbdc2496893006b97d1a2f6e2b49377d3dc9f935181dc4c6846f2e33"
 "plugin/providers/pollinations.py" = "3b770955491651e2ac1fb3d3c8e5fe9a195de820c8c5b9aeb4e413a02f051d4d"
+"plugin/providers/probe.py" = "f5296feaabfe08d071b938b506e88bd42fbe698c8253987bd85bc7f4c69bcbf0"
 "plugin/providers/stability.py" = "bb20bb1e0fc5db4d40b5b3853f0402418713225c2a099ad4aebb5acc8007956b"
-"plugin/providers/utils.py" = "030da6b428f2daaed8c6ea89f54928219a83600f66a096eabd35c9ebeb4dc8cf"
-"plugin/providers/__init__.py" = "3fb8840104dcd6664b55a023313d776417a52ba453569ddae5c39099fa9beeb5"
-"web/routes.py" = "11fa3740ca68133ba4b75e168ad0028c9d9d08dc77219a046d7919560c6ebb2c"
-"web/static/css/image_gen.css" = "dd07354d9df1096c7244cd98fa013298145fbab20feac15f934cc3d0d2b41ae0"
-"web/static/js/igen_panel.js" = "8f051a7fcb8bc95422fa2a333451d65cb34c9a9fdaba23c54cac8b74f4cd421b"
-"web/templates/config_panel.html" = "de9d4bbeb6958261736638c17eba944e7faef49854643e9c7ac6ec934bce6894"
+"plugin/providers/swarmui.py" = "4e43b17b15eca115c9bc598acb972699bade4645243ec46a5948a79a0327b264"
+"plugin/providers/utils.py" = "deb2a300d90b195e4b44f420e264d8f449d10d037e4e763e7842f075462ce4fe"
+"plugin/providers/__init__.py" = "6e74f4a46cc14cade8b2556df1421cac73d6b2181fd1ae381127e953b2c5f6e8"
+"web/routes.py" = "f77b1b95e3b4c4db32e5eacc326656f0b2a17eabcd518b8cc5632719b9284c18"
+"web/static/css/image_gen.css" = "3522468de2fb61a59f34a7b3cb5acee7f297f5e9d750400c7d47906612591db6"
+"web/static/js/igen_config.js" = "0f8d4b809521b3a9aeda333bf7fa896f35b31f65e9e443655685720641825eac"
+"web/static/js/igen_core.js" = "0e4de5257abe53bbb80ae73249f4c582a00a47433597d7f0f56251be32efbb3a"
+"web/static/js/igen_hf.js" = "490cdea458af782015edd10638416e5a0bbd5121d21172c1f17a8a52ff9288ff"
+"web/static/js/igen_horde.js" = "5a55c36d8adf1873251e1e6016bc3cc964b6f670d6faf1e3da2234ac2e748535"
+"web/static/js/igen_loras.js" = "f99b9ace3a74979fb5fdcd78e23aba030d7871b1093f5410889750f75435ddcf"
+"web/static/js/igen_presets.js" = "0e38c81bc6b292580157f45046e0e2121ec6c5d5639fef8b8bc991c64239ce68"
+"web/static/js/igen_probe.js" = "61a96af05f86a8baf6e9dd5b6c7430b8aa8060e6e6d3a958ae73e7b8a290f3b4"
+"web/static/js/igen_providers.js" = "fa14136ef8bfca198fedc0ec6c898f3b2c3b74dc45524ab13a50b39524e6d803"
+"web/templates/config_panel.html" = "5a4fb4cfaaa0b2fc9ed85c6290caad56d1f0621e977cab8881089ab080973af4"

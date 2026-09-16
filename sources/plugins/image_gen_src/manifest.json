@@ -1,0 +1,84 @@
+{
+    "tag": "IMAGE_GEN",
+    "name": "Image Generation",
+    "version": "1.5.1",
+    "description": "AI Image Generation - Generates images from text prompts using multiple providers (Pollinations, Gemini, OpenAI DALL-E, Stability AI, HuggingFace). Fully autonomous package with its own TOML configuration. The easiest way to get started is to select Hugging Face as the provider and use one or more API keys, which you can obtain by logging in with an account.",
+    "lazy_load": true,
+    "is_class_based": true,
+    "commands": {},
+    "tool_schema": [
+        {
+            "name": "IMAGE_GEN__generate_image",
+            "description": "Generates an image from a text description. Uses the configured provider.",
+            "parameters": {
+                "type": "object",
+                "required": [
+                    "prompt"
+                ],
+                "properties": {
+                    "prompt": {
+                        "type": "string",
+                        "description": "Detailed description of the image or photo to generate. Translate to English if needed."
+                    },
+                    "provider": {
+                        "type": "string",
+                        "description": "Optional: override the configured provider for this call only. Values: 'huggingface', 'pollinations', 'gemini', 'openai', 'stability', 'airforce'."
+                    },
+                    "model": {
+                        "type": "string",
+                        "description": "Optional: override the model for this call only. For HuggingFace use full repo IDs like 'black-forest-labs/FLUX.1-schnell'."
+                    },
+                    "hf_server": {
+                        "type": "string",
+                        "description": "Optional: HuggingFace target server. Values: 'hf-inference', 'fal-ai', 'together', 'replicate', 'nebius', 'black-forest-labs'. Only used when provider is 'huggingface'."
+                    }
+                }
+            }
+        },
+        {
+            "name": "IMAGE_GEN__probe_providers",
+            "description": "Tests all image generation providers and HuggingFace servers to see which ones are working. Returns a diagnostic report. Use when the user asks to check, test or diagnose providers, or when image generation keeps failing.",
+            "parameters": {
+                "type": "object",
+                "required": [],
+                "properties": {
+                    "api_key": {
+                        "type": "string",
+                        "description": "Optional HuggingFace API key to use for the probe. Leave empty to use the one from configuration."
+                    }
+                }
+            }
+        }
+    ],
+    "slash_commands": [
+        {
+            "id": "img",
+            "manifest_version": "1",
+            "aliases": [
+                "/img",
+                "/image",
+                "/photo",
+                "/foto"
+            ],
+            "description": "Generates an AI image from a text description",
+            "usage": "/img <descrizione>",
+            "example": "/img foto fotorealistica di un gatto su Marte",
+            "icon": "🖼️",
+            "method": "generate_image",
+            "requires_args": true
+        }
+    ],
+    "icon": "<i class=\"fas fa-image\"></i>",
+    "config_panel": {
+        "tab_id": "igen",
+        "tab_label": "Image Gen",
+        "tab_icon": "<i class=\"fas fa-image\"></i>",
+        "template_file": "web/templates/config_panel.html",
+        "js_file": "web/static/js/igen_panel.js",
+        "css_file": "web/static/css/image_gen.css",
+        "category": "MULTIMEDIA",
+        "api_routes_file": "web/routes.py",
+        "config_api_get": "/hecos/api/plugins/image_gen/config",
+        "config_api_post": "/hecos/api/plugins/image_gen/config"
+    }
+}

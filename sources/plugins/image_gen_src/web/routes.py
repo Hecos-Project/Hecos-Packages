@@ -168,6 +168,51 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
             logger.error(f"[ImageGen] Horde models error: {exc}")
             return jsonify({"ok": False, "error": str(exc)}), 500
 
+    @app.route("/hecos/api/plugins/image_gen/vaes", methods=["GET"])
+    def get_image_gen_vaes():
+        try:
+            from plugin.providers.swarmui import SwarmUIProvider
+            models = SwarmUIProvider.get_vaes()
+            return jsonify({"ok": True, "models": models})
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/loras", methods=["GET"])
+    def get_image_gen_loras():
+        try:
+            from plugin.providers.swarmui import SwarmUIProvider
+            models = SwarmUIProvider.get_loras()
+            return jsonify({"ok": True, "models": models})
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/local_status", methods=["GET"])
+    def get_image_gen_local_status():
+        try:
+            from plugin.providers.swarmui import SwarmUIProvider
+            models = SwarmUIProvider.get_models()
+            if not models:
+                return jsonify({"ok": False, "error": "SwarmUI reachable but no models found", "status_text": "SwarmUI Reachable"})
+            return jsonify({
+                "ok": True,
+                "status_text": "SwarmUI Reachable",
+                "version": "Unknown",
+                "url": "http://localhost:7801",
+                "models_count": len(models)
+            })
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/local_compat_info", methods=["GET"])
+    def get_image_gen_local_compat_info():
+        try:
+            from plugin.providers.swarmui import SwarmUIProvider
+            models_info = SwarmUIProvider.get_models_info()
+            loras_info = SwarmUIProvider.get_loras_info()
+            return jsonify({"ok": True, "models": models_info, "loras": loras_info})
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
     # --- 3. Prompt Refiner (Flux) ---
 
     @app.route("/hecos/api/plugins/image_gen/refine-prompt", methods=["POST"])
@@ -216,9 +261,23 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
             user_presets = get_config().get("image_gen", {}).get("presets", {})
             result = []
             for name, data in BUILTIN_PRESETS.items():
-                result.append({"name": name, "builtin": True, "description": data.get("_description", ""), "provider": data.get("provider", ""), "model": data.get("model", "")})
+                result.append({
+                    "name": name, 
+                    "builtin": True, 
+                    "description": data.get("_description", ""), 
+                    "provider": data.get("provider", ""), 
+                    "model": data.get("model", ""),
+                    "is_local": data.get("_local", False)
+                })
             for name, data in user_presets.items():
-                result.append({"name": name, "builtin": False, "description": data.get("_description", "User preset"), "provider": data.get("provider", ""), "model": data.get("model", "")})
+                result.append({
+                    "name": name, 
+                    "builtin": False, 
+                    "description": data.get("_description", "User preset"), 
+                    "provider": data.get("provider", ""), 
+                    "model": data.get("model", ""),
+                    "is_local": data.get("_local", False)
+                })
             return jsonify({"ok": True, "presets": result})
         except Exception as exc:
             return jsonify({"ok": False, "error": str(exc)}), 500

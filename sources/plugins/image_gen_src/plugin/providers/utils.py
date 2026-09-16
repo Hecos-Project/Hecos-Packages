@@ -66,7 +66,9 @@ def save_image_bytes(data: bytes, ext: str = "jpg", prompt: str = "", params: di
             if params:
                 for k, v in params.items():
                     f.write(f"{k.capitalize()}: {v}\n")
-            f.write(f"Prompt: {prompt}\n")
+            if not params or "prompt" not in (k.lower() for k in params.keys()):
+                f.write(f"Prompt: {prompt}\n")
+
     except Exception as e:
         logger.error(f"[ImageEngine] Failed to save metadata: {e}")
 

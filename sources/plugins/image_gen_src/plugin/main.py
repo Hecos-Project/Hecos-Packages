@@ -13,6 +13,8 @@ except ImportError:
 
 from .generator import run_generation
 from .providers.probe import probe_all_providers
+from .local.health import format_status_report, check_backend_status
+from .local.models import discover_models, get_model_summary
 
 
 class ImageGenTools:
@@ -39,9 +41,11 @@ class ImageGenTools:
         Generates an image from a text description.
 
         Optional overrides (only for this call, does NOT save to config):
-        - provider: e.g. 'huggingface', 'pollinations', 'gemini', 'openai'
-        - model: e.g. 'black-forest-labs/FLUX.1-schnell'
+        - provider: e.g. 'huggingface', 'pollinations', 'gemini', 'openai', 'swarmui'
+        - model: e.g. 'black-forest-labs/FLUX.1-schnell' (cloud) or 'sd_xl_base_1.0' (local)
         - hf_server: HuggingFace target server e.g. 'fal-ai', 'together', 'replicate', 'hf-inference'
+
+        Use provider='swarmui' for local generation via SwarmUI.
 
         IMPORTANT: You MUST include the EXACT output of this tool in your final response,
         including the [[IMG:filename.ext]] tag and any metadata text that follows it.
@@ -76,6 +80,79 @@ class ImageGenTools:
             return "\n".join(lines)
         except Exception as e:
             return f"⚠️ Errore nel probe provider: {e}"
+
+    def check_local_status(self) -> str:
+        """
+        Checks the status of the local image generation backend (SwarmUI).
+        Returns a diagnostic report including connectivity, version,
+        available models, and supported samplers/schedulers.
+        Use when the user asks about local generation status or troubleshooting.
+        """
+        logger.info("[IMAGE_GEN] check_local_status called")
+        try:
+            try:
+                from igen_config.config_manager import get_image_gen_config
+            except ImportError:
+                from ..igen_config.config_manager import get_image_gen_config
+
+            cfg = get_image_gen_config()
+            local_cfg = cfg.get("local", {})
+            url = local_cfg.get("url", "http://localhost:7801")
+            enabled = local_cfg.get("enabled", False)
+
+            if not enabled:
+                return ("⚠️ Local generation is **disabled** in config.\n"
+                        f"URL configured: `{url}`\n"
+                        "Enable it in the Image Gen config panel under the Local section.")
+
+            # Try creating a client for detailed info
+            try:
+                from .local.client import SwarmUIClient
+                client = SwarmUIClient(
+                    base_url=url,
+                    timeout=local_cfg.get("timeout", 120),
+                    auth_token=local_cfg.get("auth_token", ""),
+                )
+            except Exception:
+                client = None
+
+            return format_status_report(url, client=client)
+
+        except Exception as e:
+            return f"⚠️ Error checking local backend: {e}"
+
+    def list_local_models(self) -> str:
+        """
+        Lists all models available in the local SwarmUI instance,
+        categorized by architecture (Flux, SDXL, SD 1.5, etc.).
+        """
+        logger.info("[IMAGE_GEN] list_local_models called")
+        try:
+            try:
+                from igen_config.config_manager import get_image_gen_config
+            except ImportError:
+                from ..igen_config.config_manager import get_image_gen_config
+
+            cfg = get_image_gen_config()
+            local_cfg = cfg.get("local", {})
+            url = local_cfg.get("url", "http://localhost:7801")
+
+            from .local.client import SwarmUIClient
+            client = SwarmUIClient(
+                base_url=url,
+                timeout=15,
+                auth_token=local_cfg.get("auth_token", ""),
+            )
+
+            models = discover_models(client, force_refresh=True)
+            if not models:
+                return "❌ No models found. Is SwarmUI running and loaded?"
+
+            summary = get_model_summary(models)
+            return f"## 🧠 Local Models ({len(models)} total)\n\n{summary}"
+
+        except Exception as e:
+            return f"⚠️ Error listing local models: {e}"
 
 
 # â”€â”€ Module exports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
