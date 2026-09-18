@@ -229,7 +229,8 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
                 if len(clean_prompt) > 250:
                     clean_prompt = clean_prompt[:247] + "..."
                 prefix = f"🎨 Ecco l'immagine generata per: {clean_prompt}"
-                return f"{prefix}\n\n[[IMG:{filename}]]{meta_str}"
+                html_src = f"/api/images/{filename}"
+                return f"{prefix}\n\n[[IMG:{filename}]]\n<!-- HTML_SRC: {html_src} | To embed in HTML use: <img src=\"{html_src}\"> -->{meta_str}"
 
             except Exception as e:
                 last_error = e

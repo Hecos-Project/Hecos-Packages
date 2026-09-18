@@ -86,6 +86,22 @@ class DocsTools:
                 if os.path.isabs(path) and (path.startswith("C:\\") or path.startswith("C:/")):
                     logger.debug(f"[DOCS] Path is already absolute Windows path: '{path}'")
                     abs_path = path
+                    # Even if it's absolute, verify it exists; if not, try finding by basename in media/images
+                    if not os.path.exists(abs_path):
+                        fallback = os.path.join(media_images_dir, os.path.basename(path))
+                        if os.path.exists(fallback):
+                            logger.debug(f"[DOCS] Absolute path not found, found by basename in media/images: '{fallback}'")
+                            abs_path = fallback
+                        else:
+                            # Search all subdirs of media/
+                            media_dir = os.path.dirname(media_images_dir)
+                            basename = os.path.basename(path)
+                            for subdir in os.listdir(media_dir):
+                                candidate = os.path.join(media_dir, subdir, basename)
+                                if os.path.exists(candidate):
+                                    logger.debug(f"[DOCS] Found image in media/{subdir}: '{candidate}'")
+                                    abs_path = candidate
+                                    break
                 
                 # Check for API paths
                 elif path.startswith("/api/images/"):

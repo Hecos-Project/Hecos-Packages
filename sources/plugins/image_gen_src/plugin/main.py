@@ -50,6 +50,12 @@ class ImageGenTools:
         IMPORTANT: You MUST include the EXACT output of this tool in your final response,
         including the [[IMG:filename.ext]] tag and any metadata text that follows it.
         DO NOT summarize or drop the > **[Image Gen Config]** block if it is present!
+
+        When embedding the generated image into an HTML document (e.g. for generate_pdf),
+        ALWAYS use EXACTLY this format for the src attribute:
+          <img src="/api/images/FILENAME">
+        where FILENAME is the bare filename returned by this tool (e.g. gen_20260101_abc.png).
+        NEVER invent or guess a filesystem path like C:\\... or media/generations/...
         """
         logger.info(f"[IMAGE_GEN] generate_image called. Prompt: {prompt[:60]}... provider_override={provider or 'cfg'} model_override={model or 'cfg'} hf_server_override={hf_server or 'cfg'}")
         return run_generation(prompt, provider_override=provider, model_override=model, hf_server_override=hf_server)
