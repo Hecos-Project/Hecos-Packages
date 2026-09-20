@@ -1,7 +1,7 @@
 id = "document_maker"
 manifest_version = "1"
 name = "Document Maker"
-version = "1.1.0"
+version = "1.4.1"
 author = "Hecos Team / Antonio Meloni"
 license = "GPL-3.0"
 description = "Generates and modifies PDF/HTML documents from templates or raw HTML using Playwright."
@@ -23,7 +23,7 @@ tag = "DOCS"
 lazy_load = true
 is_class_based = true
 api_routes_file = "web/routes.py"
-signature = ""
+signature = "j53YPmKgCrtWVquddCWqW0WnQCHUSHdum0t0woaf7rjcEpeqoF9OkD3/RHlmhqviMoopfW+mimfT8ylDvfIYAQ=="
 
 [[slash_commands]]
 id = "pdf"
@@ -33,6 +33,36 @@ aliases = [
     "/documento",
 ]
 description = "Genera un documento PDF da un testo HTML o da un template Hecos"
+
+[[slash_commands]]
+id = "generate_pdf"
+aliases = [
+    "/DOCS__generate_pdf",
+    "/pdf",
+    "/generate_pdf",
+]
+description = "Generate a PDF document from a template ID or raw HTML."
+requires_args = true
+
+[[slash_commands]]
+id = "modify_document"
+aliases = [
+    "/DOCS__modify_document",
+    "/doc_edit",
+    "/modify_document",
+]
+description = "Modify an existing document and regenerate its PDF."
+requires_args = true
+
+[[slash_commands]]
+id = "list_documents"
+aliases = [
+    "/DOCS__list_documents",
+    "/docs_list",
+    "/list_documents",
+]
+description = "List all saved HTML and PDF documents."
+requires_args = true
 
 [commands]
 generate_pdf = "Converts HTML content to a PDF file and returns the file path."
@@ -49,6 +79,15 @@ slash_commands = [
     "/pdf",
     "/makepdf",
     "/documento",
+    "/DOCS__generate_pdf",
+    "/pdf",
+    "/generate_pdf",
+    "/DOCS__modify_document",
+    "/doc_edit",
+    "/modify_document",
+    "/DOCS__list_documents",
+    "/docs_list",
+    "/list_documents",
 ]
 has_widget = false
 has_config_panel = true
@@ -72,7 +111,7 @@ type = "function"
 
 [tool_schema.function]
 name = "DOCS__generate_pdf"
-description = "Generates a PDF and HTML document from a template ID or raw HTML. Use this when the user asks to create a magazine, report, booklet, fotoromanzo, or any PDF/HTML document. Returns the absolute path of the generated files.\n\nIMPORTANT WORKFLOW: When creating a document with AI-generated images:\n1. FIRST generate all images using IMAGE_GEN__generate_image\n2. Collect the filenames from the [[IMG:filename]] tags in the results\n3. THEN call DOCS__generate_pdf with html_content containing <img src=\"/api/images/FILENAME\"> for each generated image\n4. ALWAYS complete the full workflow — NEVER stop after generating images without producing the document.\n\nIf Playwright/Chromium is not available, the HTML version will still be saved successfully."
+description = "Generates a PDF and HTML document from a template ID or raw HTML. Returns the absolute path of the generated files.\n\nIMPORTANT GUIDELINES:\n- Formatting: When writing raw HTML, you MUST include complete inline CSS (e.g. `body { margin: 0; padding: 20px; font-family: sans-serif; } * { box-sizing: border-box; }`) to ensure the PDF layout is correct and borders work.\n- Images: Use `<img src=\"/api/images/FILENAME\">` to include images. Images are stored in `media/images`.\n- Workflow: You can reuse previously generated images without calling the image generator again. ONLY generate new images if the user explicitly asks for them or if they don't exist. NEVER stop after image generation; always proceed to call this tool to finish the document.\n\nIf Playwright/Chromium is unavailable, the HTML version will still be saved successfully."
 
 [tool_schema.function.parameters]
 type = "object"
@@ -99,6 +138,9 @@ type = "function"
 [tool_schema.function]
 name = "DOCS__list_documents"
 description = "Lists all documents in the documents folder with their size and a content preview. Use this BEFORE modify_document to find the correct file path and understand the document structure."
+
+[config_panel]
+api_routes_file = "web/routes.py"
 
 [tool_schema.function.parameters]
 type = "object"
@@ -137,3 +179,15 @@ description = "The HTML content, <img> tags, or CSS rules to inject depending on
 [tool_schema.function.parameters.properties.target_selector]
 type = "string"
 description = "Optional: For 'replace_section' a CSS selector (e.g. '.gallery', '#section2'). For 'patch' the exact text to find. For 'add_images' an optional placeholder text to replace with images."
+
+[file_hashes]
+"docs_config.json" = "f8a4f660bf782d91259b46d5d56a48addc7f980dc352d0a82e086c21c6b3487e"
+"main.py" = "0dde7442fa6ea89fafd89956f8c96db348c2204b2423661892fd1bba58701e4d"
+"manifest.json" = "d41a795d88d0752c90c54b74beec2d395e3894870f78eddcedf203ae1b74b0bd"
+"README.md" = "fd962b26def13eaa1c923cfa543be642195740de33c8f951a207c9e691f064b7"
+"web/routes.py" = "ee3d5430e6c2aec8b0201ebbd2dad9c6c1738ac141dcb457abc3fa6dadbc3840"
+"web/static/css/doc_preview.css" = "4fc4a898f3fd1631042e4b35db42129a6a36f00e796e28466f2dfea984761b6a"
+"web/static/js/document_maker_panel.js" = "651616d436799bcec3670e01c1e24f5225560cc04e877a843e94f66478af0ca9"
+"web/static/js/doc_preview.js" = "3fa8b8a4309dd6c39b04202c1b8db0d44181fff9e223fea6bbae45d6a9d5cb71"
+"web/templates/config_document_maker.html" = "e745ffc7839665b2d21ac06f0b071ff30b0340e4883529ab8ec58ef91ad57b5f"
+"web/templates/docs_editor.html" = "122f86557f1cfd0de778c80782a8bceeee1c23bf9da7a9d38a1ba55a1c096aff"

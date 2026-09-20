@@ -5,7 +5,21 @@
  */
 
 // Default override directive text
-const DOCS_DEFAULT_OVERRIDE = "IMPORTANT: After writing or generating the file, DO NOT output the raw content (HTML/code) or duplicate images/links in your chat response. The UI automatically renders a rich preview and file card when you output the file path. Just provide a brief confirmation message containing the file path.";
+const DOCS_DEFAULT_OVERRIDE = `IMPORTANT RULES FOR DOCUMENT GENERATION:
+
+1. RESPONSE FORMAT: After generating the file, DO NOT output raw HTML code or duplicate images/links in your chat response. The UI automatically renders a rich preview and file card. Just provide a brief confirmation message with the file path.
+
+2. FORMATTING: When creating HTML documents, ALWAYS include complete CSS styling:
+   - Use @page { size: A4; margin: 0; } for PDF pagination control.
+   - Set body { margin: 0; padding: 20mm; font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #222; } as default.
+   - Use * { box-sizing: border-box; } to prevent layout overflow.
+   - For multi-page documents, use CSS page-break-before/after to control pagination.
+   - All content must fit within A4 dimensions (210mm x 297mm).
+
+3. IMAGES: Previously generated images are stored in media/images/. Use <img src="/api/images/FILENAME"> to include them. If the user asks to reuse existing images, do NOT generate new ones — just reference the filenames directly. Only call IMAGE_GEN if the user explicitly asks for NEW images.
+
+4. WORKFLOW: Always call DOCS__generate_pdf to produce the final document. Never stop after generating images without producing the document.`;
+
 
 // ── Autosave debouncer ────────────────────────────────────────────────────────
 let _docsSaveTimer = null;

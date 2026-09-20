@@ -153,7 +153,7 @@ class DocsTools:
 
                 file_url = "file:///" + os.path.normpath(temp_html_path).replace("\\", "/")
                 page.goto(file_url, wait_until="networkidle")
-                page.pdf(path=pdf_output_path, format="A4", print_background=True)
+                page.pdf(path=pdf_output_path, format="A4", print_background=True, margin={"top": "0", "right": "0", "bottom": "0", "left": "0"})
             finally:
                 if temp_html_path and os.path.exists(temp_html_path):
                     try:
@@ -194,7 +194,7 @@ class DocsTools:
 
                     file_url = "file:///" + os.path.normpath(temp_html_path).replace("\\", "/")
                     page.goto(file_url, wait_until="networkidle")
-                    page.pdf(path=pdf_output_path, format="A4", print_background=True)
+                    page.pdf(path=pdf_output_path, format="A4", print_background=True, margin={"top": "0", "right": "0", "bottom": "0", "left": "0"})
                 finally:
                     if temp_html_path and os.path.exists(temp_html_path):
                         try:
@@ -375,7 +375,9 @@ class DocsTools:
                     except Exception:
                         preview = "(unable to read preview)"
                 
-                files.append(f"📄 **{f}** ({size_str})\n   {preview}" if preview else f"📄 **{f}** ({size_str})")
+                # Make the filename a markdown link using the absolute path so the UI file card processor catches it
+                url_path = full_path.replace("\\", "/")
+                files.append(f"📄 **[{f}](file:///{url_path})** ({size_str})\n   {preview}" if preview else f"📄 **[{f}](file:///{url_path})** ({size_str})")
             
             if not files:
                 return f"No documents found in {output_dir}" + (f" matching '{search}'" if search else "") + "."
