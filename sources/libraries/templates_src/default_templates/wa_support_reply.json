@@ -1,0 +1,26 @@
+{
+  "id": "d95732dd-6804-4a47-91e8-1106ff7643c4",
+  "name": "WA — Support Reply",
+  "channel": "whatsapp",
+  "description": "Customer support auto-reply.",
+  "subject": "",
+  "body_html": "",
+  "body_text": "Hi {{ name }},\n\nThank you for reaching out! Your ticket #{{ ticket_id }} has been created.\n\nOur team will get back to you within {{ response_time }}.\n\nIn the meantime, check our FAQ: {{ faq_url }}",
+  "header": "🛟 Support",
+  "footer": "— {{ company }} Support",
+  "tags": [
+    "starter",
+    "support"
+  ],
+  "is_default": false,
+  "variables": [
+    "name",
+    "ticket_id",
+    "response_time",
+    "faq_url",
+    "company"
+  ],
+  "created_at": "2026-08-15T02:56:10.049413+00:00",
+  "updated_at": "2026-08-15T02:56:10.049413+00:00",
+  "versions": []
+}

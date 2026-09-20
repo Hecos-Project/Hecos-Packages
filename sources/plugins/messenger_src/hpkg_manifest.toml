@@ -43,7 +43,6 @@ config_api_post = "/hecos/api/plugins/messenger/config"
 
 [capabilities]
 llm_tools = [
-    "resolve_contact_address",
     "send_message",
     "list_accounts",
     "check_connection",

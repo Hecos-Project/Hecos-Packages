@@ -1,0 +1,30 @@
+{
+  "id": "0a90ece2-0250-46d3-9718-a20c5a20fc3f",
+  "name": "Hecos — Automation Report",
+  "channel": "email",
+  "description": "Clean, tabular template to report the result of an automation.",
+  "subject": "Report Automazione: {{ nome_automazione }} [{{ status }}]",
+  "body_html": "\n<div style=\"font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px;\">\n    \n    <div style=\"background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05);\">\n        \n        <!-- HEADER -->\n        <div style=\"background-color: #2c3e50; padding: 25px 20px; color: #ffffff; display: flex; align-items: center;\">\n            <img src=\"/assets/Hecos_Logo_SQR_NBG_LogoOnly.png\" alt=\"Hecos\" style=\"width: 50px; height: 50px; margin-right: 15px;\">\n            <div>\n                <h1 style=\"margin: 0; font-size: 22px; font-weight: 600; letter-spacing: 0.5px;\">Rapporto Automazione</h1>\n                <p style=\"margin: 5px 0 0 0; font-size: 14px; opacity: 0.8; font-family: monospace;\">ID: {{ automation_id }}</p>\n            </div>\n        </div>\n        \n        <!-- BODY -->\n        <div style=\"padding: 30px;\">\n            <p style=\"font-size: 16px; color: #333; margin-bottom: 25px;\">\n                L'automazione <strong>{{ nome_automazione }}</strong> è stata completata. Di seguito i dettagli operativi.\n            </p>\n\n            <!-- DATA TABLE -->\n            <table style=\"width: 100%; border-collapse: collapse; margin-bottom: 30px;\">\n                <tr>\n                    <td style=\"padding: 12px 0; border-bottom: 1px solid #eeeeee; color: #666; font-size: 14px; width: 40%;\"><strong>Stato Esecuzione</strong></td>\n                    <td style=\"padding: 12px 0; border-bottom: 1px solid #eeeeee; font-size: 15px; text-align: right;\">\n                        <span style=\"display: inline-block; padding: 4px 10px; background-color: #e8f5e9; color: #2e7d32; border-radius: 4px; font-weight: bold;\">{{ status }}</span>\n                    </td>\n                </tr>\n                <tr>\n                    <td style=\"padding: 12px 0; border-bottom: 1px solid #eeeeee; color: #666; font-size: 14px;\"><strong>Ora di Inizio</strong></td>\n                    <td style=\"padding: 12px 0; border-bottom: 1px solid #eeeeee; font-size: 15px; text-align: right; color: #333;\">{{ tempo_inizio }}</td>\n                </tr>\n                <tr>\n                    <td style=\"padding: 12px 0; border-bottom: 1px solid #eeeeee; color: #666; font-size: 14px;\"><strong>Ora di Fine</strong></td>\n                    <td style=\"padding: 12px 0; border-bottom: 1px solid #eeeeee; font-size: 15px; text-align: right; color: #333;\">{{ tempo_fine }}</td>\n                </tr>\n                <tr>\n                    <td style=\"padding: 12px 0; border-bottom: 1px solid #eeeeee; color: #666; font-size: 14px;\"><strong>Durata Totale</strong></td>\n                    <td style=\"padding: 12px 0; border-bottom: 1px solid #eeeeee; font-size: 15px; text-align: right; color: #333;\">{{ durata }}</td>\n                </tr>\n            </table>\n\n            <!-- LOG / INFO BOX -->\n            <h3 style=\"font-size: 16px; color: #2c3e50; margin-bottom: 10px; border-bottom: 2px solid #3498db; display: inline-block; padding-bottom: 4px;\">Informazioni & Log</h3>\n            <div style=\"background-color: #f4f6f7; border: 1px solid #e1e5e8; border-radius: 6px; padding: 15px; font-family: 'Courier New', Courier, monospace; font-size: 13px; color: #555; line-height: 1.5; max-height: 200px; overflow-y: auto;\">\n                {{ informazioni }}\n            </div>\n\n            <div style=\"margin-top: 30px; padding: 15px; background-color: #fff8e1; border-left: 4px solid #ffc107; border-radius: 0 4px 4px 0;\">\n                <p style=\"margin: 0; font-size: 14px; color: #5d4037;\"><strong>Note per l'utente:</strong><br>{{ note_utente }}</p>\n            </div>\n        </div>\n        \n        <!-- FOOTER -->\n        <div style=\"background-color: #ecf0f1; padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d;\">\n            Hecos Automation Engine &bull; Nessuna azione richiesta\n        </div>\n    </div>\n</div>\n        ",
+  "body_text": "Report Automazione\n\nNome: {{ nome_automazione }}\nInizio: {{ tempo_inizio }}\nFine: {{ tempo_fine }}\nStato: {{ status }}\n\nInformazioni:\n{{ informazioni }}",
+  "header": "",
+  "footer": "",
+  "tags": [
+    "hecos",
+    "automation",
+    "report"
+  ],
+  "is_default": false,
+  "variables": [
+    "nome_automazione",
+    "status",
+    "automation_id",
+    "tempo_inizio",
+    "tempo_fine",
+    "durata",
+    "informazioni",
+    "note_utente"
+  ],
+  "created_at": "2026-08-15T03:45:35.111024+00:00",
+  "updated_at": "2026-08-15T03:45:35.111024+00:00",
+  "versions": []
+}

@@ -1,6 +1,8 @@
 import os
 import uuid
 import json
+import re
+import glob
 from hecos.core.logging import logger
 from hecos.app.config import ConfigManager
 
@@ -27,10 +29,208 @@ class DocsTools:
         os.makedirs(full_path, exist_ok=True)
         return full_path
 
+    def _resolve_image_paths(self, html_content: str) -> str:
+        """Resolves local image paths to file:/// URLs for Playwright rendering."""
+        root_dir = os.path.dirname(os.path.dirname(self.plugin_dir))
+        media_images_dir = os.path.join(root_dir, "media", "images")
+        generated_photos_dir = os.path.join(root_dir, "media", "generated_photos")
+        
+        def resolve_img_path(match):
+            path = match.group(2)
+            logger.debug(f"[DOCS] Regex intercepted image path: '{path}'")
+            
+            # Ignore remote and data URIs
+            if path.startswith(("http://", "https://", "data:", "file://")):
+                logger.debug(f"[DOCS] Skipping remote/data/file URI: '{path}'")
+                return match.group(0)
+
+            abs_path = None
+            
+            # Check if it's already an absolute Windows path
+            if os.path.isabs(path) and (path.startswith("C:\\") or path.startswith("C:/")):
+                logger.debug(f"[DOCS] Path is already absolute Windows path: '{path}'")
+                abs_path = path
+                # Even if it's absolute, verify it exists; if not, try finding by basename
+                if not os.path.exists(abs_path):
+                    fallback = os.path.join(media_images_dir, os.path.basename(path))
+                    if os.path.exists(fallback):
+                        logger.debug(f"[DOCS] Absolute path not found, found by basename in media/images: '{fallback}'")
+                        abs_path = fallback
+                    else:
+                        # Search all subdirs of media/
+                        media_dir = os.path.dirname(media_images_dir)
+                        basename = os.path.basename(path)
+                        for subdir in os.listdir(media_dir):
+                            candidate = os.path.join(media_dir, subdir, basename)
+                            if os.path.exists(candidate):
+                                logger.debug(f"[DOCS] Found image in media/{subdir}: '{candidate}'")
+                                abs_path = candidate
+                                break
+            
+            # Check for API paths
+            elif path.startswith("/api/images/"):
+                filename = path.replace("/api/images/", "")
+                # Try media/images first, then generated_photos
+                abs_path = os.path.join(media_images_dir, filename)
+                if not os.path.exists(abs_path):
+                    abs_path = os.path.join(generated_photos_dir, filename)
+                if not os.path.exists(abs_path):
+                    # Search all media subdirs
+                    media_dir = os.path.dirname(media_images_dir)
+                    for subdir in os.listdir(media_dir):
+                        candidate = os.path.join(media_dir, subdir, filename)
+                        if os.path.exists(candidate):
+                            abs_path = candidate
+                            break
+                logger.debug(f"[DOCS] Resolved API path to: '{abs_path}'")
+                    
+            else:
+                # Resolve relative to hecos root
+                clean_path = path.lstrip("/\\")
+                
+                if clean_path.startswith("media/images/"):
+                    abs_path = os.path.join(root_dir, clean_path)
+                    logger.debug(f"[DOCS] Resolved media/images path to: '{abs_path}'")
+                elif clean_path.startswith("../images/"):
+                    # If a relative path is passed like ../images/file.jpg, assume it's relative to media/documents
+                    abs_path = os.path.normpath(os.path.join(root_dir, "media/documents", clean_path))
+                    # If it doesn't exist there, fallback to media_images_dir
+                    if not os.path.exists(abs_path):
+                        fallback_path = os.path.join(media_images_dir, os.path.basename(clean_path))
+                        logger.debug(f"[DOCS] Relative path {abs_path} doesn't exist, falling back to: '{fallback_path}'")
+                        abs_path = fallback_path
+                    else:
+                        logger.debug(f"[DOCS] Resolved relative path to: '{abs_path}'")
+                else:
+                    basename = os.path.basename(clean_path)
+                    abs_path = os.path.join(media_images_dir, basename)
+                    logger.debug(f"[DOCS] Resolved plain filename to: '{abs_path}'")
+
+            if abs_path:
+                # Playwright requires file:/// for absolute paths on Windows
+                file_url = "file:///" + os.path.normpath(abs_path).replace("\\", "/")
+                logger.debug(f"[DOCS] Final mapped URL for Playwright: '{file_url}'")
+                return f'{match.group(1)}{file_url}{match.group(3)}'
+            
+            logger.debug(f"[DOCS] Could not resolve path: '{path}'")
+            return match.group(0)
+
+        # Match <img src="filename.png"> or <img src='filename.png'>
+        img_pattern = r'(<img[^>]+src=["\'])(.*?)(["\'][^>]*>)'
+        html_content = re.sub(img_pattern, resolve_img_path, html_content)
+
+        # Match background-image: url('filename.png')
+        bg_pattern = r"(url\(['\"]?)(.*?)(['\"]?\))"
+        html_content = re.sub(bg_pattern, resolve_img_path, html_content)
+
+        return html_content
+
+    def _generate_pdf_from_html(self, final_html: str, pdf_output_path: str) -> str:
+        """Generates a PDF from HTML using Playwright. Returns path or error string."""
+        try:
+            from hecos.modules.browser_automation.plugin import engine
+        except ImportError:
+            return self._generate_pdf_fallback(final_html, pdf_output_path)
+
+        def _pdf_task():
+            # Make sure browser is running
+            if not engine._state.get("browser") or not engine._state["browser"].is_connected():
+                from playwright.sync_api import sync_playwright
+                if not engine._state.get("pw_instance"):
+                    engine._state["pw_instance"] = sync_playwright().start()
+                engine._state["browser"] = engine._state["pw_instance"].chromium.launch(headless=True)
+            
+            browser = engine._state["browser"]
+            context = browser.new_context()
+            page = context.new_page()
+            
+            try:
+                import tempfile
+                temp_html_path = None
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w", encoding="utf-8") as tmp:
+                    tmp.write(final_html)
+                    temp_html_path = tmp.name
+
+                file_url = "file:///" + os.path.normpath(temp_html_path).replace("\\", "/")
+                page.goto(file_url, wait_until="networkidle")
+                page.pdf(path=pdf_output_path, format="A4", print_background=True)
+            finally:
+                if temp_html_path and os.path.exists(temp_html_path):
+                    try:
+                        os.remove(temp_html_path)
+                    except Exception as e:
+                        logger.error(f"[DOCS] Failed to delete temp HTML: {e}")
+                page.close()
+                context.close()
+            return pdf_output_path
+
+        try:
+            result_path = engine._run_on_browser_thread(_pdf_task)
+            if result_path and os.path.exists(result_path):
+                return result_path
+            else:
+                logger.warning(f"[DOCS] Playwright returned path but file not found: {result_path}")
+                return None
+        except Exception as e:
+            logger.error(f"[DOCS] Playwright PDF generation failed: {e}")
+            return None
+
+    def _generate_pdf_fallback(self, final_html: str, pdf_output_path: str) -> str:
+        """Tries standalone Playwright when browser_automation module is unavailable."""
+        try:
+            from playwright.sync_api import sync_playwright
+            import tempfile
+
+            with sync_playwright() as pw:
+                browser = pw.chromium.launch(headless=True)
+                context = browser.new_context()
+                page = context.new_page()
+                
+                temp_html_path = None
+                try:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w", encoding="utf-8") as tmp:
+                        tmp.write(final_html)
+                        temp_html_path = tmp.name
+
+                    file_url = "file:///" + os.path.normpath(temp_html_path).replace("\\", "/")
+                    page.goto(file_url, wait_until="networkidle")
+                    page.pdf(path=pdf_output_path, format="A4", print_background=True)
+                finally:
+                    if temp_html_path and os.path.exists(temp_html_path):
+                        try:
+                            os.remove(temp_html_path)
+                        except Exception:
+                            pass
+                    page.close()
+                    context.close()
+                    browser.close()
+
+            if os.path.exists(pdf_output_path):
+                return pdf_output_path
+            return None
+        except ImportError:
+            logger.error("[DOCS] Playwright is not installed. PDF generation unavailable. "
+                         "Install with: pip install playwright && python -m playwright install chromium")
+            return None
+        except Exception as e:
+            logger.error(f"[DOCS] Standalone Playwright PDF failed: {e}")
+            return None
+
     def generate_pdf(self, html_content: str = None, template_id: str = None, template_vars: str = None, filename: str = None) -> str:
         """
-        Generates a PDF from HTML content or a template.
-        Uses the Playwright engine from browser_automation core module.
+        Generates a document (HTML + PDF) from raw HTML content or a template.
+        Returns the absolute paths of the generated files.
+
+        WORKFLOW: When creating a document with AI-generated images:
+        1. First generate all images with IMAGE_GEN__generate_image
+        2. Collect the filenames from [[IMG:filename]] tags in the results
+        3. Then call this tool with html_content using <img src="/api/images/FILENAME"> for each image
+        4. ALWAYS complete the full workflow — never stop after generating images without producing the document.
+
+        :param html_content: Raw HTML content to convert to a document. Use <img src="/api/images/FILENAME"> for generated images.
+        :param template_id: The ID of an existing template to render.
+        :param template_vars: JSON string of variables to inject into the template.
+        :param filename: Desired name for the output file (e.g. 'magazine.pdf'). A random name is used if omitted.
         """
         if not html_content and not template_id:
             return "Error: You must provide either html_content or template_id."
@@ -66,87 +266,7 @@ class DocsTools:
                 return "Error: Generated HTML is empty."
                 
             # 1.b Resolve local image links for Playwright
-            # Convert <img src="file.png"> and background-image urls
-            import re
-            root_dir = os.path.dirname(os.path.dirname(self.plugin_dir))
-            media_images_dir = os.path.join(root_dir, "media", "images")
-            
-            def resolve_img_path(match):
-                path = match.group(2)
-                logger.debug(f"[DOCS] Regex intercepted image path: '{path}'")
-                
-                # Ignore remote and data URIs
-                if path.startswith(("http://", "https://", "data:", "file://")):
-                    logger.debug(f"[DOCS] Skipping remote/data/file URI: '{path}'")
-                    return match.group(0)
-
-                abs_path = None
-                
-                # Check if it's already an absolute Windows path
-                if os.path.isabs(path) and (path.startswith("C:\\") or path.startswith("C:/")):
-                    logger.debug(f"[DOCS] Path is already absolute Windows path: '{path}'")
-                    abs_path = path
-                    # Even if it's absolute, verify it exists; if not, try finding by basename in media/images
-                    if not os.path.exists(abs_path):
-                        fallback = os.path.join(media_images_dir, os.path.basename(path))
-                        if os.path.exists(fallback):
-                            logger.debug(f"[DOCS] Absolute path not found, found by basename in media/images: '{fallback}'")
-                            abs_path = fallback
-                        else:
-                            # Search all subdirs of media/
-                            media_dir = os.path.dirname(media_images_dir)
-                            basename = os.path.basename(path)
-                            for subdir in os.listdir(media_dir):
-                                candidate = os.path.join(media_dir, subdir, basename)
-                                if os.path.exists(candidate):
-                                    logger.debug(f"[DOCS] Found image in media/{subdir}: '{candidate}'")
-                                    abs_path = candidate
-                                    break
-                
-                # Check for API paths
-                elif path.startswith("/api/images/"):
-                    filename = path.replace("/api/images/", "")
-                    abs_path = os.path.join(media_images_dir, filename)
-                    logger.debug(f"[DOCS] Resolved API path to: '{abs_path}'")
-                    
-                else:
-                    # Resolve relative to hecos root
-                    clean_path = path.lstrip("/\\")
-                    
-                    if clean_path.startswith("media/images/"):
-                        abs_path = os.path.join(root_dir, clean_path)
-                        logger.debug(f"[DOCS] Resolved media/images path to: '{abs_path}'")
-                    elif clean_path.startswith("../images/"):
-                        # If a relative path is passed like ../images/file.jpg, assume it's relative to media/documents
-                        abs_path = os.path.normpath(os.path.join(root_dir, "media/documents", clean_path))
-                        # If it doesn't exist there, fallback to media_images_dir
-                        if not os.path.exists(abs_path):
-                            fallback_path = os.path.join(media_images_dir, os.path.basename(clean_path))
-                            logger.debug(f"[DOCS] Relative path {abs_path} doesn't exist, falling back to: '{fallback_path}'")
-                            abs_path = fallback_path
-                        else:
-                            logger.debug(f"[DOCS] Resolved relative path to: '{abs_path}'")
-                    else:
-                        basename = os.path.basename(clean_path)
-                        abs_path = os.path.join(media_images_dir, basename)
-                        logger.debug(f"[DOCS] Resolved plain filename to: '{abs_path}'")
-
-                if abs_path:
-                    # Playwright requires file:/// for absolute paths on Windows
-                    file_url = "file:///" + os.path.normpath(abs_path).replace("\\", "/")
-                    logger.debug(f"[DOCS] Final mapped URL for Playwright: '{file_url}'")
-                    return f'{match.group(1)}{file_url}{match.group(3)}'
-                
-                logger.debug(f"[DOCS] Could not resolve path: '{path}'")
-                return match.group(0)
-
-            # Match <img src="filename.png"> or <img src='filename.png'>
-            img_pattern = r'(<img[^>]+src=["\'])(.*?)(["\'][^>]*>)'
-            final_html = re.sub(img_pattern, resolve_img_path, final_html)
-
-            # Match background-image: url('filename.png')
-            bg_pattern = r'(url\([\'"]?)(.*?)([\'"]?\))'
-            final_html = re.sub(bg_pattern, resolve_img_path, final_html)
+            final_html = self._resolve_image_paths(final_html)
 
             # Get generation defaults
             gen_html = True
@@ -179,60 +299,23 @@ class DocsTools:
                     with open(html_output_path, "w", encoding="utf-8") as f:
                         f.write(final_html)
                     results.append(f"HTML: {html_output_path}")
+                    logger.info(f"[DOCS] HTML saved: {html_output_path}")
                 except Exception as e:
                     logger.error(f"[DOCS] Failed to save HTML: {e}")
 
             if gen_pdf:
-                # 3. Call browser_automation engine
-                try:
-                    from hecos.modules.browser_automation.plugin import engine
-                except ImportError:
-                    return "Error: browser_automation core module is required for PDF generation."
-
-                # Define the task to run on the browser thread
-                def _pdf_task():
-                    # Make sure browser is running. 
-                    # Since we are on the browser thread, we can't call public engine.launch() which uses queue.
-                    if not engine._state.get("browser") or not engine._state["browser"].is_connected():
-                        # We must launch manually since engine._launch_internal() might be broken
-                        from playwright.sync_api import sync_playwright
-                        if not engine._state.get("pw_instance"):
-                            engine._state["pw_instance"] = sync_playwright().start()
-                        engine._state["browser"] = engine._state["pw_instance"].chromium.launch(headless=True)
-                    
-                    # Get the browser and create a new temporary page directly
-                    browser = engine._state["browser"]
-                    context = browser.new_context()
-                    page = context.new_page()
-                    
-                    try:
-                        import tempfile
-                        temp_html_path = None
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w", encoding="utf-8") as tmp:
-                            tmp.write(final_html)
-                            temp_html_path = tmp.name
-
-                        # Use file:/// URL for the temp file to allow local file access
-                        file_url = "file:///" + os.path.normpath(temp_html_path).replace("\\", "/")
-                        page.goto(file_url, wait_until="networkidle")
-                        
-                        # Generate PDF with backgrounds and standard margins
-                        page.pdf(path=pdf_output_path, format="A4", print_background=True)
-                    finally:
-                        if temp_html_path and os.path.exists(temp_html_path):
-                            try:
-                                os.remove(temp_html_path)
-                            except Exception as e:
-                                logger.error(f"[DOCS] Failed to delete temp HTML: {e}")
-                        page.close()
-                        context.close()
-                    return pdf_output_path
-
-                # Run the task on the dedicated browser thread
-                result_path = engine._run_on_browser_thread(_pdf_task)
-                
-                logger.info(f"[DOCS] Generated PDF successfully at {result_path}")
-                results.append(f"PDF: {result_path}")
+                pdf_result = self._generate_pdf_from_html(final_html, pdf_output_path)
+                if pdf_result and os.path.exists(pdf_result):
+                    logger.info(f"[DOCS] Generated PDF successfully at {pdf_result}")
+                    results.append(f"PDF: {pdf_result}")
+                else:
+                    warning = (
+                        "⚠️ PDF generation failed (Playwright unavailable or Chromium not installed). "
+                        "The HTML version was saved successfully. "
+                        "To enable PDF: pip install playwright && python -m playwright install chromium"
+                    )
+                    results.append(warning)
+                    logger.warning(f"[DOCS] {warning}")
 
             if not results:
                 return "Error: Neither HTML nor PDF generation was enabled, or generation failed."
@@ -240,10 +323,259 @@ class DocsTools:
             return "\n".join(results)
 
         except Exception as e:
-            logger.error(f"[DOCS] Failed to generate PDF: {e}")
+            logger.error(f"[DOCS] Failed to generate document: {e}")
             import traceback
             logger.error(traceback.format_exc())
-            return f"Error generating PDF: {str(e)}"
+            return f"Error generating document: {str(e)}"
+
+    def list_documents(self, search: str = "") -> str:
+        """
+        Lists all documents in the documents folder. Optionally filters by name.
+        Use this to find existing documents before modifying them.
+        Returns filename, size, and a preview of each matching document.
+        :param search: Optional search term to filter documents by filename.
+        """
+        try:
+            output_dir = self._get_save_dir()
+            files = []
+            
+            for f in sorted(os.listdir(output_dir)):
+                full_path = os.path.join(output_dir, f)
+                if not os.path.isfile(full_path):
+                    continue
+                if search and search.lower() not in f.lower():
+                    continue
+                
+                size_bytes = os.path.getsize(full_path)
+                size_str = f"{size_bytes / 1024:.1f} KB" if size_bytes > 1024 else f"{size_bytes} bytes"
+                
+                preview = ""
+                if f.endswith(".html"):
+                    try:
+                        with open(full_path, "r", encoding="utf-8", errors="replace") as fh:
+                            content = fh.read()
+                        # Extract title if present
+                        title_match = re.search(r'<title>(.*?)</title>', content, re.IGNORECASE)
+                        title = title_match.group(1) if title_match else ""
+                        
+                        # Count images
+                        img_count = len(re.findall(r'<img\s', content, re.IGNORECASE))
+                        
+                        # Extract text preview (strip HTML tags)
+                        text = re.sub(r'<style[^>]*>.*?</style>', '', content, flags=re.DOTALL | re.IGNORECASE)
+                        text = re.sub(r'<[^>]+>', ' ', text)
+                        text = re.sub(r'\s+', ' ', text).strip()[:200]
+                        
+                        preview_parts = []
+                        if title:
+                            preview_parts.append(f"Title: {title}")
+                        preview_parts.append(f"Images: {img_count}")
+                        preview_parts.append(f"Preview: {text}...")
+                        preview = " | ".join(preview_parts)
+                    except Exception:
+                        preview = "(unable to read preview)"
+                
+                files.append(f"📄 **{f}** ({size_str})\n   {preview}" if preview else f"📄 **{f}** ({size_str})")
+            
+            if not files:
+                return f"No documents found in {output_dir}" + (f" matching '{search}'" if search else "") + "."
+            
+            header = f"📁 Documents in `{output_dir}`"
+            if search:
+                header += f" (filter: '{search}')"
+            return f"{header}\n\n" + "\n\n".join(files)
+            
+        except Exception as e:
+            logger.error(f"[DOCS] Failed to list documents: {e}")
+            return f"Error listing documents: {e}"
+
+    def modify_document(self, file_path: str, operation: str, content: str, target_selector: str = "") -> str:
+        """
+        Modifies an existing HTML document in media/documents.
+        After modification, the PDF is automatically regenerated.
+
+        Operations:
+        - 'add_images': Inserts <img> tags. If target_selector is set, replaces matching placeholder text.
+          Otherwise appends images to the first .gallery, .photo-gallery, or main container.
+        - 'replace_section': Replaces the element matching target_selector with the new content.
+        - 'change_layout': Applies CSS layout changes. content should be CSS rules (e.g. '.gallery { grid-template-columns: repeat(3, 1fr); }').
+        - 'append': Appends content before </body>.
+        - 'patch': Finds target_selector as literal text in the HTML and replaces it with content.
+
+        :param file_path: Path or filename of the document to modify. If just a name, searches in media/documents.
+        :param operation: One of: add_images, replace_section, change_layout, append, patch
+        :param content: The HTML content, images, or CSS to inject.
+        :param target_selector: CSS selector (for replace_section) or text pattern (for patch/add_images) to target.
+        """
+        try:
+            # Resolve file path
+            resolved_path = self._resolve_document_path(file_path)
+            if not resolved_path:
+                return f"Error: Document not found: '{file_path}'. Use list_documents to see available files."
+
+            # Read existing content
+            with open(resolved_path, "r", encoding="utf-8", errors="replace") as f:
+                original_html = f.read()
+
+            modified_html = original_html
+            operation = operation.lower().strip()
+
+            if operation == "add_images":
+                modified_html = self._op_add_images(modified_html, content, target_selector)
+
+            elif operation == "replace_section":
+                if not target_selector:
+                    return "Error: replace_section requires target_selector (CSS selector to find the element to replace)."
+                modified_html = self._op_replace_section(modified_html, content, target_selector)
+
+            elif operation == "change_layout":
+                modified_html = self._op_change_layout(modified_html, content)
+
+            elif operation == "append":
+                modified_html = self._op_append(modified_html, content)
+
+            elif operation == "patch":
+                if not target_selector:
+                    return "Error: patch requires target_selector (the exact text to find and replace)."
+                if target_selector not in original_html:
+                    preview = original_html[:400].replace('\n', '↵')
+                    return f"Error: Text to replace not found in document. File starts with: {preview}..."
+                modified_html = original_html.replace(target_selector, content, 1)
+
+            else:
+                return f"Error: Unknown operation '{operation}'. Use: add_images, replace_section, change_layout, append, or patch."
+
+            if modified_html == original_html:
+                return "Warning: No changes were made to the document. The target may not have been found."
+
+            # Save modified HTML
+            with open(resolved_path, "w", encoding="utf-8") as f:
+                f.write(modified_html)
+            logger.info(f"[DOCS] Document modified: {resolved_path}")
+
+            results = [f"✅ Document modified successfully: {resolved_path}"]
+
+            # Auto-regenerate PDF
+            pdf_path = resolved_path.rsplit(".", 1)[0] + ".pdf"
+            resolved_for_pdf = self._resolve_image_paths(modified_html)
+            pdf_result = self._generate_pdf_from_html(resolved_for_pdf, pdf_path)
+            if pdf_result and os.path.exists(pdf_result):
+                results.append(f"✅ PDF regenerated: {pdf_result}")
+            else:
+                results.append("⚠️ PDF regeneration failed (Playwright unavailable). HTML was updated successfully.")
+
+            return "\n".join(results)
+
+        except Exception as e:
+            logger.error(f"[DOCS] Failed to modify document: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return f"Error modifying document: {e}"
+
+    def _resolve_document_path(self, file_path: str) -> str:
+        """Resolves a document path — accepts absolute paths, relative names, or partial matches."""
+        # Absolute path
+        if os.path.isabs(file_path) and os.path.exists(file_path):
+            return file_path
+
+        output_dir = self._get_save_dir()
+
+        # Exact filename match
+        if not file_path.endswith((".html", ".pdf")):
+            file_path_html = file_path + ".html"
+        else:
+            file_path_html = file_path
+
+        exact = os.path.join(output_dir, os.path.basename(file_path_html))
+        if os.path.exists(exact):
+            return exact
+
+        # Fuzzy search
+        search_term = os.path.basename(file_path).replace(".html", "").replace(".pdf", "").lower()
+        for f in os.listdir(output_dir):
+            if search_term in f.lower() and f.endswith(".html"):
+                return os.path.join(output_dir, f)
+
+        return None
+
+    def _op_add_images(self, html: str, content: str, target_selector: str) -> str:
+        """Adds images to the document. content is HTML with <img> tags."""
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html, "html.parser")
+
+            # If target_selector is specified, find and replace placeholder text
+            if target_selector:
+                # Find elements containing the target text
+                for element in soup.find_all(string=lambda text: text and target_selector in text):
+                    new_content = BeautifulSoup(content, "html.parser")
+                    element.replace_with(new_content)
+                return str(soup)
+
+            # Otherwise, find the gallery container and append
+            gallery = (
+                soup.select_one(".gallery") or
+                soup.select_one(".photo-gallery") or
+                soup.select_one(".photo-grid") or
+                soup.select_one("main") or
+                soup.find("body")
+            )
+            if gallery:
+                new_content = BeautifulSoup(content, "html.parser")
+                gallery.append(new_content)
+            
+            return str(soup)
+        except ImportError:
+            # Fallback without BeautifulSoup — append before </body>
+            return self._op_append(html, content)
+
+    def _op_replace_section(self, html: str, content: str, selector: str) -> str:
+        """Replaces the first element matching the CSS selector with new content."""
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html, "html.parser")
+            target = soup.select_one(selector)
+            if target:
+                new_content = BeautifulSoup(content, "html.parser")
+                target.replace_with(new_content)
+                return str(soup)
+            else:
+                logger.warning(f"[DOCS] CSS selector '{selector}' not found in document.")
+                return html
+        except ImportError:
+            return html
+
+    def _op_change_layout(self, html: str, css_content: str) -> str:
+        """Injects CSS rules into the document's <style> block."""
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html, "html.parser")
+            
+            style_tag = soup.find("style")
+            if style_tag:
+                style_tag.string = (style_tag.string or "") + "\n/* --- Layout Override --- */\n" + css_content
+            else:
+                head = soup.find("head")
+                if not head:
+                    head = soup.new_tag("head")
+                    if soup.html:
+                        soup.html.insert(0, head)
+                new_style = soup.new_tag("style")
+                new_style.string = css_content
+                head.append(new_style)
+            
+            return str(soup)
+        except ImportError:
+            # Fallback: inject style tag via regex
+            if "</head>" in html:
+                return html.replace("</head>", f"<style>\n{css_content}\n</style>\n</head>")
+            return f"<style>\n{css_content}\n</style>\n" + html
+
+    def _op_append(self, html: str, content: str) -> str:
+        """Appends content before </body>."""
+        if "</body>" in html:
+            return html.replace("</body>", f"\n{content}\n</body>")
+        return html + f"\n{content}"
 
 
 # ── Module-level singleton (required by the Hecos plugin dispatcher) ──────────

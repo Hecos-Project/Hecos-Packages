@@ -1,0 +1,24 @@
+{
+  "id": "4fbe7e30-3733-46a8-8b5f-82ead66b74df",
+  "name": "Invoice / Receipt",
+  "channel": "email",
+  "description": "Professional invoice template.",
+  "subject": "Invoice #{{ invoice_id }} from {{ company }}",
+  "body_html": "<p>Invoice <b>#{{ invoice_id }}</b> is attached. Please pay by <b>{{ due_date }}</b>.</p>",
+  "body_text": "Invoice #{{ invoice_id }} is attached. Please pay by {{ due_date }}.",
+  "header": "",
+  "footer": "",
+  "tags": [
+    "starter",
+    "billing"
+  ],
+  "is_default": false,
+  "variables": [
+    "invoice_id",
+    "company",
+    "due_date"
+  ],
+  "created_at": "2026-08-15T02:56:10.049413+00:00",
+  "updated_at": "2026-08-15T02:56:10.049413+00:00",
+  "versions": []
+}

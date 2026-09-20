@@ -5,8 +5,8 @@ readme = "README.md"
 tag = "TEMPLATES"
 type = "library"
 description = "Centralized template manager for communications (Mail, WhatsApp, Telegram)."
-version = "1.0.2"
-author = "Hecos"
+version = "1.3.2"
+author = "Antonio Meloni"
 pip_isolation = "shared"
 target_dir = "hpm/libraries"
 plugin_dir = "."
@@ -17,6 +17,7 @@ dependencies = [
     "premailer",
 ]
 signature = "F68uxPUkVaVG6jupYDfXwhwJM8JaniLWVYSR/JY82wjSKzva1+BOcGV1sGnPExYrgb7GtG8z1uaAScy2gQZMBQ=="
+license = "GPL-V3"
 
 [config_panel]
 tab_id = "templates"
@@ -134,12 +135,10 @@ description = "The new raw HTML and CSS content."
 
 [file_hashes]
 "api.py" = "cf3b568c17cdb95528a32a0c0281d55686dd37c470abb87439d9031bff4c67d8"
-"default_templates.json" = "cdb71c748542a6aeb15003635a5d5fc5fbb7c521f8709cd5b0c3d973d5883fe2"
 "main.py" = "feb569306746703226a4dfdeb35269be1ceaea06c6aeb61cf735853cf08086bb"
 "README.md" = "b4e899f164dc54bbbefa97f6e55db9a814dbd03b3e8c4c5d90d09c301aeccb02"
 "store.py" = "aac17e09b6ecbaac4050f7a40c6f692ec2658c43a9f84a7ce019aa11b4b23955"
 "web/routes.py" = "0482b45c385ac88e66b5d30b7321894700550cab356b67e29eb40ec34da83e4b"
-"web/assets/js/templates.js" = "434e4039146aeaadd127d19c46a0f5b73387938954cfd2ec4b6552b00334d3c7"
 "web/templates/config_templates.html" = "ec97c0ba39f3e73bb097dfd5c40f8b966aeced3114c8b13e967eca87f4abaf17"
 "web/templates/modules/templates/_templates_logic.html" = "1420d85c2d86ed29608ca81e40d11dff2c27464d4a2d9368dc8e9403d4c7007a"
 "web/templates/modules/templates/_templates_styles.html" = "7238b787a9cee10cc1814909229880f338c7791d5d3a0939b0b129fdb7c556eb"

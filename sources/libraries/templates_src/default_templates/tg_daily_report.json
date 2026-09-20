@@ -1,0 +1,28 @@
+{
+  "id": "781637f6-31e2-4150-b5c9-039dfcd1b575",
+  "name": "TG — Daily Report",
+  "channel": "telegram",
+  "description": "Daily summary report.",
+  "subject": "",
+  "body_html": "",
+  "body_text": "📊 *Daily Report — {{ date }}*\n\n📈 New users: {{ new_users }}\n💰 Revenue: {{ revenue }}\n📦 Orders: {{ orders }}\n🎫 Support tickets: {{ tickets }}\n\n{{ notes }}",
+  "header": "",
+  "footer": "— {{ company }} Analytics",
+  "tags": [
+    "starter",
+    "reports"
+  ],
+  "is_default": false,
+  "variables": [
+    "date",
+    "new_users",
+    "revenue",
+    "orders",
+    "tickets",
+    "notes",
+    "company"
+  ],
+  "created_at": "2026-08-15T02:56:10.049413+00:00",
+  "updated_at": "2026-08-15T02:56:10.049413+00:00",
+  "versions": []
+}

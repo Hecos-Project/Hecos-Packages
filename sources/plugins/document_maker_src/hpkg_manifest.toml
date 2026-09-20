@@ -1,10 +1,10 @@
 id = "document_maker"
 manifest_version = "1"
 name = "Document Maker"
-version = "1.0.0"
+version = "1.1.0"
 author = "Hecos Team / Antonio Meloni"
 license = "GPL-3.0"
-description = "Generates PDF documents from HTML templates using Playwright."
+description = "Generates and modifies PDF/HTML documents from templates or raw HTML using Playwright."
 type = "plugin"
 pip_isolation = "shared"
 target_dir = "hpm"
@@ -16,11 +16,14 @@ readme_url = ""
 dependencies = [
     "templates",
 ]
+pip_requirements = [
+    "beautifulsoup4",
+]
 tag = "DOCS"
 lazy_load = true
 is_class_based = true
 api_routes_file = "web/routes.py"
-signature = "NYYCMueDx0y61yF90Wlerh2RsONLARuqLbyFB/F+6X870VhGORm7SXEfJ7JcJZKRW5k77sTlSnO0vyDegD4WAg=="
+signature = ""
 
 [[slash_commands]]
 id = "pdf"
@@ -33,10 +36,14 @@ description = "Genera un documento PDF da un testo HTML o da un template Hecos"
 
 [commands]
 generate_pdf = "Converts HTML content to a PDF file and returns the file path."
+list_documents = "Lists all documents in the documents folder."
+modify_document = "Modifies an existing HTML document (add images, replace sections, change layout)."
 
 [capabilities]
 llm_tools = [
     "generate_pdf",
+    "list_documents",
+    "modify_document",
 ]
 slash_commands = [
     "/pdf",
@@ -48,7 +55,7 @@ has_config_panel = true
 has_api_routes = true
 has_system_calls = false
 syscall_notes = ""
-notes = "Uses Playwright via the browser_automation core module."
+notes = "Uses Playwright via the browser_automation core module. Falls back to standalone Playwright if browser_automation is unavailable."
 
 [config_panel]
 tab_id = "docs"
@@ -65,18 +72,18 @@ type = "function"
 
 [tool_schema.function]
 name = "DOCS__generate_pdf"
-description = "Generates a PDF document from a template ID or raw HTML. Use this when the user asks to create a magazine, report, or PDF document. Returns the absolute path of the generated PDF file, which can then be attached to emails or sent via messengers."
+description = "Generates a PDF and HTML document from a template ID or raw HTML. Use this when the user asks to create a magazine, report, booklet, fotoromanzo, or any PDF/HTML document. Returns the absolute path of the generated files.\n\nIMPORTANT WORKFLOW: When creating a document with AI-generated images:\n1. FIRST generate all images using IMAGE_GEN__generate_image\n2. Collect the filenames from the [[IMG:filename]] tags in the results\n3. THEN call DOCS__generate_pdf with html_content containing <img src=\"/api/images/FILENAME\"> for each generated image\n4. ALWAYS complete the full workflow — NEVER stop after generating images without producing the document.\n\nIf Playwright/Chromium is not available, the HTML version will still be saved successfully."
 
 [tool_schema.function.parameters]
 type = "object"
 
 [tool_schema.function.parameters.properties.html_content]
 type = "string"
-description = "Optional: Raw HTML content to convert to PDF. If provided, template_id is ignored."
+description = "Optional: Raw HTML content to convert to a document. Use <img src=\"/api/images/FILENAME\"> for generated images. If provided, template_id is ignored."
 
 [tool_schema.function.parameters.properties.template_id]
 type = "string"
-description = "Optional: The ID of an existing template to render and convert to PDF."
+description = "Optional: The ID of an existing template to render and convert."
 
 [tool_schema.function.parameters.properties.template_vars]
 type = "string"
@@ -84,12 +91,49 @@ description = "Optional: JSON string of variables to inject into the template if
 
 [tool_schema.function.parameters.properties.filename]
 type = "string"
-description = "Optional: Desired name for the output PDF (e.g. 'magazine.pdf'). If not provided, a random UUID name will be used."
+description = "Optional: Desired name for the output file (e.g. 'magazine.pdf'). If not provided, a random UUID name will be used."
 
-[file_hashes]
-"main.py" = "16290a21db4c273116a29d6db6c7eb2b7fe376e3d8b35cb99155664d3a0c5289"
-"manifest.json" = "d18dea9ce92a11b4f28cd927060deae53852b326f0849a7bb7f622e3aaf5a1b2"
-"README.md" = "fd962b26def13eaa1c923cfa543be642195740de33c8f951a207c9e691f064b7"
-"web/routes.py" = "cc72261c1ab3f19d185be9792dedccb132bcc9eacbdcceef729f7ca3f31455d6"
-"web/static/js/document_maker_panel.js" = "e0e7be2261036f2a511f1c3394a76ed2001bd61eba7a0b6b8b5edca6d9820c53"
-"web/templates/config_document_maker.html" = "184da999dbeec7a27b6c3fb3a0cecaed8ecfab602f69f1f54bab28e3b6038dce"
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "DOCS__list_documents"
+description = "Lists all documents in the documents folder with their size and a content preview. Use this BEFORE modify_document to find the correct file path and understand the document structure."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.search]
+type = "string"
+description = "Optional: Search term to filter documents by filename (e.g. 'jun' or 'fotoromanzo')."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "DOCS__modify_document"
+description = "Modifies an existing HTML document in media/documents. The PDF is automatically regenerated after modification.\n\nUse this when the user asks to:\n- Add missing photos to an existing document\n- Change the layout (e.g. from 2 to 3 columns)\n- Replace or update a section of text\n- Append new content to a document\n\nTIP: Call DOCS__list_documents first to find the document and understand its structure."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "file_path",
+    "operation",
+    "content",
+]
+
+[tool_schema.function.parameters.properties.file_path]
+type = "string"
+description = "Path or filename of the document to modify. Can be a full path, a filename (e.g. 'jun_magic_preview.html'), or a partial name (e.g. 'jun_magic')."
+
+[tool_schema.function.parameters.properties.operation]
+type = "string"
+description = "The modification operation: 'add_images' (insert images into gallery or at placeholder), 'replace_section' (replace element by CSS selector), 'change_layout' (inject CSS rules), 'append' (add before </body>), 'patch' (find-and-replace text)."
+
+[tool_schema.function.parameters.properties.content]
+type = "string"
+description = "The HTML content, <img> tags, or CSS rules to inject depending on the operation."
+
+[tool_schema.function.parameters.properties.target_selector]
+type = "string"
+description = "Optional: For 'replace_section' a CSS selector (e.g. '.gallery', '#section2'). For 'patch' the exact text to find. For 'add_images' an optional placeholder text to replace with images."

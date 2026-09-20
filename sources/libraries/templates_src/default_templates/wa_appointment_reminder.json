@@ -1,0 +1,26 @@
+{
+  "id": "b90f56d7-84a8-4472-95be-15349df3ebe3",
+  "name": "WA — Appointment Reminder",
+  "channel": "whatsapp",
+  "description": "Appointment reminder.",
+  "subject": "",
+  "body_html": "",
+  "body_text": "Hi {{ name }},\n\nThis is a friendly reminder about your appointment:\n\n📅 Date: {{ date }}\n🕐 Time: {{ time }}\n📍 Location: {{ location }}\n\nPlease reply to confirm or reschedule.",
+  "header": "📋 Appointment Reminder",
+  "footer": "— {{ company }}",
+  "tags": [
+    "starter",
+    "reminders"
+  ],
+  "is_default": false,
+  "variables": [
+    "name",
+    "date",
+    "time",
+    "location",
+    "company"
+  ],
+  "created_at": "2026-08-15T02:56:10.049413+00:00",
+  "updated_at": "2026-08-15T02:56:10.049413+00:00",
+  "versions": []
+}

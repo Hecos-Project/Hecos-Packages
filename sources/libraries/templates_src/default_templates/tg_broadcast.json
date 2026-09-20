@@ -1,0 +1,25 @@
+{
+  "id": "61447d46-fcae-44df-80cf-f64db48a17ce",
+  "name": "TG — Broadcast",
+  "channel": "telegram",
+  "description": "Broadcast message for announcements.",
+  "subject": "",
+  "body_html": "",
+  "body_text": "📢 *{{ title }}*\n\n{{ message }}\n\n🔗 More info: {{ link }}",
+  "header": "",
+  "footer": "— {{ company }}",
+  "tags": [
+    "starter",
+    "announcements"
+  ],
+  "is_default": false,
+  "variables": [
+    "title",
+    "message",
+    "link",
+    "company"
+  ],
+  "created_at": "2026-08-15T02:56:10.049413+00:00",
+  "updated_at": "2026-08-15T02:56:10.049413+00:00",
+  "versions": []
+}

@@ -1,0 +1,26 @@
+{
+  "id": "fb38c92c-ec01-477c-994e-039ebb6c0879",
+  "name": "WA — Order Update",
+  "channel": "whatsapp",
+  "description": "Order status update.",
+  "subject": "",
+  "body_html": "",
+  "body_text": "Hi {{ name }},\n\nYour order #{{ order_id }} has been updated:\n\n📦 Status: {{ status }}\n🚚 Tracking: {{ tracking_url }}\n\nThank you for your purchase!",
+  "header": "📦 Order Update",
+  "footer": "— {{ company }}",
+  "tags": [
+    "starter",
+    "ecommerce"
+  ],
+  "is_default": false,
+  "variables": [
+    "name",
+    "order_id",
+    "status",
+    "tracking_url",
+    "company"
+  ],
+  "created_at": "2026-08-15T02:56:10.049413+00:00",
+  "updated_at": "2026-08-15T02:56:10.049413+00:00",
+  "versions": []
+}

@@ -1,0 +1,23 @@
+{
+  "id": "064b1736-a21e-4d2a-a647-ced51208b0d3",
+  "name": "TG — Welcome",
+  "channel": "telegram",
+  "description": "Welcome message for Telegram.",
+  "subject": "",
+  "body_html": "",
+  "body_text": "👋 Welcome, {{ name }}!\n\nI am the {{ company }} bot. Here is what I can do:\n\n/help — Show available commands\n/status — Check your account\n/support — Contact us\n\nType /help to get started!",
+  "header": "🤖 {{ company }} Bot",
+  "footer": "",
+  "tags": [
+    "starter",
+    "bot"
+  ],
+  "is_default": false,
+  "variables": [
+    "name",
+    "company"
+  ],
+  "created_at": "2026-08-15T02:56:10.049413+00:00",
+  "updated_at": "2026-08-15T02:56:10.049413+00:00",
+  "versions": []
+}

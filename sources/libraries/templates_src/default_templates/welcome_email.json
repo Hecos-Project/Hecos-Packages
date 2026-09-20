@@ -1,0 +1,23 @@
+{
+  "id": "854e34e6-c70f-4f8d-8d1a-9b2d0b946ea2",
+  "name": "Welcome Email",
+  "channel": "email",
+  "description": "A clean welcome email for new users or customers.",
+  "subject": "Welcome to {{ company }}!",
+  "body_html": "<h1>Welcome!</h1><p>Hi {{ name }},</p><p>Welcome to <b>{{ company }}</b>! We are excited to have you on board.</p>",
+  "body_text": "Hi {{ name }},\n\nWelcome to {{ company }}! We are excited to have you on board.",
+  "header": "",
+  "footer": "",
+  "tags": [
+    "starter",
+    "onboarding"
+  ],
+  "is_default": false,
+  "variables": [
+    "company",
+    "name"
+  ],
+  "created_at": "2026-08-15T02:56:10.049413+00:00",
+  "updated_at": "2026-08-15T02:56:10.049413+00:00",
+  "versions": []
+}

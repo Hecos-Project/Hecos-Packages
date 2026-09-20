@@ -1,0 +1,27 @@
+{
+  "id": "0af561cf-3f4a-4746-990a-e753a7984711",
+  "name": "TG — Alert Notification",
+  "channel": "telegram",
+  "description": "System alert template.",
+  "subject": "",
+  "body_html": "",
+  "body_text": "⚠️ *Alert: {{ alert_type }}*\n\n{{ message }}\n\n🕐 Time: {{ timestamp }}\n📊 Severity: {{ severity }}\n\nAction required: {{ action }}",
+  "header": "",
+  "footer": "— {{ company }} Monitoring",
+  "tags": [
+    "starter",
+    "alerts"
+  ],
+  "is_default": false,
+  "variables": [
+    "alert_type",
+    "message",
+    "timestamp",
+    "severity",
+    "action",
+    "company"
+  ],
+  "created_at": "2026-08-15T02:56:10.049413+00:00",
+  "updated_at": "2026-08-15T02:56:10.049413+00:00",
+  "versions": []
+}

@@ -1,0 +1,37 @@
+{
+  "id": "00000000-0000-0000-0000-000000000010",
+  "name": "Fotoromanzo Classico — 4 Foto con Didascalia",
+  "channel": "document",
+  "description": "Template fotoromanzo classico con griglia 2 colonne, 4 slot foto con didascalie stilizzate, copertina, e footer. Perfetto per photobook e storie fotografiche. Variabili: title, subtitle, description, img1-img4, caption1-caption4, footer_text.",
+  "subject": "{{ title }}",
+  "body_html": "<!DOCTYPE html>\n<html lang=\"it\">\n<head>\n<meta charset=\"UTF-8\">\n<title>{{ title }}</title>\n<style>\n  :root {\n    --bg-primary: #0f0f1a;\n    --bg-card: rgba(255,255,255,0.06);\n    --accent: #ff6b6b;\n    --accent-alt: #ffd93d;\n    --text-main: #f0f0f0;\n    --text-muted: rgba(255,255,255,0.55);\n    --font-display: 'Georgia', 'Playfair Display', serif;\n    --font-body: 'Segoe UI', 'Inter', sans-serif;\n  }\n  * { margin: 0; padding: 0; box-sizing: border-box; }\n  body {\n    font-family: var(--font-body);\n    background: var(--bg-primary);\n    color: var(--text-main);\n    min-height: 100vh;\n  }\n  /* ── COVER ─────────────────────────── */\n  .cover {\n    text-align: center;\n    padding: 60px 40px 40px;\n    background: linear-gradient(180deg, #1a1a3e 0%, var(--bg-primary) 100%);\n    border-bottom: 3px solid var(--accent);\n  }\n  .cover h1 {\n    font-family: var(--font-display);\n    font-size: 3.2em;\n    text-transform: uppercase;\n    letter-spacing: 6px;\n    text-shadow: 2px 2px 6px rgba(0,0,0,0.5);\n    background: linear-gradient(135deg, var(--accent), var(--accent-alt));\n    -webkit-background-clip: text;\n    -webkit-text-fill-color: transparent;\n    background-clip: text;\n  }\n  .cover .subtitle {\n    font-style: italic;\n    color: var(--accent-alt);\n    margin-top: 12px;\n    font-size: 1.2em;\n    letter-spacing: 2px;\n  }\n  .cover .edition {\n    margin-top: 8px;\n    font-size: 0.85em;\n    color: var(--text-muted);\n    letter-spacing: 3px;\n    text-transform: uppercase;\n  }\n  /* ── DESCRIPTION ────────────────────── */\n  .description {\n    max-width: 800px;\n    margin: 40px auto;\n    padding: 0 40px;\n    text-align: justify;\n    font-size: 1.15em;\n    line-height: 1.9;\n    color: rgba(255,255,255,0.8);\n  }\n  .description::first-letter {\n    font-family: var(--font-display);\n    font-size: 3em;\n    float: left;\n    line-height: 0.8;\n    margin-right: 10px;\n    color: var(--accent);\n  }\n  /* ── GALLERY ────────────────────────── */\n  .gallery {\n    display: grid;\n    grid-template-columns: repeat(2, 1fr);\n    gap: 28px;\n    max-width: 900px;\n    margin: 40px auto;\n    padding: 0 40px;\n  }\n  .photo-card {\n    background: var(--bg-card);\n    border-radius: 16px;\n    overflow: hidden;\n    box-shadow: 0 12px 28px rgba(0,0,0,0.4);\n    transition: transform 0.3s ease, box-shadow 0.3s ease;\n    border: 1px solid rgba(255,255,255,0.05);\n  }\n  .photo-card:hover {\n    transform: translateY(-4px) scale(1.02);\n    box-shadow: 0 20px 40px rgba(0,0,0,0.5);\n  }\n  .photo-card img {\n    width: 100%;\n    height: 380px;\n    object-fit: cover;\n    display: block;\n  }\n  .caption {\n    padding: 18px 16px;\n    font-size: 0.95em;\n    line-height: 1.6;\n    color: var(--accent);\n    font-weight: 600;\n    text-align: center;\n    background: linear-gradient(180deg, rgba(255,107,107,0.15), transparent);\n    border-top: 2px solid rgba(255,107,107,0.2);\n  }\n  .caption .scene-num {\n    display: block;\n    font-size: 0.75em;\n    letter-spacing: 3px;\n    text-transform: uppercase;\n    color: var(--accent-alt);\n    margin-bottom: 6px;\n  }\n  /* ── FOOTER ─────────────────────────── */\n  .doc-footer {\n    text-align: center;\n    padding: 40px;\n    font-size: 0.85em;\n    color: var(--text-muted);\n    border-top: 1px solid rgba(255,255,255,0.08);\n    margin-top: 40px;\n  }\n  @media print {\n    body { background: #0f0f1a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }\n    .photo-card { break-inside: avoid; }\n  }\n</style>\n</head>\n<body>\n  <div class=\"cover\">\n    <h1>{{ title }}</h1>\n    <div class=\"subtitle\">{{ subtitle }}</div>\n    <div class=\"edition\">Edizione Speciale</div>\n  </div>\n\n  <div class=\"description\">\n    <p>{{ description }}</p>\n  </div>\n\n  <div class=\"gallery\">\n    <div class=\"photo-card\">\n      <img src=\"{{ img1 }}\" alt=\"Scena 1\">\n      <div class=\"caption\"><span class=\"scene-num\">Scena I</span>{{ caption1 }}</div>\n    </div>\n    <div class=\"photo-card\">\n      <img src=\"{{ img2 }}\" alt=\"Scena 2\">\n      <div class=\"caption\"><span class=\"scene-num\">Scena II</span>{{ caption2 }}</div>\n    </div>\n    <div class=\"photo-card\">\n      <img src=\"{{ img3 }}\" alt=\"Scena 3\">\n      <div class=\"caption\"><span class=\"scene-num\">Scena III</span>{{ caption3 }}</div>\n    </div>\n    <div class=\"photo-card\">\n      <img src=\"{{ img4 }}\" alt=\"Scena 4\">\n      <div class=\"caption\"><span class=\"scene-num\">Scena IV</span>{{ caption4 }}</div>\n    </div>\n  </div>\n\n  <div class=\"doc-footer\">\n    <p>{{ footer_text }}</p>\n  </div>\n</body>\n</html>",
+  "body_text": "",
+  "header": "",
+  "footer": "",
+  "tags": [
+    "fotoromanzo",
+    "photobook",
+    "magazine",
+    "photo-story",
+    "document",
+    "4-photos"
+  ],
+  "is_default": true,
+  "variables": [
+    "title",
+    "subtitle",
+    "description",
+    "img1",
+    "img2",
+    "img3",
+    "img4",
+    "caption1",
+    "caption2",
+    "caption3",
+    "caption4",
+    "footer_text"
+  ],
+  "created_at": "2026-09-19T06:00:00.000000+00:00",
+  "updated_at": "2026-09-19T06:00:00.000000+00:00",
+  "versions": []
+}

@@ -1,0 +1,7 @@
+{
+    "pdf_save_path": "media/documents",
+    "generate_html": true,
+    "generate_pdf": true,
+    "override_enabled": true,
+    "override_directive": "CRITICAL WORKFLOW RULE: When the user requests a document with generated images, you MUST complete the ENTIRE workflow in a single conversation turn. After generating images with IMAGE_GEN__generate_image, you MUST call DOCS__generate_pdf with the full HTML content using <img src='/api/images/FILENAME'> tags where FILENAME is the exact filename returned by IMAGE_GEN. NEVER stop after image generation — always produce the final document. If you need to modify an existing document, use DOCS__modify_document instead. CRITICAL: NEVER use EXECUTOR to run shell commands to create PDFs or convert HTML to PDF. ALWAYS use DOCS__generate_pdf."
+}

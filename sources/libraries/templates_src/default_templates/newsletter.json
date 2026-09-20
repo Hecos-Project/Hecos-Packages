@@ -1,0 +1,101 @@
+{
+  "id": "cb82a70f-d170-4d2f-97d9-8de9d55e3ef7",
+  "name": "Newsletter",
+  "channel": "email",
+  "description": "Monthly newsletter template.",
+  "subject": "{{ company }} Newsletter — {{ month }} {{ year }}",
+  "body_html": "<body><h2>Hello!</h2><p>Here is our latest news:</p><blockquote>{{ news_summary }}</blockquote><p>Cheers,<br/>The <b>{{ company }}</b> Team</p></body>",
+  "body_text": "* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}",
+  "header": "",
+  "footer": "",
+  "tags": [
+    "starter",
+    "newsletter"
+  ],
+  "is_default": false,
+  "variables": [
+    "company",
+    "month",
+    "year",
+    "news_summary"
+  ],
+  "created_at": "2026-08-15T02:56:10.049413+00:00",
+  "updated_at": "2026-08-15T03:02:48.200596+00:00",
+  "versions": [
+    {
+      "id": "cb82a70f-d170-4d2f-97d9-8de9d55e3ef7",
+      "name": "Newsletter",
+      "channel": "email",
+      "description": "Monthly newsletter template.",
+      "subject": "{{ company }} Newsletter — {{ month }} {{ year }}",
+      "body_html": "<h2>Hello!</h2><p>Here is our latest news:</p><blockquote>{{ news_summary }}</blockquote><p>Cheers,<br>The <b>{{ company }}</b> Team</p>",
+      "body_text": "Hello!\n\nHere is our latest news:\n{{ news_summary }}\n\nCheers,\nThe {{ company }} Team",
+      "header": "",
+      "footer": "",
+      "tags": [
+        "starter",
+        "newsletter"
+      ],
+      "is_default": false,
+      "variables": [
+        "company",
+        "month",
+        "year",
+        "news_summary"
+      ],
+      "created_at": "2026-08-15T02:56:10.049413+00:00",
+      "updated_at": "2026-08-15T02:56:10.049413+00:00",
+      "snapshot_at": "2026-08-15T03:02:28.825202+00:00"
+    },
+    {
+      "id": "cb82a70f-d170-4d2f-97d9-8de9d55e3ef7",
+      "name": "Newsletter",
+      "channel": "email",
+      "description": "Monthly newsletter template.",
+      "subject": "{{ company }} Newsletter — {{ month }} {{ year }}",
+      "body_html": "<body><h2>Hello!</h2><p>Here is our latest news:</p><blockquote>{{ news_summary }}</blockquote><p>Cheers,<br/>The <b>{{ company }}</b> Team</p></body>",
+      "body_text": "* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}",
+      "header": "",
+      "footer": "",
+      "tags": [
+        "starter",
+        "newsletter"
+      ],
+      "is_default": false,
+      "variables": [
+        "company",
+        "month",
+        "year",
+        "news_summary"
+      ],
+      "created_at": "2026-08-15T02:56:10.049413+00:00",
+      "updated_at": "2026-08-15T03:02:28.825202+00:00",
+      "snapshot_at": "2026-08-15T03:02:36.577058+00:00"
+    },
+    {
+      "id": "cb82a70f-d170-4d2f-97d9-8de9d55e3ef7",
+      "name": "Newsletter",
+      "channel": "email",
+      "description": "Monthly newsletter template.",
+      "subject": "{{ company }} Newsletter — {{ month }} {{ year }}",
+      "body_html": "<body><h2>Hello!</h2><p>Here is our latest news:</p><blockquote>{{ news_summary }}</blockquote><p>Cheers,<br/>The <b>{{ company }}</b> Team</p></body>",
+      "body_text": "* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}",
+      "header": "",
+      "footer": "",
+      "tags": [
+        "starter",
+        "newsletter"
+      ],
+      "is_default": false,
+      "variables": [
+        "company",
+        "month",
+        "year",
+        "news_summary"
+      ],
+      "created_at": "2026-08-15T02:56:10.049413+00:00",
+      "updated_at": "2026-08-15T03:02:36.578057+00:00",
+      "snapshot_at": "2026-08-15T03:02:48.200596+00:00"
+    }
+  ]
+}

@@ -38,6 +38,7 @@
         ('whatsapp', 'fab fa-whatsapp',        'WhatsApp'),
         ('telegram', 'fab fa-telegram-plane',  'Telegram'),
         ('discord',  'fab fa-discord',         'Discord'),
+        ('document', 'fas fa-file-image',       'Documents'),
       ] %}
 
       {% for ch_id, ch_icon, ch_label in channels %}
@@ -112,14 +113,19 @@
       <div id="tpl-editor-section" style="display:none" class="tpl-editor">
 
         <!-- Header bar -->
-        <div class="tpl-editor-topbar">
-          <div class="tpl-editor-title">
+        <div class="tpl-editor-topbar" style="flex-direction: column; align-items: flex-start; gap: 12px;">
+          <div class="tpl-editor-title" style="width: 100%;">
             <button class="tpl-btn tpl-sidebar-toggle" onclick="document.querySelector('.tpl-layout').classList.toggle('hide-sidebar')" title="Toggle Templates Sidebar">
               <i class="fas fa-bars"></i>
             </button>
             <i class="fas fa-pen-nib"></i>
             <input id="tpl-edit-name" type="text" placeholder="Template name…"
                    class="tpl-name-input" oninput="TemplateManager._dirty=true">
+            <div id="tpl-id-badge" style="display:none; align-items:center; gap:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px; margin-left:10px;">
+                <span style="font-size:0.7rem; color:var(--muted)">ID:</span>
+                <span class="tpl-id-value" style="font-size:0.75rem; font-family:monospace; color:var(--accent);"></span>
+                <i class="fas fa-copy" style="font-size:0.7rem; cursor:pointer; color:var(--muted);" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent); window.toast && window.toast('success', 'Template ID copiato!')" title="Copia ID"></i>
+            </div>
           </div>
           <div class="tpl-editor-actions">
             <select id="tpl-edit-channel" class="tpl-channel-select"
@@ -128,6 +134,7 @@
               <option value="whatsapp">💬 WhatsApp</option>
               <option value="telegram">📨 Telegram</option>
               <option value="discord">🔵 Discord</option>
+              <option value="document">📄 Document</option>
             </select>
             <button class="tpl-btn tpl-btn-save" onclick="TemplateManager.saveTemplate()">
               <i class="fas fa-save"></i> Save
@@ -185,42 +192,14 @@
               <input id="tpl-edit-subject" type="text" placeholder="Email subject… {{ nome }}"
                      oninput="TemplateManager._dirty=true">
             </div>
-
-
-            <div class="tpl-grapes-wrapper">
-              <div id="tpl-grapes-loading" class="tpl-grapes-loading">
-                <i class="fas fa-spinner fa-spin"></i> Loading template editor…
-              </div>
-              <!-- GrapeJS panels -->
-              <div class="tpl-grapes-layout">
-                <!-- TOP BAR: Blocks -->
-                <div class="tpl-grapes-topbar-wrapper" style="display: flex; gap: 10px; align-items: center; background: rgba(8,8,20,0.6); padding-right: 10px; border-bottom: 1px solid rgba(255,255,255,0.06);">
-                  <div id="tpl-grapes-blocks" class="tpl-grapes-blocks-top" style="flex: 1;"></div>
-                  <button class="tpl-btn" onclick="document.querySelector('.tpl-grapes-layout').classList.toggle('hide-right-panel')" title="Toggle Properties Panel" style="white-space: nowrap;">
-                    <i class="fas fa-sliders-h"></i> <span style="margin-left:5px">Properties</span>
-                  </button>
-                  <button class="tpl-btn" onclick="document.querySelector('.tpl-layout').classList.toggle('hide-sidebar'); document.querySelector('.tpl-grapes-layout').classList.toggle('hide-right-panel');" title="Toggle Fullscreen Canvas" style="white-space: nowrap;">
-                    <i class="fas fa-expand"></i> <span style="margin-left:5px">Focus Mode</span>
-                  </button>
-                </div>
-                <div class="tpl-grapes-main">
-                  <div id="tpl-grapes-container" class="tpl-grapes-canvas"></div>
-                  <div class="tpl-grapes-right">
-                    <div id="tpl-grapes-styles" class="tpl-grapes-panel"></div>
-                    <div id="tpl-grapes-traits" class="tpl-grapes-panel"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
-
 
           <!-- WHATSAPP editor -->
           <div id="tpl-editor-whatsapp" style="display:none">
             <div class="tpl-messenger-info">
               <i class="fab fa-whatsapp" style="color:#25d366"></i>
-              WhatsApp supports <strong>plain text</strong> only.
-              Use <code>*bold*</code>, <code>_italic_</code>, <code>~strikethrough~</code>.
+              <div>WhatsApp supports <strong>plain text</strong> only.
+              Use <code>*bold*</code>, <code>_italic_</code>, <code>~strikethrough~</code>.</div>
             </div>
             {% include 'modules/templates/_templates_textarea.html' %}
           </div>
@@ -229,7 +208,7 @@
           <div id="tpl-editor-telegram" style="display:none">
             <div class="tpl-messenger-info">
               <i class="fab fa-telegram-plane" style="color:#2ca5e0"></i>
-              Telegram supports <strong>Markdown</strong>: <code>**bold**</code>, <code>_italic_</code>, inline links.
+              <div>Telegram supports <strong>Markdown</strong>: <code>**bold**</code>, <code>_italic_</code>, inline links.</div>
             </div>
             {% include 'modules/templates/_templates_textarea.html' %}
           </div>
@@ -238,11 +217,48 @@
           <div id="tpl-editor-discord" style="display:none">
             <div class="tpl-messenger-info">
               <i class="fab fa-discord" style="color:#7289da"></i>
-              Discord supports <strong>Markdown</strong>: <code>**bold**</code>, <code>*italic*</code>, <code>`code`</code>.
+              <div>Discord supports <strong>Markdown</strong>: <code>**bold**</code>, <code>*italic*</code>, <code>`code`</code>.</div>
             </div>
             {% include 'modules/templates/_templates_textarea.html' %}
           </div>
-        </div>
+
+          <!-- DOCUMENT editor -->
+          <div id="tpl-editor-document" style="display:none">
+            <div class="tpl-field" style="margin-bottom: 8px;">
+              <label>Subject / Titolo</label>
+              <input id="tpl-edit-subject-doc" type="text" placeholder="Titolo documento… {{ title }}"
+                     oninput="TemplateManager._dirty=true">
+            </div>
+          </div>
+
+          <!-- ── Shared GrapeJS visual editor (Email + Document) ─── -->
+          <!-- Shown/hidden by _setChannel() in templates.js -->
+          <div id="tpl-grapes-wrapper-shared" class="tpl-grapes-wrapper" style="display:none">
+            <div id="tpl-grapes-loading" class="tpl-grapes-loading">
+              <i class="fas fa-spinner fa-spin"></i> Loading visual editor…
+            </div>
+            <div class="tpl-grapes-layout">
+              <!-- TOP BAR: Blocks -->
+              <div class="tpl-grapes-topbar-wrapper" style="display: flex; gap: 10px; align-items: center; background: rgba(8,8,20,0.6); padding-right: 10px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <div id="tpl-grapes-blocks" class="tpl-grapes-blocks-top" style="flex: 1;"></div>
+                <button class="tpl-btn" onclick="document.querySelector('.tpl-grapes-layout').classList.toggle('hide-right-panel')" title="Toggle Properties Panel" style="white-space: nowrap;">
+                  <i class="fas fa-sliders-h"></i> <span style="margin-left:5px">Properties</span>
+                </button>
+                <button class="tpl-btn" onclick="document.querySelector('.tpl-layout').classList.toggle('hide-sidebar'); document.querySelector('.tpl-grapes-layout').classList.toggle('hide-right-panel');" title="Toggle Fullscreen Canvas" style="white-space: nowrap;">
+                  <i class="fas fa-expand"></i> <span style="margin-left:5px">Focus Mode</span>
+                </button>
+              </div>
+              <div class="tpl-grapes-main">
+                <div id="tpl-grapes-container" class="tpl-grapes-canvas"></div>
+                <div class="tpl-grapes-right">
+                  <div id="tpl-grapes-styles" class="tpl-grapes-panel"></div>
+                  <div id="tpl-grapes-traits" class="tpl-grapes-panel"></div>
+                </div>
+              </div>
+            </div>
+          </div><!-- /#tpl-grapes-wrapper-shared -->
+
+        </div><!-- /#tpl-tab-content -->
 
         <!-- ─ Tab: Variables ───────────────────────────────────────── -->
         <div id="tpl-tab-variables" class="tpl-tab-pane" style="display:none">
@@ -300,4 +316,14 @@
 
 </div><!-- /#tab-templates -->
 
-
+<script>
+  // Auto-init TemplateManager when this HTML is injected into the DOM by the Hecos lazy loader
+  if (window.TemplateManager) {
+    window.TemplateManager.init();
+  } else {
+    // If JS is still loading, wait a bit
+    setTimeout(() => {
+      if (window.TemplateManager) window.TemplateManager.init();
+    }, 500);
+  }
+</script>

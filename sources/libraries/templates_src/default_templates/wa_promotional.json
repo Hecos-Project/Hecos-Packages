@@ -1,0 +1,27 @@
+{
+  "id": "0d50c6fd-dc49-48b1-9fa8-ade286f17f0c",
+  "name": "WA — Promotional",
+  "channel": "whatsapp",
+  "description": "Promotional message.",
+  "subject": "",
+  "body_html": "",
+  "body_text": "Hey {{ name }}! 🎁\n\nWe have a special offer just for you:\n\n🏷️ Use code: {{ promo_code }}\n💰 Get {{ discount }}% off your next purchase!\n\nOffer valid until {{ expiry_date }}.\n\nShop now: {{ shop_url }}",
+  "header": "🎁 Special Offer",
+  "footer": "— {{ company }}",
+  "tags": [
+    "starter",
+    "marketing"
+  ],
+  "is_default": false,
+  "variables": [
+    "name",
+    "promo_code",
+    "discount",
+    "expiry_date",
+    "shop_url",
+    "company"
+  ],
+  "created_at": "2026-08-15T02:56:10.049413+00:00",
+  "updated_at": "2026-08-15T02:56:10.049413+00:00",
+  "versions": []
+}

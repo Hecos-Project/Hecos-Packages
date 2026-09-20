@@ -1,0 +1,129 @@
+{
+    "tag": "TEMPLATES",
+    "name": "Templates",
+    "version": "1.0.2",
+    "description": "Centralized template manager for communications (Mail, WhatsApp, Telegram).",
+    "lazy_load": true,
+    "is_class_based": true,
+    "commands": {},
+    "tool_schema": [
+        {
+            "type": "function",
+            "function": {
+                "name": "TEMPLATES__list_templates",
+                "description": "List all available templates. Channel is optional (e.g. 'whatsapp', 'email', 'telegram', 'discord').",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "channel": {
+                            "type": "string",
+                            "description": "Optional channel filter."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "TEMPLATES__render_template",
+                "description": "Render a template by replacing its variables and combining header/body/footer. Use this before sending a message if you want to use a specific template.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "template_id_or_name",
+                        "variables"
+                    ],
+                    "properties": {
+                        "template_id_or_name": {
+                            "type": "string",
+                            "description": "The ID or the exact Name of the template."
+                        },
+                        "variables": {
+                            "type": "string",
+                            "description": "A JSON string of variables to inject."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "TEMPLATES__create_template",
+                "description": "Creates a new custom HTML/CSS template from scratch. You can include Jinja variables (e.g. {{ title }}). Returns the ID of the new template.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "name",
+                        "body_html"
+                    ],
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "The name of the new template."
+                        },
+                        "body_html": {
+                            "type": "string",
+                            "description": "The raw HTML and CSS content of the template."
+                        },
+                        "subject": {
+                            "type": "string",
+                            "description": "Optional default subject for the email."
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Optional description of what the template is for."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "TEMPLATES__update_template",
+                "description": "Updates the HTML content of an existing template.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "template_id",
+                        "body_html"
+                    ],
+                    "properties": {
+                        "template_id": {
+                            "type": "string",
+                            "description": "The ID of the template to update."
+                        },
+                        "body_html": {
+                            "type": "string",
+                            "description": "The new raw HTML and CSS content."
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "slash_commands": [],
+    "icon": "fa-file-alt",
+    "config_panel": {
+        "tab_id": "templates",
+        "tab_label": "Templates",
+        "tab_icon": "fa-file-alt",
+        "template_file": "web/templates/config_templates.html",
+        "js_file": "web/assets/js/templates_core.js",
+        "js_files": [
+            "web/assets/js/templates_core.js",
+            "web/assets/js/templates_sidebar.js",
+            "web/assets/js/templates_editor.js",
+            "web/assets/js/templates_grapejs.js",
+            "web/assets/js/templates_history.js",
+            "web/assets/js/templates_import_export.js"
+        ],
+        "css_file": null,
+        "category": "CONNETTIVITÀ",
+        "api_routes_file": "web/routes.py",
+        "config_api_get": "/hecos/api/plugins/templates/config",
+        "config_api_post": "/hecos/api/plugins/templates/config"
+    }
+}

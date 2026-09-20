@@ -94,6 +94,7 @@ class TemplateTools:
         if rendered.get("body_text"):
             parts.append(rendered["body_text"])
         if rendered.get("footer"):
+            parts.append(rendered["footer"])
         return "\n\n".join(parts)
 
     def create_template(self, name: str, body_html: str, subject: str = "", description: str = "") -> str:

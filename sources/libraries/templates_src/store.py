@@ -47,7 +47,7 @@ _STORE    = os.path.join(_DATA_DIR, "templates.json")
 MAX_VERSIONS = 20
 
 # Valid channel identifiers
-VALID_CHANNELS = {"email", "whatsapp", "telegram", "discord"}
+VALID_CHANNELS = {"email", "whatsapp", "telegram", "discord", "document"}
 
 
 # ── Internal helpers ───────────────────────────────────────────────────────────
@@ -58,24 +58,58 @@ def _now_iso() -> str:
 
 
 def _load() -> dict:
-    """Load the full templates store from disk. Returns {} on missing/invalid file."""
-    if not os.path.exists(_STORE):
-        default_tpl = os.path.join(os.path.dirname(os.path.abspath(__file__)), "default_templates.json")
-        if os.path.exists(default_tpl):
+    """Load the full templates store from disk. Returns {} on missing/invalid file.
+    
+    On first run (no DB): seeds the DB from all JSON files in default_templates/.
+    On subsequent runs: loads the DB and transparently merges any NEW default templates
+    whose ID is not yet in the DB, so additions to default_templates/ are picked up
+    automatically without wiping user-customized data.
+    """
+    import glob as _glob
+
+    default_tpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "default_templates")
+
+    def _load_defaults() -> dict:
+        """Load all default template files from the directory."""
+        defaults = {}
+        if not os.path.exists(default_tpl_dir):
+            return defaults
+        for filepath in _glob.glob(os.path.join(default_tpl_dir, "*.json")):
             try:
-                with open(default_tpl, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                _save(data)
-                return data
+                with open(filepath, "r", encoding="utf-8") as f:
+                    tpl = json.load(f)
+                if "id" in tpl:
+                    defaults[tpl["id"]] = tpl
             except Exception as e:
-                logger.warning(f"[TEMPLATES] Could not load default templates: {e}")
-        return {}
+                logger.warning(f"[TEMPLATES] Failed to load default {filepath}: {e}")
+        return defaults
+
+    if not os.path.exists(_STORE):
+        # Fresh install: seed the DB from all default files
+        data = _load_defaults()
+        if data:
+            _save(data)
+        return data
+
+    # DB exists: load it
     try:
         with open(_STORE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
     except Exception as e:
         logger.warning(f"[TEMPLATES] Could not read store: {e}")
         return {}
+
+    # Merge any new default templates whose ID is not yet in the DB
+    defaults = _load_defaults()
+    added = [tpl_id for tpl_id, tpl in defaults.items() if tpl_id not in data]
+    if added:
+        for tpl_id in added:
+            data[tpl_id] = defaults[tpl_id]
+        logger.info(f"[TEMPLATES] Auto-merged {len(added)} new default template(s): {added}")
+        _save(data)
+
+    return data
+
 
 
 def _save(data: dict) -> bool:

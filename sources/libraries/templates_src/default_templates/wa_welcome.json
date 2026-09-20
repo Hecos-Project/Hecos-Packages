@@ -1,0 +1,23 @@
+{
+  "id": "3e5efb64-9dfc-422c-b173-4611d5fb512e",
+  "name": "WA — Welcome",
+  "channel": "whatsapp",
+  "description": "Welcome message for new contacts on WhatsApp.",
+  "subject": "",
+  "body_html": "",
+  "body_text": "Hi {{ name }}! 👋\n\nWelcome to {{ company }}. We are happy to have you on board!\n\nFeel free to reply to this message if you need anything.",
+  "header": "🎉 Welcome!",
+  "footer": "— {{ company }} Team",
+  "tags": [
+    "starter",
+    "onboarding"
+  ],
+  "is_default": false,
+  "variables": [
+    "name",
+    "company"
+  ],
+  "created_at": "2026-08-15T02:56:10.049413+00:00",
+  "updated_at": "2026-08-15T02:56:10.049413+00:00",
+  "versions": []
+}

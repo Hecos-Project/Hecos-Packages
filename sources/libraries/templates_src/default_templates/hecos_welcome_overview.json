@@ -1,0 +1,76 @@
+{
+  "id": "992eef74-5cd1-42b9-b0da-cf84b22bbb31",
+  "name": "Hecos — Welcome & Overview",
+  "channel": "email",
+  "description": "Magazine-style welcome email explaining Hecos capabilities.",
+  "subject": "Benvenuto nel mondo di Hecos! 🚀",
+  "body_html": "<body id=\"iihl\"><div id=\"iblr\"><!-- HEADER --><div id=\"iyqn\"><!-- Logo Banner --><img src=\"/assets/Hecos_Logo_Banner.png\" alt=\"Hecos Banner\" id=\"iagq\"/></div><!-- MAIN CONTENT --><div id=\"ipdy\"><h1 id=\"irj5a\">Cosa hai tra le mani?</h1><p id=\"itl7u\">\n            Ciao <strong>{{ nome_utente }}</strong>,<br/><br/>\n            Ti diamo il benvenuto in <strong>Hecos</strong>, il tuo nuovo assistente e orchestratore personale. Non si tratta di un semplice programma, ma di un vero e proprio compagno digitale con cui puoi interagire in modo naturale.\n        </p><!-- MAGAZINE SECTION WITH FLOATED IMAGE --><div id=\"i8gqd\"><img src=\"/assets/Urania%209800.jpg\" alt=\"Urania in Teatro\" id=\"ialal\"/><h2 id=\"ipyk2\">Un Nuovo Modo di Dialogare</h2><p id=\"imc0j\">\n                Con Hecos, puoi <em>parlare e dialogare</em> in modo fluido, esattamente come faresti con un essere umano. L'interfaccia avanzata e le capacità cognitive integrate permettono ad Hecos di comprendere il contesto, imparare dalle tue abitudini e fornirti risposte precise ed elaborate.\n            </p><p id=\"irk2l\">Che tu stia organizzando il tuo lavoro o cercando informazioni complesse, l'intelligenza dietro questo sistema è pronta ad assisterti. L'immagine qui a fianco, <em id=\"izkkj\">Urania 9800 in teatro</em>, simboleggia l'arte della comunicazione e della messa in scena delle tue idee.\n            </p><div id=\"iqb88\"></div></div><div id=\"ikmhm\"><h3 id=\"iok21\">Automazioni Infinite</h3><p id=\"i6tsv\">\n                Crea automazioni su misura, gestisci dispositivi, invia email o messaggi WhatsApp senza muovere un dito. Tutto è orchestrato in background, permettendoti di concentrarti su ciò che conta davvero.\n            </p></div><div id=\"i75r8\"><a href=\"{{ link_guida }}\" id=\"iz7i9\">Scopri di più</a></div></div><!-- FOOTER --><div id=\"ihx3h\"><img src=\"/assets/Hecos_Logo_SQR_NBG_LogoOnly.png\" alt=\"Hecos Icon\" id=\"iyeux\"/><p id=\"ilknz\">Questo messaggio è stato generato automaticamente da Hecos.</p><p id=\"isgvm\">© {{ anno }} Hecos System. Tutti i diritti riservati.</p></div></div></body>",
+  "body_text": "* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}#iblr{font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;max-width:650px;margin:0 auto;background-color:#ffffff;color:#333333;overflow:hidden;border:1px solid #e0e0e0;border-radius:8px;}#iyqn{background-color:#0f0f15;padding:20px;text-align:center;border-bottom:3px solid #ff4a4a;}#iagq{max-width:100%;height:auto;display:block;margin:0 auto;}#ipdy{padding:30px;line-height:1.6;}#irj5a{font-size:28px;font-weight:700;color:#111111;margin-top:0;margin-bottom:20px;}#itl7u{font-size:16px;margin-bottom:25px;}#i8gqd{margin-bottom:30px;clear:both;}#ialal{float:left;width:250px;margin-right:20px;margin-bottom:10px;border-radius:6px;box-shadow:0 4px 10px rgba(0,0,0,0.1);}#ipyk2{font-size:20px;font-weight:600;color:#ff4a4a;margin-top:0;}#imc0j{font-size:15px;text-align:justify;}#irk2l{font-size:15px;text-align:justify;}#iqb88{clear:both;}#ikmhm{background-color:#f8f9fa;border-left:4px solid #ff4a4a;padding:15px 20px;margin-bottom:25px;}#iok21{margin-top:0;font-size:18px;color:#111;}#i6tsv{margin:0;font-size:15px;}#i75r8{text-align:center;margin-top:40px;margin-bottom:20px;}#iz7i9{background-color:#ff4a4a;color:#ffffff;text-decoration:none;padding:12px 30px;border-radius:30px;font-weight:bold;font-size:16px;display:inline-block;}#ihx3h{background-color:#f1f1f1;padding:20px;text-align:center;font-size:12px;color:#777777;border-top:1px solid #e5e5e5;}#iyeux{width:40px;height:40px;margin-bottom:10px;opacity:0.7;}#ilknz{margin:0;}#isgvm{margin:5px 0 0 0;}",
+  "header": "",
+  "footer": "",
+  "tags": [
+    "hecos",
+    "welcome",
+    "magazine"
+  ],
+  "is_default": false,
+  "variables": [
+    "nome_utente",
+    "link_guida",
+    "anno"
+  ],
+  "created_at": "2026-08-15T03:45:35.111024+00:00",
+  "updated_at": "2026-08-15T06:33:27.823001+00:00",
+  "versions": [
+    {
+      "id": "992eef74-5cd1-42b9-b0da-cf84b22bbb31",
+      "name": "Hecos — Welcome & Overview",
+      "channel": "email",
+      "description": "Magazine-style welcome email explaining Hecos capabilities.",
+      "subject": "Benvenuto nel mondo di Hecos! 🚀",
+      "body_html": "\n<div style=\"font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff; color: #333333; overflow: hidden; border: 1px solid #e0e0e0; border-radius: 8px;\">\n    \n    <!-- HEADER -->\n    <div style=\"background-color: #0f0f15; padding: 20px; text-align: center; border-bottom: 3px solid #ff4a4a;\">\n        <!-- Logo Banner -->\n        <img src=\"/assets/Hecos_Logo_Banner.png\" alt=\"Hecos Banner\" style=\"max-width: 100%; height: auto; display: block; margin: 0 auto;\">\n    </div>\n    \n    <!-- MAIN CONTENT -->\n    <div style=\"padding: 30px; line-height: 1.6;\">\n        <h1 style=\"font-size: 28px; font-weight: 700; color: #111111; margin-top: 0; margin-bottom: 20px;\">Cosa hai tra le mani?</h1>\n        <p style=\"font-size: 16px; margin-bottom: 25px;\">\n            Ciao <strong>{{ nome_utente }}</strong>,<br><br>\n            Ti diamo il benvenuto in <strong>Hecos</strong>, il tuo nuovo assistente e orchestratore personale. Non si tratta di un semplice programma, ma di un vero e proprio compagno digitale con cui puoi interagire in modo naturale.\n        </p>\n\n        <!-- MAGAZINE SECTION WITH FLOATED IMAGE -->\n        <div style=\"margin-bottom: 30px; clear: both;\">\n            <img src=\"/assets/Urania%209800.jpg\" alt=\"Urania in Teatro\" style=\"float: left; width: 250px; margin-right: 20px; margin-bottom: 10px; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);\">\n            <h2 style=\"font-size: 20px; font-weight: 600; color: #ff4a4a; margin-top: 0;\">Un Nuovo Modo di Dialogare</h2>\n            <p style=\"font-size: 15px; text-align: justify;\">\n                Con Hecos, puoi <em>parlare e dialogare</em> in modo fluido, esattamente come faresti con un essere umano. L'interfaccia avanzata e le capacità cognitive integrate permettono ad Hecos di comprendere il contesto, imparare dalle tue abitudini e fornirti risposte precise ed elaborate.\n            </p>\n            <p style=\"font-size: 15px; text-align: justify;\">\n                Che tu stia organizzando il tuo lavoro o cercando informazioni complesse, l'intelligenza dietro questo sistema è pronta ad assisterti. L'immagine qui a fianco, <em>Urania in teatro</em>, simboleggia l'arte della comunicazione e della messa in scena delle tue idee.\n            </p>\n            <div style=\"clear: both;\"></div>\n        </div>\n\n        <div style=\"background-color: #f8f9fa; border-left: 4px solid #ff4a4a; padding: 15px 20px; margin-bottom: 25px;\">\n            <h3 style=\"margin-top: 0; font-size: 18px; color: #111;\">Automazioni Infinite</h3>\n            <p style=\"margin: 0; font-size: 15px;\">\n                Crea automazioni su misura, gestisci dispositivi, invia email o messaggi WhatsApp senza muovere un dito. Tutto è orchestrato in background, permettendoti di concentrarti su ciò che conta davvero.\n            </p>\n        </div>\n\n        <div style=\"text-align: center; margin-top: 40px; margin-bottom: 20px;\">\n            <a href=\"{{ link_guida }}\" style=\"background-color: #ff4a4a; color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 30px; font-weight: bold; font-size: 16px; display: inline-block;\">Scopri di più</a>\n        </div>\n    </div>\n    \n    <!-- FOOTER -->\n    <div style=\"background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #e5e5e5;\">\n        <img src=\"/assets/Hecos_Logo_SQR_NBG_LogoOnly.png\" alt=\"Hecos Icon\" style=\"width: 40px; height: 40px; margin-bottom: 10px; opacity: 0.7;\">\n        <p style=\"margin: 0;\">Questo messaggio è stato generato automaticamente da Hecos.</p>\n        <p style=\"margin: 5px 0 0 0;\">&copy; {{ anno }} Hecos System. Tutti i diritti riservati.</p>\n    </div>\n</div>\n        ",
+      "body_text": "Benvenuto in Hecos.\n\nHai tra le mani uno strumento potente. Puoi dialogare, automatizzare compiti e gestire la tua vita digitale.",
+      "header": "",
+      "footer": "",
+      "tags": [
+        "hecos",
+        "welcome",
+        "magazine"
+      ],
+      "is_default": false,
+      "variables": [
+        "nome_utente",
+        "link_guida",
+        "anno"
+      ],
+      "created_at": "2026-08-15T03:45:35.111024+00:00",
+      "updated_at": "2026-08-15T03:45:35.111024+00:00",
+      "snapshot_at": "2026-08-15T06:33:13.308538+00:00"
+    },
+    {
+      "id": "992eef74-5cd1-42b9-b0da-cf84b22bbb31",
+      "name": "Hecos — Welcome & Overview",
+      "channel": "email",
+      "description": "Magazine-style welcome email explaining Hecos capabilities.",
+      "subject": "Benvenuto nel mondo di Hecos! 🚀",
+      "body_html": "<body id=\"iihl\"><div id=\"iblr\"><!-- HEADER --><div id=\"iyqn\"><!-- Logo Banner --><img src=\"/assets/Hecos_Logo_Banner.png\" alt=\"Hecos Banner\" id=\"iagq\"/></div><!-- MAIN CONTENT --><div id=\"ipdy\"><h1 id=\"irj5a\">Cosa hai tra le mani?</h1><p id=\"itl7u\">\n            Ciao <strong>{{ nome_utente }}</strong>,<br/><br/>\n            Ti diamo il benvenuto in <strong>Hecos</strong>, il tuo nuovo assistente e orchestratore personale. Non si tratta di un semplice programma, ma di un vero e proprio compagno digitale con cui puoi interagire in modo naturale.\n        </p><!-- MAGAZINE SECTION WITH FLOATED IMAGE --><div id=\"i8gqd\"><img src=\"/assets/Urania%209800.jpg\" alt=\"Urania in Teatro\" id=\"ialal\"/><h2 id=\"ipyk2\">Un Nuovo Modo di Dialogare</h2><p id=\"imc0j\">\n                Con Hecos, puoi <em>parlare e dialogare</em> in modo fluido, esattamente come faresti con un essere umano. L'interfaccia avanzata e le capacità cognitive integrate permettono ad Hecos di comprendere il contesto, imparare dalle tue abitudini e fornirti risposte precise ed elaborate.\n            </p><p id=\"irk2l\">Che tu stia organizzando il tuo lavoro o cercando informazioni complesse, l'intelligenza dietro questo sistema è pronta ad assisterti. L'immagine qui a fianco, <em id=\"izkkj\">Urania 9800 in teatro</em>, simboleggia l'arte della comunicazione e della messa in scena delle tue idee.\n            </p><div id=\"iqb88\"></div></div><div id=\"ikmhm\"><h3 id=\"iok21\">Automazioni Infinite</h3><p id=\"i6tsv\">\n                Crea automazioni su misura, gestisci dispositivi, invia email o messaggi WhatsApp senza muovere un dito. Tutto è orchestrato in background, permettendoti di concentrarti su ciò che conta davvero.\n            </p></div><div id=\"i75r8\"><a href=\"{{ link_guida }}\" id=\"iz7i9\">Scopri di più</a></div></div><!-- FOOTER --><div id=\"ihx3h\"><img src=\"/assets/Hecos_Logo_SQR_NBG_LogoOnly.png\" alt=\"Hecos Icon\" id=\"iyeux\"/><p id=\"ilknz\">Questo messaggio è stato generato automaticamente da Hecos.</p><p id=\"isgvm\">© {{ anno }} Hecos System. Tutti i diritti riservati.</p></div></div></body>",
+      "body_text": "* { box-sizing: border-box; } body {margin: 0;}*{box-sizing:border-box;}body{margin-top:0px;margin-right:0px;margin-bottom:0px;margin-left:0px;}#iblr{font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;max-width:650px;margin:0 auto;background-color:#ffffff;color:#333333;overflow:hidden;border:1px solid #e0e0e0;border-radius:8px;}#iyqn{background-color:#0f0f15;padding:20px;text-align:center;border-bottom:3px solid #ff4a4a;}#iagq{max-width:100%;height:auto;display:block;margin:0 auto;}#ipdy{padding:30px;line-height:1.6;}#irj5a{font-size:28px;font-weight:700;color:#111111;margin-top:0;margin-bottom:20px;}#itl7u{font-size:16px;margin-bottom:25px;}#i8gqd{margin-bottom:30px;clear:both;}#ialal{float:left;width:250px;margin-right:20px;margin-bottom:10px;border-radius:6px;box-shadow:0 4px 10px rgba(0,0,0,0.1);}#ipyk2{font-size:20px;font-weight:600;color:#ff4a4a;margin-top:0;}#imc0j{font-size:15px;text-align:justify;}#irk2l{font-size:15px;text-align:justify;}#iqb88{clear:both;}#ikmhm{background-color:#f8f9fa;border-left:4px solid #ff4a4a;padding:15px 20px;margin-bottom:25px;}#iok21{margin-top:0;font-size:18px;color:#111;}#i6tsv{margin:0;font-size:15px;}#i75r8{text-align:center;margin-top:40px;margin-bottom:20px;}#iz7i9{background-color:#ff4a4a;color:#ffffff;text-decoration:none;padding:12px 30px;border-radius:30px;font-weight:bold;font-size:16px;display:inline-block;}#ihx3h{background-color:#f1f1f1;padding:20px;text-align:center;font-size:12px;color:#777777;border-top:1px solid #e5e5e5;}#iyeux{width:40px;height:40px;margin-bottom:10px;opacity:0.7;}#ilknz{margin:0;}#isgvm{margin:5px 0 0 0;}",
+      "header": "",
+      "footer": "",
+      "tags": [
+        "hecos",
+        "welcome",
+        "magazine"
+      ],
+      "is_default": false,
+      "variables": [
+        "nome_utente",
+        "link_guida",
+        "anno"
+      ],
+      "created_at": "2026-08-15T03:45:35.111024+00:00",
+      "updated_at": "2026-08-15T06:33:13.308538+00:00",
+      "snapshot_at": "2026-08-15T06:33:27.823001+00:00"
+    }
+  ]
+}
