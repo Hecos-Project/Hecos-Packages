@@ -5,20 +5,53 @@
  */
 
 // Default override directive text
-const DOCS_DEFAULT_OVERRIDE = `IMPORTANT RULES FOR DOCUMENT GENERATION:
+const DOCS_DEFAULT_OVERRIDE = `CRITICAL RULES FOR DOCUMENT GENERATION (READ CAREFULLY BEFORE GENERATING):
 
-1. RESPONSE FORMAT: After generating the file, DO NOT output raw HTML code or duplicate images/links in your chat response. The UI automatically renders a rich preview and file card. Just provide a brief confirmation message with the file path.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. RESPONSE FORMAT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+After generating the file, DO NOT output raw HTML or duplicate images/links in the chat. Just confirm with a brief message and the file path.
 
-2. FORMATTING: When creating HTML documents, ALWAYS include complete CSS styling:
-   - Use @page { size: A4; margin: 0; } for PDF pagination control.
-   - Set body { margin: 0; padding: 20mm; font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #222; } as default.
-   - Use * { box-sizing: border-box; } to prevent layout overflow.
-   - For multi-page documents, use CSS page-break-before/after to control pagination.
-   - All content must fit within A4 dimensions (210mm x 297mm).
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. PAGE STRUCTURE — MANDATORY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Wrap EVERY page in: <div class="page">...</div>
+- Each .page div MUST be exactly one A4 page worth of content — never more.
+- CSS: .page { page-break-after: always; width: 210mm; min-height: 297mm; max-height: 297mm; overflow: hidden; padding: 20mm; box-sizing: border-box; }
+- ALWAYS include: @page { size: A4; margin: 0; } body { margin: 0; font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #222; } * { box-sizing: border-box; }
 
-3. IMAGES: Previously generated images are stored in media/images/. Use <img src="/api/images/FILENAME"> to include them. If the user asks to reuse existing images, do NOT generate new ones — just reference the filenames directly. Only call IMAGE_GEN if the user explicitly asks for NEW images.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. TEXT LENGTH LIMITS PER PAGE (A4, 11pt, padding 20mm)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Usable area per page: 170mm × 257mm.
+- Full text page (no images): MAX 2500 characters
+- Page with 1 full-width image (height ~80mm): MAX 1200 characters of text
+- Page with 2 side-by-side images: MAX 800 characters of text
+- Page with a title/cover: MAX 400 characters of body text
+- NEVER put more text than the limits above — it will overflow into the next page and break the PDF layout.
 
-4. WORKFLOW: Always call DOCS__generate_pdf to produce the final document. Never stop after generating images without producing the document.`;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. IMAGE SIZING RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Full-width image: max-height: 180mm; width: 100%; object-fit: cover;
+- Half-width image: max-height: 130mm; width: 48%; object-fit: cover;
+- ALWAYS add: page-break-inside: avoid; on every image container div.
+- NEVER let an image bleed across a page boundary.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. ANTI-BREAK RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Add to CSS: h1, h2, h3 { page-break-after: avoid; } .photo-card, .photo-grid, .gallery, .card { page-break-inside: avoid; }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. IMAGES IN DOCUMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Use <img src="/api/images/FILENAME"> for generated images. Do NOT generate new images if the user asks to reuse existing ones.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. WORKFLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Always call DOCS__generate_pdf to finalize. Never stop after images without producing the document.`;
 
 
 // ── Autosave debouncer ────────────────────────────────────────────────────────

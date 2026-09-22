@@ -79,7 +79,9 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
                 pdf_path = path[:-5] + ".pdf"
                 from hecos.hpm.document_maker.main import DocsTools
                 dt = DocsTools()
-                res = dt._generate_pdf_from_html(html, pdf_path)
+                processed_html = dt._resolve_image_paths(html)
+                processed_html = dt._inject_pagination_css(processed_html)
+                res = dt._generate_pdf_from_html(processed_html, pdf_path)
                 if not res:
                     return jsonify({"ok": False, "error": "PDF regeneration failed (Playwright error)"}), 500
                     
@@ -134,6 +136,7 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
             from hecos.hpm.document_maker.main import DocsTools
             dt = DocsTools()
             resolved_html = dt._resolve_image_paths(html)
+            resolved_html = dt._inject_pagination_css(resolved_html)
             result = dt._generate_pdf_from_html(resolved_html, pdf_path)
 
             if result and os.path.exists(result):

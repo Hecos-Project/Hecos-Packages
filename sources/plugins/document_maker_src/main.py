@@ -153,7 +153,7 @@ class DocsTools:
 
                 file_url = "file:///" + os.path.normpath(temp_html_path).replace("\\", "/")
                 page.goto(file_url, wait_until="networkidle")
-                page.pdf(path=pdf_output_path, format="A4", print_background=True, margin={"top": "0", "right": "0", "bottom": "0", "left": "0"})
+                page.pdf(path=pdf_output_path, format="A4", print_background=True, margin={"top": "15mm", "right": "15mm", "bottom": "15mm", "left": "15mm"})
             finally:
                 if temp_html_path and os.path.exists(temp_html_path):
                     try:
@@ -194,7 +194,7 @@ class DocsTools:
 
                     file_url = "file:///" + os.path.normpath(temp_html_path).replace("\\", "/")
                     page.goto(file_url, wait_until="networkidle")
-                    page.pdf(path=pdf_output_path, format="A4", print_background=True, margin={"top": "0", "right": "0", "bottom": "0", "left": "0"})
+                    page.pdf(path=pdf_output_path, format="A4", print_background=True, margin={"top": "15mm", "right": "15mm", "bottom": "15mm", "left": "15mm"})
                 finally:
                     if temp_html_path and os.path.exists(temp_html_path):
                         try:
@@ -215,6 +215,59 @@ class DocsTools:
         except Exception as e:
             logger.error(f"[DOCS] Standalone Playwright PDF failed: {e}")
             return None
+
+    def _inject_pagination_css(self, html: str) -> str:
+        """
+        Safety net: injects pagination rules to guarantee correct PDF layout.
+        Playwright margins handle the outer page margins (15mm), and this CSS
+        ensures content inside flows correctly with proper spacing.
+        """
+        safety_css = """
+        /* --- Hecos Auto-Pagination Safety Net --- */
+        @page { size: A4; margin: 0; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; }
+        .page {
+            page-break-after: always;
+            width: 100%;
+            min-height: 257mm; /* 297mm - 2*15mm Playwright margins - safety */
+            overflow: hidden;
+            padding: 5mm 0;
+            position: relative;
+        }
+        .page:last-child { page-break-after: auto; }
+        img { max-width: 100%; height: auto; display: block; margin: 8px auto; }
+        img, figure, .photo-card, .gallery, .photo-grid, .card {
+            page-break-inside: avoid;
+        }
+        h1, h2, h3, h4 {
+            page-break-after: avoid;
+        }
+        """
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html, "html.parser")
+            
+            # Check if there's already a style tag
+            style_tag = soup.find("style")
+            if style_tag:
+                style_tag.string = (style_tag.string or "") + "\n" + safety_css
+            else:
+                head = soup.find("head")
+                if not head:
+                    head = soup.new_tag("head")
+                    if soup.html:
+                        soup.html.insert(0, head)
+                new_style = soup.new_tag("style")
+                new_style.string = safety_css
+                head.append(new_style)
+            
+            return str(soup)
+        except ImportError:
+            # Fallback string manipulation if bs4 isn't available
+            if "</head>" in html:
+                return html.replace("</head>", f"<style>\n{safety_css}\n</style>\n</head>")
+            return f"<style>\n{safety_css}\n</style>\n" + html
 
     def generate_pdf(self, html_content: str = None, template_id: str = None, template_vars: str = None, filename: str = None) -> str:
         """
@@ -267,6 +320,9 @@ class DocsTools:
                 
             # 1.b Resolve local image links for Playwright
             final_html = self._resolve_image_paths(final_html)
+
+            # 1.c Auto-inject pagination CSS safety net
+            final_html = self._inject_pagination_css(final_html)
 
             # Get generation defaults
             gen_html = True

@@ -139,9 +139,6 @@ type = "function"
 name = "DOCS__list_documents"
 description = "Lists all documents in the documents folder with their size and a content preview. Use this BEFORE modify_document to find the correct file path and understand the document structure."
 
-[config_panel]
-api_routes_file = "web/routes.py"
-
 [tool_schema.function.parameters]
 type = "object"
 
