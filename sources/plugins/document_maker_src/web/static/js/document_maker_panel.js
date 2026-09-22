@@ -80,6 +80,24 @@ window.loadDocsConfig = async function() {
         const pdfEl = document.getElementById('docs-generate-pdf');
         if (pdfEl) pdfEl.checked = data.generate_pdf !== false; // default true
 
+        const formatEl = document.getElementById('docs-page-format');
+        if (formatEl) formatEl.value = data.page_format || 'A4';
+
+        const optEl = document.getElementById('docs-ai-optimization');
+        if (optEl) optEl.value = data.ai_optimization || 'hybrid';
+
+        const mtEl = document.getElementById('docs-margin-top');
+        if (mtEl) mtEl.value = data.margin_top !== undefined ? data.margin_top : 20;
+        
+        const mbEl = document.getElementById('docs-margin-bottom');
+        if (mbEl) mbEl.value = data.margin_bottom !== undefined ? data.margin_bottom : 20;
+
+        const mlEl = document.getElementById('docs-margin-left');
+        if (mlEl) mlEl.value = data.margin_left !== undefined ? data.margin_left : 20;
+
+        const mrEl = document.getElementById('docs-margin-right');
+        if (mrEl) mrEl.value = data.margin_right !== undefined ? data.margin_right : 20;
+
         const directiveEl = document.getElementById('docs-override-generate-pdf');
         if (directiveEl) {
             // If override_directive is missing (first load), populate with the default
@@ -102,11 +120,24 @@ window.saveDocsConfig = async function(silent = false) {
     const pdfEl = document.getElementById('docs-generate-pdf');
     const directiveEl = document.getElementById('docs-override-generate-pdf');
 
+    const formatEl = document.getElementById('docs-page-format');
+    const optEl = document.getElementById('docs-ai-optimization');
+    const mtEl = document.getElementById('docs-margin-top');
+    const mbEl = document.getElementById('docs-margin-bottom');
+    const mlEl = document.getElementById('docs-margin-left');
+    const mrEl = document.getElementById('docs-margin-right');
+
     const payload = {
         pdf_save_path: pathEl.value.trim() || 'media/documents',
         override_enabled: enabledEl ? enabledEl.checked : true,
         generate_html: htmlEl ? htmlEl.checked : true,
         generate_pdf: pdfEl ? pdfEl.checked : true,
+        page_format: formatEl ? formatEl.value : 'A4',
+        ai_optimization: optEl ? optEl.value : 'hybrid',
+        margin_top: mtEl ? parseInt(mtEl.value) || 0 : 20,
+        margin_bottom: mbEl ? parseInt(mbEl.value) || 0 : 20,
+        margin_left: mlEl ? parseInt(mlEl.value) || 0 : 20,
+        margin_right: mrEl ? parseInt(mrEl.value) || 0 : 20,
         override_directive: directiveEl ? directiveEl.value.trim() : DOCS_DEFAULT_OVERRIDE
     };
 

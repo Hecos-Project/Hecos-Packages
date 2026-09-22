@@ -29,6 +29,24 @@ class DocsTools:
         os.makedirs(full_path, exist_ok=True)
         return full_path
 
+    def _get_layout_config(self):
+        default_config = {
+            "page_format": "A4",
+            "ai_optimization": "hybrid",
+            "margin_top": 20,
+            "margin_bottom": 20,
+            "margin_left": 20,
+            "margin_right": 20
+        }
+        if os.path.exists(self.config_file):
+            try:
+                with open(self.config_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    default_config.update({k: data[k] for k in default_config.keys() if k in data})
+            except Exception as e:
+                logger.error(f"[DOCS] Failed to read config: {e}")
+        return default_config
+
     def _resolve_image_paths(self, html_content: str) -> str:
         """Resolves local image paths to file:/// URLs for Playwright rendering."""
         root_dir = os.path.dirname(os.path.dirname(self.plugin_dir))
@@ -152,8 +170,19 @@ class DocsTools:
                     temp_html_path = tmp.name
 
                 file_url = "file:///" + os.path.normpath(temp_html_path).replace("\\", "/")
+                layout = self._get_layout_config()
                 page.goto(file_url, wait_until="networkidle")
-                page.pdf(path=pdf_output_path, format="A4", print_background=True, margin={"top": "15mm", "right": "15mm", "bottom": "15mm", "left": "15mm"})
+                page.pdf(
+                    path=pdf_output_path, 
+                    format=layout["page_format"], 
+                    print_background=True, 
+                    margin={
+                        "top": f"{layout['margin_top']}mm", 
+                        "right": f"{layout['margin_right']}mm", 
+                        "bottom": f"{layout['margin_bottom']}mm", 
+                        "left": f"{layout['margin_left']}mm"
+                    }
+                )
             finally:
                 if temp_html_path and os.path.exists(temp_html_path):
                     try:
@@ -193,8 +222,19 @@ class DocsTools:
                         temp_html_path = tmp.name
 
                     file_url = "file:///" + os.path.normpath(temp_html_path).replace("\\", "/")
+                    layout = self._get_layout_config()
                     page.goto(file_url, wait_until="networkidle")
-                    page.pdf(path=pdf_output_path, format="A4", print_background=True, margin={"top": "15mm", "right": "15mm", "bottom": "15mm", "left": "15mm"})
+                    page.pdf(
+                        path=pdf_output_path, 
+                        format=layout["page_format"], 
+                        print_background=True, 
+                        margin={
+                            "top": f"{layout['margin_top']}mm", 
+                            "right": f"{layout['margin_right']}mm", 
+                            "bottom": f"{layout['margin_bottom']}mm", 
+                            "left": f"{layout['margin_left']}mm"
+                        }
+                    )
                 finally:
                     if temp_html_path and os.path.exists(temp_html_path):
                         try:
@@ -222,27 +262,29 @@ class DocsTools:
         Playwright margins handle the outer page margins (15mm), and this CSS
         ensures content inside flows correctly with proper spacing.
         """
-        safety_css = """
+        layout = self._get_layout_config()
+        page_format = layout["page_format"]
+        
+        safety_css = f"""
         /* --- Hecos Auto-Pagination Safety Net --- */
-        @page { size: A4; margin: 0; }
-        * { box-sizing: border-box; }
-        body { margin: 0; padding: 0; }
-        .page {
+        @page {{ size: {page_format}; margin: 0; }}
+        * {{ box-sizing: border-box; }}
+        body {{ margin: 0; padding: 0; }}
+        .page {{
             page-break-after: always;
             width: 100%;
-            min-height: 257mm; /* 297mm - 2*15mm Playwright margins - safety */
             overflow: hidden;
             padding: 5mm 0;
             position: relative;
-        }
-        .page:last-child { page-break-after: auto; }
-        img { max-width: 100%; height: auto; display: block; margin: 8px auto; }
-        img, figure, .photo-card, .gallery, .photo-grid, .card {
+        }}
+        .page:last-child {{ page-break-after: auto; }}
+        img {{ max-width: 100%; height: auto; display: block; margin: 8px auto; }}
+        img, figure, .photo-card, .gallery, .photo-grid, .card {{
             page-break-inside: avoid;
-        }
-        h1, h2, h3, h4 {
+        }}
+        h1, h2, h3, h4 {{
             page-break-after: avoid;
-        }
+        }}
         """
         try:
             from bs4 import BeautifulSoup
@@ -634,6 +676,81 @@ class DocsTools:
         if "</body>" in html:
             return html.replace("</body>", f"\n{content}\n</body>")
         return html + f"\n{content}"
+    def DOCS__optimize_layout(self, document_id: str) -> str:
+        """
+        Calculates page breaks for a document and returns a report of elements split across pages.
+        Used to analyze pagination and determine where manual page breaks are needed.
+        """
+        output_dir = self._get_save_dir()
+        if not document_id.endswith(".html"):
+            document_id += ".html"
+        
+        file_path = os.path.join(output_dir, document_id)
+        if not os.path.exists(file_path):
+            file_path = self._find_document(document_id)
+            if not file_path:
+                return f"Error: Document {document_id} not found."
+                
+        # Only support mathematical bounding box extraction via Playwright for now
+        from hecos.core.modules import engine
+        if not engine.get_module("browser_automation"):
+            return "Error: browser_automation module is required for layout optimization."
+            
+        def _optimization_task():
+            if not engine._state.get("browser") or not engine._state["browser"].is_connected():
+                from playwright.sync_api import sync_playwright
+                if not engine._state.get("pw_instance"):
+                    engine._state["pw_instance"] = sync_playwright().start()
+                engine._state["browser"] = engine._state["pw_instance"].chromium.launch(headless=True)
+            
+            browser = engine._state["browser"]
+            context = browser.new_context()
+            page = context.new_page()
+            
+            try:
+                file_url = "file:///" + os.path.normpath(file_path).replace("\\", "/")
+                page.goto(file_url, wait_until="networkidle")
+                
+                # Extract layout issues
+                issues = page.evaluate('''() => {
+                    const pageHeight = 1122.5; // A4 height at 96 DPI
+                    const elements = document.querySelectorAll('h1, h2, h3, img, p, div.card, div.photo-card, div.gallery');
+                    const issues = [];
+                    elements.forEach((el, index) => {
+                        const rect = el.getBoundingClientRect();
+                        const top = rect.top + window.scrollY;
+                        const bottom = rect.bottom + window.scrollY;
+                        
+                        const startPage = Math.floor(top / pageHeight);
+                        const endPage = Math.floor(bottom / pageHeight);
+                        
+                        if (startPage !== endPage && bottom - top > 0) {
+                            let snippet = el.outerHTML;
+                            if (snippet.length > 80) snippet = snippet.substring(0, 80) + '...';
+                            issues.push(`Pagina ${startPage+1}->${endPage+1}: Elemento tagliato a meta -> ${snippet}`);
+                        } else if (endPage > startPage && top % pageHeight > pageHeight - 80 && el.tagName.match(/^H[1-6]/)) {
+                            issues.push(`Pagina ${startPage+1}: Titolo isolato a fine pagina -> ${el.textContent.substring(0,40)}`);
+                        }
+                    });
+                    return issues;
+                }''')
+                return issues
+            except Exception as e:
+                logger.error(f"[DOCS] Layout optimization failed: {e}")
+                return [f"Error calculating layout: {str(e)}"]
+            finally:
+                page.close()
+                context.close()
+                
+        issues = engine._run_on_browser_thread(_optimization_task)
+        if not issues:
+            return "✅ L'impaginazione sembra corretta, non ci sono elementi importanti tagliati a metà."
+        
+        report = "⚠️ ATTENZIONE: Sono stati rilevati i seguenti errori di impaginazione:\n\n"
+        for issue in issues:
+            report += f"- {issue}\n"
+        report += "\nUsa `DOCS__modify_document` per inserire `<div style=\"page-break-before: always;\"></div>` prima degli elementi tagliati."
+        return report
 
 
 # ── Module-level singleton (required by the Hecos plugin dispatcher) ──────────

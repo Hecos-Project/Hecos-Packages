@@ -43,6 +43,57 @@
     </div>
   </div>
 
+  <!-- Layout & Pagination Card -->
+  <div class="card" style="margin-top:14px;">
+    <div class="card-title"><i class="fas fa-ruler-combined"></i> Layout & Pagination</div>
+    <p style="color:var(--muted); font-size:12px; margin-bottom:12px; line-height:1.5;">
+      Configure the default page size and margins for generated PDFs.
+    </p>
+
+    <div class="field">
+      <label for="docs-page-format">Page Format</label>
+      <select id="docs-page-format" class="config-input" style="appearance:auto; background:var(--bg3);" onchange="docsDebounceSave()">
+        <option value="A4">A4</option>
+        <option value="Letter">US Letter</option>
+        <option value="Legal">US Legal</option>
+      </select>
+    </div>
+
+    <div class="field" style="display:flex; gap:10px;">
+      <div style="flex:1;">
+        <label for="docs-margin-top">Margin Top (mm)</label>
+        <input type="number" id="docs-margin-top" class="config-input" value="20" oninput="docsDebounceSave()">
+      </div>
+      <div style="flex:1;">
+        <label for="docs-margin-bottom">Margin Bottom (mm)</label>
+        <input type="number" id="docs-margin-bottom" class="config-input" value="20" oninput="docsDebounceSave()">
+      </div>
+    </div>
+    <div class="field" style="display:flex; gap:10px;">
+      <div style="flex:1;">
+        <label for="docs-margin-left">Margin Left (mm)</label>
+        <input type="number" id="docs-margin-left" class="config-input" value="20" oninput="docsDebounceSave()">
+      </div>
+      <div style="flex:1;">
+        <label for="docs-margin-right">Margin Right (mm)</label>
+        <input type="number" id="docs-margin-right" class="config-input" value="20" oninput="docsDebounceSave()">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="docs-ai-optimization">AI Auto-Pagination Method</label>
+      <select id="docs-ai-optimization" class="config-input" style="appearance:auto; background:var(--bg3);" onchange="docsDebounceSave()">
+        <option value="hybrid">Hybrid (Math + Vision)</option>
+        <option value="math">Mathematical (Fast)</option>
+        <option value="vision">Vision Only (Accurate)</option>
+        <option value="none">Disabled (Strict Paging)</option>
+      </select>
+      <p style="color:var(--muted); font-size:11px; margin-top:5px;">
+        Choose how the LLM should analyze and fix page breaks in the document.
+      </p>
+    </div>
+  </div>
+
   <!-- Generation Defaults Card -->
   <div class="card" style="margin-top:14px;">
     <div class="card-title"><i class="fas fa-cogs"></i> Generation Defaults</div>

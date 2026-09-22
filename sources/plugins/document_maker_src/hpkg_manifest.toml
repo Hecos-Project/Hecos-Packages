@@ -64,16 +64,28 @@ aliases = [
 description = "List all saved HTML and PDF documents."
 requires_args = true
 
+[[slash_commands]]
+id = "optimize_layout"
+aliases = [
+    "/DOCS__optimize_layout",
+    "/doc_layout",
+    "/optimize_layout",
+]
+description = "Analyze an HTML document to find pagination errors (cut-off elements) and get suggestions for page breaks."
+requires_args = true
+
 [commands]
 generate_pdf = "Converts HTML content to a PDF file and returns the file path."
 list_documents = "Lists all documents in the documents folder."
 modify_document = "Modifies an existing HTML document (add images, replace sections, change layout)."
+optimize_layout = "Calculates page breaks for a document and returns a report of elements split across pages."
 
 [capabilities]
 llm_tools = [
     "generate_pdf",
     "list_documents",
     "modify_document",
+    "optimize_layout",
 ]
 slash_commands = [
     "/pdf",
@@ -88,6 +100,9 @@ slash_commands = [
     "/DOCS__list_documents",
     "/docs_list",
     "/list_documents",
+    "/DOCS__optimize_layout",
+    "/doc_layout",
+    "/optimize_layout",
 ]
 has_widget = false
 has_config_panel = true
@@ -176,6 +191,23 @@ description = "The HTML content, <img> tags, or CSS rules to inject depending on
 [tool_schema.function.parameters.properties.target_selector]
 type = "string"
 description = "Optional: For 'replace_section' a CSS selector (e.g. '.gallery', '#section2'). For 'patch' the exact text to find. For 'add_images' an optional placeholder text to replace with images."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "DOCS__optimize_layout"
+description = "Calculates page breaks for a document and returns a report of elements split across pages. Used to analyze pagination and determine where manual page breaks are needed."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "document_id",
+]
+
+[tool_schema.function.parameters.properties.document_id]
+type = "string"
+description = "The ID or filename of the document to optimize (e.g. 'magazine.html')."
 
 [file_hashes]
 "docs_config.json" = "f8a4f660bf782d91259b46d5d56a48addc7f980dc352d0a82e086c21c6b3487e"
