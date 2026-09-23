@@ -311,6 +311,40 @@ class DocsTools:
                 return html.replace("</head>", f"<style>\n{safety_css}\n</style>\n</head>")
             return f"<style>\n{safety_css}\n</style>\n" + html
 
+    def DOCS__list_images(self, folder: str = "") -> str:
+        """
+        Lists available images in the media/images and media/generated_photos directories.
+        Use this before generating a document to discover existing images that can be referenced
+        with <img src="/api/images/FILENAME"> without regenerating them.
+        :param folder: Optional subfolder to filter (e.g. 'generated_photos'). Leave empty to list all.
+        """
+        root_dir = os.path.dirname(os.path.dirname(self.plugin_dir))
+        search_dirs = {
+            "images": os.path.join(root_dir, "media", "images"),
+            "generated_photos": os.path.join(root_dir, "media", "generated_photos"),
+        }
+        IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"}
+
+        results = []
+        for subfolder, dirpath in search_dirs.items():
+            if folder and folder.lower() not in subfolder.lower():
+                continue
+            if not os.path.isdir(dirpath):
+                continue
+            for fname in sorted(os.listdir(dirpath)):
+                ext = os.path.splitext(fname)[1].lower()
+                if ext not in IMAGE_EXTS:
+                    continue
+                size_bytes = os.path.getsize(os.path.join(dirpath, fname))
+                size_str = f"{size_bytes / 1024:.1f} KB"
+                results.append(f"  /api/images/{fname}  ({subfolder}, {size_str})")
+
+        if not results:
+            return "No images found in media/images or media/generated_photos."
+
+        header = f"Found {len(results)} image(s). Use <img src=\"/api/images/FILENAME\"> to reference them:\n"
+        return header + "\n".join(results)
+
     def generate_pdf(self, html_content: str = None, template_id: str = None, template_vars: str = None, filename: str = None) -> str:
         """
         Generates a document (HTML + PDF) from raw HTML content or a template.
@@ -353,7 +387,30 @@ class DocsTools:
                 if not target:
                     return f"Error: Template '{template_id}' not found."
 
+                # Parse template_vars from JSON
                 v_dict = json.loads(template_vars) if template_vars else {}
+
+                # GUARD: If the template defines variables but the LLM didn't provide them,
+                # return an error listing the required variables so the LLM re-calls correctly.
+                from hecos.hpm.libraries.templates.store import get_template
+                tpl_meta = get_template(target["id"])
+                required_vars = tpl_meta.get("variables", []) if tpl_meta else []
+                if required_vars:
+                    missing = [v for v in required_vars if v not in v_dict or not str(v_dict[v]).strip()]
+                    if missing and (len(missing) > len(required_vars) * 0.2 or len(missing) >= 3 or not v_dict):
+                        vars_list = ", ".join(required_vars)
+                        missing_list = ", ".join(missing)
+                        return (
+                            f"Error: Template '{target['name']}' requires template_vars but you missed some critical ones.\n"
+                            f"Missing or empty variables: {missing_list}\n\n"
+                            f"You MUST call this tool again with template_vars set to a JSON string containing "
+                            f"ALL required keys populated with real, extensive content. DO NOT leave them empty.\n"
+                            f"All required variables: {vars_list}\n"
+                            f"If you have generated images, embed them inside the content variables using HTML like <img src=\"/api/images/FILENAME\">."
+                        )
+                    elif missing:
+                        logger.warning(f"[DOCS] Template '{target['name']}' has unfilled variables: {missing}")
+
                 rendered = render_template(target["id"], v_dict)
                 final_html = rendered["body_html"]
 
@@ -394,6 +451,12 @@ class DocsTools:
             # Generate HTML if requested
             if gen_html:
                 try:
+                    try:
+                        from hecos.core.agent.traces import AgentTracer
+                        AgentTracer.emit(None, "Generating HTML...", level="tool")
+                    except Exception:
+                        pass
+                        
                     with open(html_output_path, "w", encoding="utf-8") as f:
                         f.write(final_html)
                     results.append(f"HTML: {html_output_path}")
@@ -402,6 +465,12 @@ class DocsTools:
                     logger.error(f"[DOCS] Failed to save HTML: {e}")
 
             if gen_pdf:
+                try:
+                    from hecos.core.agent.traces import AgentTracer
+                    AgentTracer.emit(None, "Generating PDF with Playwright...", level="tool")
+                except Exception:
+                    pass
+                    
                 pdf_result = self._generate_pdf_from_html(final_html, pdf_output_path)
                 if pdf_result and os.path.exists(pdf_result):
                     logger.info(f"[DOCS] Generated PDF successfully at {pdf_result}")

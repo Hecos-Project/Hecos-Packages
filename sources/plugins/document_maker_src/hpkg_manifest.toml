@@ -77,6 +77,7 @@ requires_args = true
 [commands]
 generate_pdf = "Converts HTML content to a PDF file and returns the file path."
 list_documents = "Lists all documents in the documents folder."
+list_images = "Lists available images in media/images and media/generated_photos that can be reused in documents."
 modify_document = "Modifies an existing HTML document (add images, replace sections, change layout)."
 optimize_layout = "Calculates page breaks for a document and returns a report of elements split across pages."
 
@@ -86,6 +87,7 @@ llm_tools = [
     "list_documents",
     "modify_document",
     "optimize_layout",
+    "list_images",
 ]
 slash_commands = [
     "/pdf",
@@ -141,7 +143,7 @@ description = "Optional: The ID of an existing template to render and convert."
 
 [tool_schema.function.parameters.properties.template_vars]
 type = "string"
-description = "Optional: JSON string of variables to inject into the template if template_id is used."
+description = "REQUIRED when using template_id. A JSON string with ALL template variables populated with REAL content you write. Example: '{\"company\": \"Acme Corp\", \"report_title\": \"Q3 Report\", \"executive_summary\": \"This quarter we achieved...\"}'. You MUST fill in every variable with actual text — do NOT leave placeholders or empty strings. The template will reject the call if variables are missing. IF YOU GENERATED IMAGES, YOU MUST EMBED THEM INSIDE CONTENT VARIABLES (e.g. section1_content) using `<img src=\"/api/images/FILENAME\">`."
 
 [tool_schema.function.parameters.properties.filename]
 type = "string"
@@ -208,6 +210,20 @@ required = [
 [tool_schema.function.parameters.properties.document_id]
 type = "string"
 description = "The ID or filename of the document to optimize (e.g. 'magazine.html')."
+
+[[tool_schema]]
+type = "function"
+
+[tool_schema.function]
+name = "DOCS__list_images"
+description = "Lists available images in media/images and media/generated_photos. Call this before generating a document when the user says to use existing images instead of generating new ones. Returns a list of image filenames with their /api/images/FILENAME reference paths."
+
+[tool_schema.function.parameters]
+type = "object"
+
+[tool_schema.function.parameters.properties.folder]
+type = "string"
+description = "Optional: filter by subfolder name ('images' or 'generated_photos'). Leave empty to list all."
 
 [file_hashes]
 "docs_config.json" = "f8a4f660bf782d91259b46d5d56a48addc7f980dc352d0a82e086c21c6b3487e"
