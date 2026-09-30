@@ -100,7 +100,7 @@ window.collectIgenConfig = function() {
         horde_nsfw:             chk('horde-nsfw', true),
         horde_worker_blacklist: get('horde-worker-blacklist', ''),
         vae:                    get('igen-vae', ''),
-        loras:                  Array.from(document.getElementById('igen-loras')?.selectedOptions || []).map(o => o.value),
+        loras:                  Array.from((document.getElementById('igen-loras') || {}).selectedOptions || []).map(o => o.value),
         cloud_enabled:          chk('igen-cloud-enabled', false),
     };
 };
@@ -151,11 +151,11 @@ window.applyIgenConfig = function(cfg) {
     set('igen-style',           cfg.style               || 'none');
     chk('igen-nologo',          cfg.nologo              ?? true);
     chk('igen-optimize-flux',   cfg.optimize_for_flux   ?? true);
-    chk('igen-show-metadata',   cfg.show_metadata_in_chat ?? false);
+    chk('igen-show-metadata',   cfg.show_metadata_in_chat ?? true);
     set('igen-routing-override', cfg.routing_override   || '');
     chk('igen-enabled',         cfg.enabled             ?? true);
     chk('igen-cloud-enabled',   cfg.cloud_enabled       ?? false);
 
     onAspectRatioChanged();
     if (window._applyCloudToggleState) window._applyCloudToggleState();
-};
+    };

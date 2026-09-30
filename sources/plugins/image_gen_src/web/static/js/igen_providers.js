@@ -79,8 +79,9 @@ window.onProviderChanged = async function(userTriggered, _attempt) {
     // ── Show/hide VAE + LoRA tabs ────────────────────────────────────────────
     var vaeTabBtn   = document.getElementById('igen-tab-btn-vae');
     var lorasTabBtn = document.getElementById('igen-tab-btn-loras');
-    if (vaeTabBtn)   vaeTabBtn.style.display   = isLocal ? 'inline-flex' : 'none';
-    if (lorasTabBtn) lorasTabBtn.style.display = isLocal ? 'inline-flex' : 'none';
+    // We intentionally do NOT hide these tabs anymore as per user request
+    if (vaeTabBtn)   vaeTabBtn.style.display   = 'inline-flex';
+    if (lorasTabBtn) lorasTabBtn.style.display = 'inline-flex';
 
     // If switching away from local while VAE/LoRA tab is active, reset to Model
     if (!isLocal) {
@@ -138,13 +139,20 @@ window.onProviderChanged = async function(userTriggered, _attempt) {
                 opt.value = opt.textContent = m;
                 modelSel.appendChild(opt);
             });
-            if (currentSelection && data.models.includes(currentSelection)) {
-                modelSel.value = currentSelection;
+            if (currentSelection) {
+                if (data.models.includes(currentSelection)) {
+                    modelSel.value = currentSelection;
+                } else {
+                    var matched = data.models.find(function(m) { return m.includes(currentSelection); });
+                    if (matched) {
+                        modelSel.value = matched;
+                    }
+                }
             }
         }
 
         // ── Fetch VAEs and LoRAs for SwarmUI ─────────────────────────────────
-        if (isLocal && _attempt === 0) {
+        if (_attempt === 0) {
             try {
                 var vSel = document.getElementById('igen-vae');
                 var lSel = document.getElementById('igen-loras');
@@ -344,8 +352,10 @@ window._onCloudToggle = function(enabled) {
         }
     });
 
-    // Trigger provider change to update UI
-    window.onProviderChanged(true, 0);
+    // Only trigger provider change if NOT during a bulk reload (prevents race condition)
+    if (!_igenLoadingConfig) {
+        window.onProviderChanged(true, 0);
+    }
 };
 
 // Apply cloud toggle state after config loads
@@ -368,15 +378,33 @@ window.reloadIgenPanel = async function() {
     var btn = document.getElementById('igen-refresh-btn');
     if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:13px;"></i> Loading...'; btn.disabled = true; }
     try {
+        _igenLoadingConfig = true;
+
+        // 1. Fetch config from server
         var res  = await fetch('/hecos/api/plugins/image_gen/config');
         var data = await res.json();
         var cfg  = data.image_gen || {};
+
+        // 2. Load presets and profiles
         await window.loadIgenPresets(cfg.active_preset);
-        window.applyIgenConfig(cfg);
+        
+
+        // 3. Set initial values BEFORE rebuilding provider dropdown
         var provSel = document.getElementById('igen-provider');
+        var modelSel = document.getElementById('igen-model');
+        if (provSel && cfg.provider) provSel.setAttribute('data-initial-val', cfg.provider);
+        if (modelSel && cfg.model)   modelSel.setAttribute('data-initial-val', cfg.model);
+
+        // 4. Clear and rebuild provider dropdown + fetch models/VAEs/LoRAs
         if (provSel) provSel.innerHTML = '';
         await window.onProviderChanged(false, 0);
+
+        // 5. Apply all config values (sliders, checkboxes, etc.)
+        window.applyIgenConfig(cfg);
+
+        _igenLoadingConfig = false;
     } catch(e) {
+        _igenLoadingConfig = false;
         console.error('[ImageGen] reloadIgenPanel error:', e);
     } finally {
         if (btn) { btn.innerHTML = '<i class="fas fa-sync-alt" style="font-size:13px;"></i> Refresh'; btn.disabled = false; }

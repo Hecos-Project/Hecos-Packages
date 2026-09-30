@@ -1,0 +1,33 @@
+{
+    "tag": "BUILDER_STUDIO",
+    "name": "Builder Studio",
+    "version": "1.0.0",
+    "description": "Visual IDE for building, compiling, inspecting and managing Hecos packages (.hpkg).",
+    "lazy_load": false,
+    "is_class_based": false,
+    "commands": {},
+    "tool_schema": [],
+    "slash_commands": [],
+    "icon": "fas fa-hammer",
+    "config_panel": {
+        "tab_id": "builder",
+        "tab_label": "Builder Studio",
+        "tab_icon": "fas fa-hammer",
+        "template_file": "builder_studio/templates/config_builder.html",
+        "js_file": null,
+        "js_files": [
+            "builder_studio/static/js/builder_core.js",
+            "builder_studio/static/js/builder_ui.js",
+            "builder_studio/static/js/builder_io.js",
+            "builder_studio/static/js/builder_wizard.js",
+            "builder_studio/static/js/builder_info_sheets.js",
+            "builder_studio/static/js/builder_batch.js",
+            "builder_studio/static/js/builder_compiler.js"
+        ],
+        "css_file": null,
+        "category": "SISTEMA",
+        "api_routes_file": "builder_studio/routes.py",
+        "config_api_get": null,
+        "config_api_post": null
+    }
+}

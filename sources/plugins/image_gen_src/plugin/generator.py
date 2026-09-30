@@ -20,9 +20,9 @@ except ImportError:
         def t(k, **kw): return k
 
 try:
-    from igen_config.config_manager import get_image_gen_config, save_image_gen_section
+    from igen_config.config_manager import get_image_gen_config, save_image_gen_section, get_effective_config
 except ImportError:
-    from ..igen_config.config_manager import get_image_gen_config, save_image_gen_section
+    from ..igen_config.config_manager import get_image_gen_config, save_image_gen_section, get_effective_config
 from .dimensions import resolve_dimensions
 from .prompt_engine import build_prompt
 from .providers import generate_image as _engine_generate
@@ -125,7 +125,7 @@ def _mark_exhausted(provider: str, api_key: str, err_msg: str) -> None:
 
 def run_generation(raw_prompt: str, provider_override: str = "", model_override: str = "", hf_server_override: str = "") -> str:
     try:
-        cfg = get_image_gen_config()
+        cfg = get_effective_config()
 
         provider    = provider_override.strip().lower() if provider_override else cfg.get("provider", "pollinations")
         provider    = provider.replace("-", "_")
@@ -230,7 +230,12 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
                     clean_prompt = clean_prompt[:247] + "..."
                 prefix = f"🎨 Ecco l'immagine generata per: {clean_prompt}"
                 html_src = f"/api/images/{filename}"
-                return f"{prefix}\n\n[[IMG:{filename}]]\n<!-- HTML_SRC: {html_src} | To embed in HTML use: <img src=\"{html_src}\"> -->{meta_str}"
+                system_instruction = "[SYSTEM: SUCCESS. The image has been generated. DO NOT call this tool again for this request. Output the final text response to the user now."
+                if meta_str:
+                    system_instruction += " You MUST include the [Image Gen Config] string verbatim in your response so the user can see it."
+                system_instruction += "]"
+                
+                return f"{prefix}\n\n[[IMG:{filename}]]\n<!-- HTML_SRC: {html_src} | To embed in HTML use: <img src=\"{html_src}\"> -->{meta_str}\n\n{system_instruction}"
 
             except Exception as e:
                 last_error = e

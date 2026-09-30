@@ -1,7 +1,8 @@
 """
-Plugin: Image Generation â€” Preset Manager
+Plugin: Image Generation — Preset Manager
 Manages built-in (read-only) and user-defined (CRUD) configuration presets.
-Reads/writes from the package's own config manager.
+User presets now capture the FULL configuration snapshot (provider, model,
+VAE, LoRAs, sampler, scheduler, API keys, etc.) — same scope as Profiles.
 """
 
 from __future__ import annotations
@@ -34,14 +35,14 @@ BUILTIN_PRESETS: dict[str, dict[str, Any]] = {
         "_builtin": True,
         "_description": "Free, no API key required. Uses Pollinations with Flux model.",
     },
-    "🖼️ SDXL (HuggingFace)": {
+    "🌐 SDXL (HuggingFace)": {
         "provider": "huggingface",
         "model": "stabilityai/stable-diffusion-xl-base-1.0",
         "aspect_ratio": "1:1",
         "guidance_scale": 7.5,
         "num_inference_steps": 40,
         "seed": -1,
-        "sampler": "dpm++2m",
+        "sampler": "dpm++_2m",
         "scheduler": "dpm++",
         "negative_prompt": "distorted, extra fingers, malformed limbs, missing limbs, ugly, blurry, low quality",
         "enable_negative_prompt": True,
@@ -51,7 +52,7 @@ BUILTIN_PRESETS: dict[str, dict[str, Any]] = {
         "_builtin": True,
         "_description": "Stable Diffusion XL via HuggingFace Inference API. Requires HF API key.",
     },
-    "🎨 SD 1.5 1B (HuggingFace)": {
+    "🖼 SD 1.5 1B (HuggingFace)": {
         "provider": "huggingface",
         "model": "runwayml/stable-diffusion-v1-5",
         "aspect_ratio": "1:1",
@@ -85,7 +86,7 @@ BUILTIN_PRESETS: dict[str, dict[str, Any]] = {
         "_builtin": True,
         "_description": "Flux Schnell via HuggingFace. Very fast (4 steps). Requires HF API key.",
     },
-    "🌐 Stable Diffusion (AI Horde)": {
+    "🎲 Stable Diffusion (AI Horde)": {
         "provider": "horde",
         "model": "stable_diffusion",
         "aspect_ratio": "custom",
@@ -106,7 +107,7 @@ BUILTIN_PRESETS: dict[str, dict[str, Any]] = {
     },
 }
 
-# ── Import local presets ──────────────────────────────────────────────────
+# -- Import local presets ----------------------------------------------------
 try:
     from .local.presets import LOCAL_BUILTIN_PRESETS
 except ImportError:
@@ -114,6 +115,17 @@ except ImportError:
 
 # Merge local presets into the built-in set
 BUILTIN_PRESETS.update(LOCAL_BUILTIN_PRESETS)
+
+# All keys captured in a full user preset snapshot
+_PRESET_SNAPSHOT_KEYS = [
+    "provider", "model", "hf_provider", "aspect_ratio", "width", "height",
+    "seed", "sampler", "scheduler", "guidance_scale", "num_inference_steps",
+    "enable_negative_prompt", "negative_prompt", "auto_enrich",
+    "enrich_keywords", "style", "nologo", "optimize_for_flux",
+    "show_metadata_in_chat", "active_preset", "vae", "loras",
+    "cloud_enabled", "api_key", "horde_api_key", "horde_nsfw",
+    "horde_worker_blacklist", "routing_override",
+]
 
 
 def get_all_presets(user_presets: dict) -> dict[str, dict]:
@@ -127,11 +139,13 @@ def get_preset(name: str, user_presets: dict) -> dict | None:
 
 
 def save_user_preset(name: str, config_snapshot: dict) -> bool:
-    import sys, os
+    """Save a full configuration snapshot as a named user preset.
+    Captures all parameters: provider, model, VAE, LoRAs, sampler,
+    scheduler, API keys, negative prompt, enrich settings, etc.
+    """
     try:
         from igen_config.config_manager import get_config, save_config
     except ImportError:
-        # Fallback if imported inside Hecos plugin loader
         from ..igen_config.config_manager import get_config, save_config
 
     if not name or not name.strip():
@@ -146,16 +160,19 @@ def save_user_preset(name: str, config_snapshot: dict) -> bool:
         cfg = get_config()
         igen = cfg.get("image_gen", {})
         presets = igen.get("presets", {})
-        
-        snapshot = {k: v for k, v in config_snapshot.items()
-                    if not k.startswith("_") and k != "presets" and k != "active_preset"}
+
+        # Capture all snapshot keys — full config including VAE, LoRAs, etc.
+        snapshot = {
+            k: v for k, v in config_snapshot.items()
+            if k in _PRESET_SNAPSHOT_KEYS
+        }
         presets[name] = snapshot
-        
+
         igen["presets"] = presets
         cfg["image_gen"] = igen
         ok = save_config(cfg)
         if ok:
-            logger.info(f"[PRESETS] Saved user preset '{name}'.")
+            logger.info(f"[PRESETS] Saved user preset '{name}' (full snapshot).")
         return ok
     except Exception as e:
         logger.error(f"[PRESETS] Failed saving preset '{name}': {e}")
@@ -163,11 +180,9 @@ def save_user_preset(name: str, config_snapshot: dict) -> bool:
 
 
 def delete_user_preset(name: str) -> bool:
-    import sys, os
     try:
         from igen_config.config_manager import get_config, save_config
     except ImportError:
-        # Fallback if imported inside Hecos plugin loader
         from ..igen_config.config_manager import get_config, save_config
 
     if name in BUILTIN_PRESETS:
@@ -181,7 +196,7 @@ def delete_user_preset(name: str) -> bool:
         if name not in presets:
             logger.error(f"[PRESETS] Preset '{name}' not found.")
             return False
-            
+
         del presets[name]
         igen["presets"] = presets
         cfg["image_gen"] = igen
@@ -192,4 +207,3 @@ def delete_user_preset(name: str) -> bool:
     except Exception as e:
         logger.error(f"[PRESETS] Failed deleting preset '{name}': {e}")
         return False
-

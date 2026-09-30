@@ -105,7 +105,11 @@ class SwarmUIClient:
             return session_id
 
         except requests.ConnectionError:
-            logger.error(f"[SWARM_CLIENT] Connection refused at {self.base_url}. Is SwarmUI running?")
+            logger.error("\n" + "="*70)
+            logger.error(f"[SWARM_CLIENT] ERROR: SwarmUI is not running or unreachable!")
+            logger.error(f"Cannot connect to the address: {self.base_url}")
+            logger.error("Make sure SwarmUI is started or select a Cloud provider.")
+            logger.error("="*70 + "\n")
             raise SwarmUIConnectionError(
                 f"Cannot connect to SwarmUI at {self.base_url}. "
                 "Make sure SwarmUI is running."
@@ -181,7 +185,11 @@ class SwarmUIClient:
             return data
 
         except requests.ConnectionError:
-            logger.error(f"[SWARM_CLIENT] Lost connection to {self.base_url}. Was SwarmUI closed?")
+            logger.error("\n" + "="*70)
+            logger.error(f"[SWARM_CLIENT] ERROR: Connection to SwarmUI lost!")
+            logger.error(f"SwarmUI was closed or stopped responding at {self.base_url}")
+            logger.error("Make sure SwarmUI is running or select a Cloud provider.")
+            logger.error("="*70 + "\n")
             raise SwarmUIConnectionError(
                 f"Lost connection to SwarmUI at {self.base_url}"
             )
@@ -262,7 +270,11 @@ class SwarmUIClient:
             return resp.content
 
         except requests.ConnectionError:
-            logger.error(f"[SWARM_CLIENT] Failed to download image, connection failed with {url}. Is SwarmUI closed?")
+            logger.error("\n" + "="*70)
+            logger.error(f"[SWARM_CLIENT] ERROR: Failed to download image!")
+            logger.error(f"Connection to SwarmUI at {url} failed.")
+            logger.error("SwarmUI might have been closed during generation.")
+            logger.error("="*70 + "\n")
             raise SwarmUIConnectionError(
                 f"Failed to download image from {url}"
             )

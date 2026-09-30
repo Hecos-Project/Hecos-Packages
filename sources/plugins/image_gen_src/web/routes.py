@@ -12,7 +12,11 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
     plugin_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if plugin_path not in sys.path:
         sys.path.insert(0, plugin_path)
-    from igen_config.config_manager import get_config, save_config
+    from igen_config.config_manager import (
+        get_config, save_config, get_effective_config,
+        list_profiles, save_profile, load_profile,
+        delete_profile, set_default_profile,
+    )
 
     def _get_env_key(name: str) -> str:
         """Read a key from env, supporting both KEY and KEY_1, KEY_2, ... format."""
@@ -31,7 +35,9 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
 
     @app.route("/hecos/api/plugins/image_gen/config", methods=["GET"])
     def get_image_gen_config_api():
-        c = get_config()
+        # Use get_effective_config to apply the default profile on load
+        effective = get_effective_config()
+        c = {"image_gen": effective}
         routing_file = os.path.join(plugin_path, "routing_override.yaml")
         if os.path.exists(routing_file):
             try:
@@ -258,7 +264,9 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
     def list_presets():
         try:
             from plugin.presets import BUILTIN_PRESETS
-            user_presets = get_config().get("image_gen", {}).get("presets", {})
+            igen_cfg = get_config().get("image_gen", {})
+            user_presets = igen_cfg.get("presets", {})
+            default_preset = igen_cfg.get("default_preset", "")
             result = []
             for name, data in BUILTIN_PRESETS.items():
                 result.append({
@@ -267,7 +275,8 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
                     "description": data.get("_description", ""), 
                     "provider": data.get("provider", ""), 
                     "model": data.get("model", ""),
-                    "is_local": data.get("_local", False)
+                    "is_local": data.get("_local", False),
+                    "is_default": (name == default_preset)
                 })
             for name, data in user_presets.items():
                 result.append({
@@ -276,7 +285,8 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
                     "description": data.get("_description", "User preset"), 
                     "provider": data.get("provider", ""), 
                     "model": data.get("model", ""),
-                    "is_local": data.get("_local", False)
+                    "is_local": data.get("_local", False),
+                    "is_default": (name == default_preset)
                 })
             return jsonify({"ok": True, "presets": result})
         except Exception as exc:
@@ -286,7 +296,9 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
     def load_preset(name):
         try:
             from plugin.presets import get_preset
-            user_presets = get_config().get("image_gen", {}).get("presets", {})
+            igen_cfg = get_config().get("image_gen", {})
+            user_presets = igen_cfg.get("presets", {})
+            default_preset = igen_cfg.get("default_preset", "")
             preset = get_preset(name, user_presets)
             if preset is None:
                 return jsonify({"ok": False, "error": f"Preset '{name}' not found"}), 404
@@ -317,6 +329,79 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
             if not ok:
                 return jsonify({"ok": False, "error": f"Cannot delete '{name}'"}), 400
             return jsonify({"ok": True, "deleted": name})
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+    @app.route("/hecos/api/plugins/image_gen/presets/set-default", methods=["POST"])
+    def set_default_preset_route():
+        try:
+            data = request.json or {}
+            name = data.get("name", "").strip()
+            from igen_config.config_manager import set_default_preset
+            ok = set_default_preset(name)
+            return jsonify({"ok": ok, "default": name})
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    # --- 4b. Global Config Profiles ---
+
+    @app.route("/hecos/api/plugins/image_gen/profiles", methods=["GET"])
+    def list_image_gen_profiles():
+        """List all saved profiles with their default status."""
+        try:
+            profiles = list_profiles()
+            return jsonify({"ok": True, "profiles": profiles})
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/profiles/save", methods=["POST"])
+    def save_image_gen_profile():
+        """Save the current config as a named profile."""
+        try:
+            data = request.json or {}
+            name = data.get("name", "").strip()
+            snapshot = data.get("config", {})
+            set_as_default = data.get("set_as_default", False)
+            if not name:
+                return jsonify({"ok": False, "error": "Profile name is required"}), 400
+            ok = save_profile(name, snapshot)
+            if ok and set_as_default:
+                set_default_profile(name)
+            return jsonify({"ok": ok, "name": name})
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/profiles/load/<path:name>", methods=["GET"])
+    def load_image_gen_profile(name):
+        """Load a named profile's config snapshot."""
+        try:
+            profile = load_profile(name)
+            if profile is None:
+                return jsonify({"ok": False, "error": f"Profile '{name}' not found"}), 404
+            return jsonify({"ok": True, "name": name, "config": profile})
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/profiles/delete/<path:name>", methods=["DELETE"])
+    def delete_image_gen_profile(name):
+        """Delete a saved profile."""
+        try:
+            ok = delete_profile(name)
+            if not ok:
+                return jsonify({"ok": False, "error": f"Cannot delete '{name}'"}), 400
+            return jsonify({"ok": True, "deleted": name})
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/profiles/set-default", methods=["POST"])
+    def set_default_image_gen_profile():
+        """Set a profile as the default (auto-loaded on startup). Send empty name to clear."""
+        try:
+            data = request.json or {}
+            name = data.get("name", "").strip()
+            ok = set_default_profile(name)
+            return jsonify({"ok": ok, "default_profile": name})
         except Exception as exc:
             return jsonify({"ok": False, "error": str(exc)}), 500
 

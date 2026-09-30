@@ -164,14 +164,37 @@ window._openIgenGallery = async function() {
     </div>
 
     <!-- Tab: Presets -->
+    
     <div id="igen-tab-presets" class="igen-tab-pane" style="display:none; padding-top:14px;">
+      
+      <!-- Live Summary Card -->
+      <div style="margin-bottom:16px; padding:12px; background:linear-gradient(135deg, rgba(var(--accent-rgb),0.05), var(--bg2)); border:1px solid var(--border); border-radius:10px; font-size:12px;">
+        <div style="font-weight:700; color:var(--text); margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+          <i class="fas fa-clipboard-list" style="color:var(--accent);"></i> Active Configuration
+        </div>
+        <div id="igen-live-summary" style="display:flex; flex-direction:column; gap:2px;">
+          <!-- Populated by JS -->
+          <div style="color:var(--muted); font-style:italic;">Loading...</div>
+        </div>
+      </div>
+
+      <!-- Presets Management -->
+      <div style="font-weight:600; font-size:12px; margin-bottom:8px; color:var(--muted);">Select or Save Preset</div>
       <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
         <select id="igen-preset" onchange="loadIgenPreset()" class="config-input" style="flex:1; min-width:180px; padding:6px 12px; font-size:13px;">
           <option value="">— Select a preset —</option>
         </select>
+        <button id="igen-preset-default-btn" type="button" class="btn-default-profile" style="display:none; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; border:1px solid rgba(251,191,36,0.3); color:#fbbf24; background:transparent; cursor:pointer;"><i class="far fa-star"></i> Set as Default</button>
         <button id="igen-preset-update-btn" onclick="updateIgenPreset()" title="Update selected user preset with current values" style="display:none; padding:7px 14px; border-radius:8px; border:1px solid var(--accent); background:rgba(var(--accent-rgb),0.1); color:var(--accent); cursor:pointer; font-size:12px; font-weight:700; white-space:nowrap;"><i class="fas fa-sync"></i> Update</button>
         <button onclick="saveIgenPreset()" title="Save current config as a new preset" class="btn btn-sm" style="white-space:nowrap;"><i class="fas fa-save"></i> Save As</button>
         <button id="igen-preset-delete-btn" onclick="deleteIgenPreset()" title="Delete selected user preset" class="btn btn-sm btn-danger" style="white-space:nowrap; padding:6px 12px;"><i class="fas fa-trash"></i> Delete</button>
+      </div>
+      
+      <!-- Info Box -->
+      <div style="margin-top:14px; padding:10px 12px; background:rgba(var(--accent-rgb),0.06); border-left:3px solid var(--accent); border-radius:0 8px 8px 0; font-size:11.5px; color:var(--muted); line-height:1.5;">
+        <i class="fas fa-info-circle" style="color:var(--accent); margin-right:4px;"></i>
+        A preset saves <strong>every</strong> parameter: provider, model, VAE, LoRAs, sampler, scheduler, etc.
+        Mark a preset as <strong>⭐ Default</strong> to load it automatically on every restart.
       </div>
     </div>
 
@@ -443,6 +466,7 @@ window._openIgenGallery = async function() {
           <option value="dpm_2">DPM2</option>
           <option value="dpm_2_a">DPM2 Ancestral</option>
           <option value="lms">LMS</option>
+          <option value="lcm">LCM</option>
           <option value="dpm_fast">DPM Fast</option>
           <option value="dpm_adaptive">DPM Adaptive</option>
           <option value="dpm++_2s_a">DPM++ 2S a</option>
@@ -470,6 +494,7 @@ window._openIgenGallery = async function() {
           <option value="pndm">PNDM</option>
           <option value="ddim">DDIM</option>
           <option value="beta">Beta</option>
+          <option value="align_your_steps">Align Your Steps</option>
         </select>
       </div>
     </div>

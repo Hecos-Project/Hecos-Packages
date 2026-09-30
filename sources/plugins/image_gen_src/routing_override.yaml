@@ -1,2 +1,2 @@
 enabled: true
-instruction: 'CRITICAL: When the user asks to generate, create, or draw an image (or photo, picture), you MUST ALWAYS use the IMAGE_GEN__generate_image tool. Do NOT use text-based slash commands like /img. Formulate a detailed visual prompt and pass it to the tool. Do NOT pretend you have generated the image without explicitly calling the tool.'
+instruction: ''

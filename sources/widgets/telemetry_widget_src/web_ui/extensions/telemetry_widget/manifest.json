@@ -2,7 +2,7 @@
     "extension_id": "telemetry_widget",
     "parent_plugin": "WEB_UI",
     "display_name": "WebUI Telemetry Dashboard",
-    "version": "1.0.0",
+    "version": "1.3.2",
     "description": "System hardware metrics, audio toggles, and model context status overview.",
     "sidebar_widget": true,
     "eager_load": true,

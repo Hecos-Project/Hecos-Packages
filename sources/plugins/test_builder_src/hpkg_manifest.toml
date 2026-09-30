@@ -1,0 +1,20 @@
+author = "Antigravity"
+date = ""
+description = "Questo è un pacchetto fittizio creato per testare la nuova GUI del Package Builder di Hecos."
+id = "org.hecos.testbuilder"
+license = ""
+name = "Test Builder Plugin"
+readme = "README.md"
+requires_restart = false
+type = "plugin"
+version = "7.3.3"
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = false
+has_api_routes = false
+has_system_calls = false
+syscall_notes = ""
+notes = ""

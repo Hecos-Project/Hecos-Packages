@@ -1,25 +1,25 @@
-id = "atlas_man"
-manifest_version = "1"
-name = "Atlas Man"
-version = "1.0.0"
 author = "Antonio Meloni"
-license = "GPL-3.0"
+category = "PERSONAS"
+dependencies = []
 description = "Persona pack: Atlas Man"
 icon = "⚡"
 icon_url = ""
-screenshots = []
-category = "PERSONAS"
-plugin_tag = "PERSONA"
+id = "atlas_man"
 is_class_based = false
-type = "persona"
-pip_isolation = "shared"
-plugin_dir = "Atlas_Man"
 lazy_load = false
+license = "GPL-3.0"
+manifest_version = "1"
+name = "Atlas Man"
+pip_isolation = "shared"
+pip_requirements = []
+plugin_dir = "Atlas_Man"
+plugin_tag = "PERSONA"
+python_requires = ">=3.11"
 readme = "README.md"
 readme_url = ""
-dependencies = []
-pip_requirements = []
-python_requires = ">=3.11"
+screenshots = []
+type = "persona"
+version = "1.0.0"
 
 [capabilities]
 llm_tools = []

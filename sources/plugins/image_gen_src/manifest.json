@@ -1,8 +1,8 @@
 {
     "tag": "IMAGE_GEN",
     "name": "Image Generation",
-    "version": "1.5.1",
-    "description": "AI Image Generation - Generates images from text prompts using multiple providers (Pollinations, Gemini, OpenAI DALL-E, Stability AI, HuggingFace). Fully autonomous package with its own TOML configuration. The easiest way to get started is to select Hugging Face as the provider and use one or more API keys, which you can obtain by logging in with an account.",
+    "version": "2.0.1",
+    "description": "AI Image Generation - Generates images from text prompts with priority support for local backends (SwarmUI/ComfyUI on port 7801). Additionally supports cloud AI providers including Pollinations, Gemini, OpenAI DALL-E, Stability AI, and HuggingFace. Fully autonomous package with its own TOML configuration.",
     "lazy_load": true,
     "is_class_based": true,
     "commands": {},
@@ -22,7 +22,7 @@
                     },
                     "provider": {
                         "type": "string",
-                        "description": "Optional: override the configured provider for this call only. Values: 'huggingface', 'pollinations', 'gemini', 'openai', 'stability', 'airforce'."
+                        "description": "Optional: override the configured provider for this call only. Values: 'swarmui' (local SwarmUI backend), 'huggingface', 'pollinations', 'gemini', 'openai', 'stability', 'airforce', 'horde'. Leave empty to use the provider configured by the user."
                     },
                     "model": {
                         "type": "string",
@@ -47,6 +47,14 @@
                         "description": "Optional HuggingFace API key to use for the probe. Leave empty to use the one from configuration."
                     }
                 }
+            }
+        },
+        {
+            "name": "IMAGE_GEN__check_local_status",
+            "description": "Checks the status of the local image generation backend (SwarmUI). Returns a diagnostic report including connectivity, version, available models, and supported samplers/schedulers. Use when the user asks about local generation status, wants to list local models, or troubleshoot local issues.",
+            "parameters": {
+                "type": "object",
+                "required": []
             }
         }
     ],
@@ -74,7 +82,18 @@
         "tab_label": "Image Gen",
         "tab_icon": "<i class=\"fas fa-image\"></i>",
         "template_file": "web/templates/config_panel.html",
-        "js_file": "web/static/js/igen_panel.js",
+        "js_file": null,
+        "js_files": [
+            "web/static/js/igen_core.js",
+            "web/static/js/igen_providers.js",
+            "web/static/js/igen_config.js",
+            "web/static/js/igen_presets.js",
+            "web/static/js/igen_profiles.js",
+            "web/static/js/igen_hf.js",
+            "web/static/js/igen_probe.js",
+            "web/static/js/igen_horde.js",
+            "web/static/js/igen_loras.js"
+        ],
         "css_file": "web/static/css/image_gen.css",
         "category": "MULTIMEDIA",
         "api_routes_file": "web/routes.py",
