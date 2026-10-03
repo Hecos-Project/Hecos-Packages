@@ -92,6 +92,17 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
         build_res = compile_package(src_dir, out_dir, builder_path=cli_dir)
         if not build_res.get("ok"):
             return jsonify({'ok': False, 'error': build_res.get("error"), 'logs': build_res.get("logs")})
+        
+        # Invalidate the store catalog cache so next load fetches fresh data from GitHub
+        try:
+            import os
+            hecos_src = Path(__file__).parent.parent.parent
+            cache_file = hecos_src / "data" / "store_cache.json"
+            if cache_file.exists():
+                cache_file.unlink()
+                info("Store cache invalidated after build")
+        except Exception as e:
+            info(f"Could not invalidate store cache: {e}")
             
         return jsonify({'ok': True, 'out_dir': build_res.get("out_dir"), 'hpkg_path': build_res.get("hpkg_path"), 'logs': build_res.get("logs")})
 
