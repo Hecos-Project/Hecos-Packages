@@ -34,6 +34,7 @@ def generate_store_catalog():
     else:
         output_file = website_store_dir / "index.json"
 
+    catalog_map = {}
     catalog = {
         "version": "1",
         "catalog_url": "https://hecos-project.github.io/store/index.json",
@@ -157,11 +158,26 @@ def generate_store_catalog():
             "pip_requirements": manifest_data.get("pip_requirements", []),
         }
         
-        catalog["packages"].append(pkg_entry)
-
-        print(f" {Fore.GREEN}[OK] Added: {pkg_entry['name']} v{pkg_entry['version']}{Style.RESET_ALL}")
+        existing_pkg = catalog_map.get(pkg_id)
+        
+        if existing_pkg:
+            def parse_ver(v_str):
+                return [int(x) if x.isdigit() else 0 for x in v_str.replace('-', '.').split('.')]
+            
+            try:
+                if parse_ver(pkg_entry["version"]) > parse_ver(existing_pkg["version"]):
+                    catalog_map[pkg_id] = pkg_entry
+                    print(f" {Fore.GREEN}[OK] Updated: {pkg_entry['name']} to v{pkg_entry['version']}{Style.RESET_ALL}")
+            except Exception:
+                if pkg_entry["version"] > existing_pkg["version"]:
+                    catalog_map[pkg_id] = pkg_entry
+                    print(f" {Fore.GREEN}[OK] Updated: {pkg_entry['name']} to v{pkg_entry['version']}{Style.RESET_ALL}")
+        else:
+            catalog_map[pkg_id] = pkg_entry
+            print(f" {Fore.GREEN}[OK] Added: {pkg_entry['name']} v{pkg_entry['version']}{Style.RESET_ALL}")
         
     try:
+        catalog["packages"] = list(catalog_map.values())
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(catalog, f, indent=2, ensure_ascii=False)
         

@@ -17,9 +17,12 @@ plugin_tag = "PERSONA"
 python_requires = ">=3.11"
 readme = "README.md"
 readme_url = ""
-screenshots = []
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/personas/Atlas_Man_src/preview_1.png",
+]
 type = "persona"
 version = "1.0.0"
+date = ""
 
 [capabilities]
 llm_tools = []
