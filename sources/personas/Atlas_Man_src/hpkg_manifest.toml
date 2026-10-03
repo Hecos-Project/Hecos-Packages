@@ -21,7 +21,7 @@ screenshots = [
     "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/personas/Atlas_Man_src/preview_1.png",
 ]
 type = "persona"
-version = "1.0.0"
+version = "1.0.1"
 date = ""
 
 [capabilities]
