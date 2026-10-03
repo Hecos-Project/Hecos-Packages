@@ -1,7 +1,7 @@
 id = "builder_studio"
 manifest_version = "1"
 name = "Builder Studio"
-version = "1.0.0"
+version = "1.1.4"
 author = "Hecos Community"
 license = "GPL-3.0"
 description = "Visual IDE for building, compiling, inspecting and managing Hecos packages (.hpkg)."

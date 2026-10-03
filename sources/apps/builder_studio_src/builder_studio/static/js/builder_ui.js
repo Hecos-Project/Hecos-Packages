@@ -332,21 +332,72 @@ setTimeout(() => {
     window.builderRefreshSources();
 }, 500);
 
+window.builderCurrentImages = [];
+window.builderCurrentImageIndex = 0;
+window.builderCurrentDir = "";
+
 window._builderUpdateImages = function(dir, images) {
+    window.builderCurrentImages = images || [];
+    window.builderCurrentDir = dir;
+    window.builderCurrentImageIndex = 0;
+    _builderRenderGallery();
+};
+
+window._builderRenderGallery = function() {
     const box = document.getElementById('builder-image-preview');
     const cnt = document.getElementById('builder-image-count');
     if (!box) return;
+    
+    const images = window.builderCurrentImages;
+    const dir = window.builderCurrentDir;
     
     if (images && images.length > 0) {
         if (cnt) cnt.innerText = images.length + (images.length === 1 ? " Image" : " Images");
         let d = dir;
         if (!d.endsWith("\\") && !d.endsWith("/")) d += "\\";
-        const imgPath = d + images[0];
-        box.innerHTML = `<img src="/api/local_file?path=${encodeURIComponent(imgPath)}&t=${Date.now()}" style="width:100%; height:100%; object-fit:cover;">`;
+        
+        let idx = window.builderCurrentImageIndex;
+        if (idx >= images.length) idx = 0;
+        if (idx < 0) idx = images.length - 1;
+        window.builderCurrentImageIndex = idx;
+        
+        const imgName = images[idx];
+        const imgPath = d + imgName;
+        
+        let html = `<div style="position:relative; width:100%; height:100%;">
+            <img src="/api/local_file?path=${encodeURIComponent(imgPath)}&t=${Date.now()}" style="width:100%; height:100%; object-fit:cover; border-radius:4px;">
+            
+            <button onclick="window.builderDeleteImage('${imgName}'); event.stopPropagation();" title="Delete this image" style="position:absolute; top:8px; right:8px; background:rgba(220,38,38,0.8); color:white; border:none; border-radius:4px; width:28px; height:28px; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:10;"><i class="fas fa-trash-alt"></i></button>
+            
+            <div style="position:absolute; bottom:8px; left:0; width:100%; display:flex; justify-content:center; gap:8px; z-index:10;">`;
+            
+        if (images.length > 1) {
+            html += `
+                <button onclick="window.builderGalleryPrev(event)" style="background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-chevron-left"></i></button>
+                <div style="background:rgba(0,0,0,0.6); color:white; padding:4px 10px; border-radius:12px; font-size:12px; display:flex; align-items:center;">${idx + 1} / ${images.length}</div>
+                <button onclick="window.builderGalleryNext(event)" style="background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-chevron-right"></i></button>
+            `;
+        }
+        
+        html += `</div></div>`;
+        box.innerHTML = html;
+        
     } else {
         if (cnt) cnt.innerText = "0 Images";
         box.innerHTML = '<i class="fas fa-image" style="font-size:24px; color:var(--muted);"></i>';
     }
+};
+
+window.builderGalleryPrev = function(e) {
+    if(e) e.stopPropagation();
+    window.builderCurrentImageIndex--;
+    window._builderRenderGallery();
+};
+
+window.builderGalleryNext = function(e) {
+    if(e) e.stopPropagation();
+    window.builderCurrentImageIndex++;
+    window._builderRenderGallery();
 };
 
 

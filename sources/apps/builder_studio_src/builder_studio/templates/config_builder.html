@@ -1,5 +1,5 @@
   <!-- ── BUILDER PANE ──────────────────────────────────────────────── -->
-  <div id="hpm-pane-builder" style="display:none; margin: -16px; padding: 16px; display:flex; flex-direction:column; min-height:calc(100vh - 120px);">
+  <div id="tab-builder" class="panel" style="margin: -16px; padding: 16px; flex-direction:column; min-height:calc(100vh - 120px);">
     
     <!-- Global Header -->
     <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:16px;">
@@ -194,13 +194,13 @@
 </div>
 
 <!-- Uninstall Confirmation Modal -->
-<div id="hpm-confirm-modal" class="modal-bg" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center;">
+<div id="builder-confirm-modal" class="modal-bg" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center;">
   <div class="modal-content" style="background:var(--bg2, #1e1e1e); border:1px solid var(--border-color); border-radius:12px; padding:24px; max-width:400px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-    <h2 style="margin-top:0; font-size:1.4em; color:var(--text);"><i class="fas fa-exclamation-triangle" style="color:#ff4a4a; margin-right:8px;"></i>{{ t('hpm_confirm_uninstall_title') or 'Confirm Uninstall' }}</h2>
-    <p id="hpm-confirm-modal-text" style="margin:20px 0; color:var(--text); font-size:1.05em;"></p>
+    <h2 style="margin-top:0; font-size:1.4em; color:var(--text);"><i class="fas fa-exclamation-triangle" style="color:#ff4a4a; margin-right:8px;"></i>{{ t('hpm_confirm_uninstall_title') or 'Confirm Action' }}</h2>
+    <p id="builder-confirm-modal-text" style="margin:20px 0; color:var(--text); font-size:1.05em;"></p>
     <div class="modal-actions" style="display:flex; justify-content:center; gap:15px; margin-top:24px;">
-      <button type="button" class="btn btn-secondary" onclick="document.getElementById('hpm-confirm-modal').style.display='none'">{{ t('hpm_confirm_uninstall_cancel') or 'Cancel' }}</button>
-      <button type="button" class="btn btn-danger" style="background:#ff4a4a; color:white; border:none;" id="hpm-confirm-modal-yes">{{ t('hpm_confirm_uninstall_yes') or 'Uninstall' }}</button>
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('builder-confirm-modal').style.display='none'">{{ t('hpm_confirm_uninstall_cancel') or 'Cancel' }}</button>
+      <button type="button" class="btn btn-danger" style="background:#ff4a4a; color:white; border:none;" id="builder-confirm-modal-yes">{{ t('hpm_confirm_uninstall_yes') or 'Confirm' }}</button>
     </div>
   </div>
 </div>
@@ -218,11 +218,11 @@
 // Safety guard: prevent Enter key from accidentally confirming the Wipe/Confirm modal
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') {
-    const modal = document.getElementById('hpm-confirm-modal');
+    const modal = document.getElementById('builder-confirm-modal');
     // If the modal is NOT visible, prevent Enter from bubbling to any button inside it
     if (modal && modal.style.display === 'none') {
       // Check if the active element is NOT inside the modal itself
-      const yesBtn = document.getElementById('hpm-confirm-modal-yes');
+      const yesBtn = document.getElementById('builder-confirm-modal-yes');
       if (document.activeElement === yesBtn) {
         e.preventDefault();
       }
@@ -293,6 +293,13 @@ document.addEventListener('keydown', function(e) {
                     <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-unpack-dest')"><i class="fas fa-folder-open"></i></button>
                 </div>
             </div>
+            <div>
+                <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Hecos Root Directory</label>
+                <div style="display:flex; gap:6px; margin-top:4px;">
+                    <input type="text" id="setup-hecos-root" class="config-input" style="flex:1;" placeholder="C:\Hecos\hecos">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-hecos-root')"><i class="fas fa-folder-open"></i></button>
+                </div>
+            </div>
         </div>
         
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:24px;">
@@ -338,7 +345,8 @@ document.addEventListener('keydown', function(e) {
 <script>
     if (!window.builderInitInterval) {
         window.builderInitInterval = setInterval(() => {
-            if (typeof window.builderRefreshSources === 'function' && document.getElementById('hpm-pane-builder').style.display !== 'none') {
+            const bp = document.getElementById('tab-builder');
+            if (typeof window.builderRefreshSources === 'function' && bp && bp.classList.contains('active')) {
                 clearInterval(window.builderInitInterval);
                 window.builderInitInterval = null;
                 window.builderRefreshSources();

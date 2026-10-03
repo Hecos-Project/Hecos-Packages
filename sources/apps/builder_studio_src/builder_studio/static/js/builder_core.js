@@ -28,9 +28,13 @@ let currentManifest = {};
 
 // Use native Hecos Modal instead of browser alert
 function _builderModal(msg, isError = true) {
+    const modal = document.getElementById('builder-info-modal');
+    if (msg === false) {
+        if (modal) modal.style.display = 'none';
+        return;
+    }
     const titleEl = document.getElementById('builder-info-modal-title');
     const textEl = document.getElementById('builder-info-modal-text');
-    const modal = document.getElementById('builder-info-modal');
     
     if (titleEl && textEl && modal) {
         if (isError) {
@@ -43,6 +47,25 @@ function _builderModal(msg, isError = true) {
     } else {
         console.error("Modal not found. Fallback:", msg);
         alert(msg);
+    }
+}
+
+function _builderConfirmModal(msg, onConfirm) {
+    const modal = document.getElementById('builder-confirm-modal');
+    const textEl = document.getElementById('builder-confirm-modal-text');
+    const yesBtn = document.getElementById('builder-confirm-modal-yes');
+    
+    if (modal && textEl && yesBtn) {
+        textEl.innerHTML = msg;
+        yesBtn.onclick = () => {
+            modal.style.display = 'none';
+            if (onConfirm) onConfirm();
+        };
+        modal.style.display = 'flex';
+    } else {
+        if (confirm(msg)) {
+            if (onConfirm) onConfirm();
+        }
     }
 }
 

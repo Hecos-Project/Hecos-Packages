@@ -63,6 +63,29 @@ window.builderUploadImage = async function(event) {
     event.target.value = ''; // Reset input
 };
 
+window.builderDeleteImage = function(imageName) {
+    const dir = document.getElementById('builder-source-dir').value;
+    if (!dir || !imageName) return;
+    
+    _builderConfirmModal(`Are you sure you want to delete ${imageName}?`, async () => {
+        try {
+            const resp = await fetch('/api/hpm/builder/delete-image-upload', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ src_dir: dir, image_name: imageName })
+            });
+            const data = await resp.json();
+            if (!data.ok) {
+                _builderModal("Failed to delete image: " + data.error, true);
+            } else {
+                _builderUpdateImages(dir, data.images);
+            }
+        } catch (e) {
+            console.error("Image delete error", e);
+        }
+    });
+};
+
 window.builderHandleFolderInput = function(e) {
     if (e.target.files && e.target.files.length > 0) {
         let packageNames = new Set();
@@ -144,95 +167,33 @@ window.builderPickDestRoot = function() {
 };
 
 window.builderShowCustomPicker = async function(targetId) {
-    currentPickerTarget = targetId;
-    const currentVal = document.getElementById(targetId).value;
-    document.getElementById('hpm-folder-picker-modal').style.display = 'flex';
+    const inputEl = document.getElementById(targetId);
+    if (!inputEl) return;
     
-    if (currentVal && currentVal.length > 0) {
-        await window.builderPickerLoad(currentVal);
-    } else {
-        await window.builderPickerLoadDrives();
-    }
-};
-
-window.builderPickerLoadDrives = async function() {
+    const currentVal = inputEl.value || '';
+    // Determine if this is a file picker (private key) or folder picker
+    const isFilePicker = targetId === 'setup-private-key';
+    
     try {
-        const resp = await fetch('/api/system/explorer/drives');
-        const data = await resp.json();
-        if (data && data.ok) {
-            currentPickerPath = '';
-            document.getElementById('hpm-picker-path').value = 'My Computer';
-            const list = document.getElementById('hpm-picker-list');
-            list.innerHTML = '';
-            data.drives.forEach(drive => {
-                const div = document.createElement('div');
-                div.style = "padding:8px; cursor:pointer; border-radius:6px; display:flex; align-items:center; gap:8px;";
-                div.onmouseover = () => div.style.background = 'var(--bg3)';
-                div.onmouseout = () => div.style.background = 'transparent';
-                div.onclick = () => window.builderPickerLoad(drive);
-                div.innerHTML = `<i class="fas fa-hdd" style="color:var(--muted);"></i> <span style="color:var(--text);">${drive}</span>`;
-                list.appendChild(div);
-            });
-        }
-    } catch (e) { console.error(e);
-        window.builderLog('An unexpected error occurred: ' + e.message, 'error'); }
-};
-
-window.builderPickerLoad = async function(path) {
-    try {
-        const resp = await fetch('/api/system/explorer/ls', {
+        const resp = await fetch('/api/system/explorer/pick-native', {
             method: 'POST',
-            body: JSON.stringify({path: path})
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                title: isFilePicker ? 'Select File' : 'Select Directory',
+                initialdir: currentVal,
+                pick_dir: !isFilePicker,
+                filetypes: isFilePicker ? [["PEM Key Files", "*.pem"], ["All Files", "*.*"]] : undefined
+            })
         });
         const data = await resp.json();
-        if (data && data.ok) {
-            currentPickerPath = path;
-            document.getElementById('hpm-picker-path').value = path;
-            const list = document.getElementById('hpm-picker-list');
-            list.innerHTML = '';
-            
-            let dirs = data.entries ? data.entries.filter(e => e.type === 'dir') : [];
-            dirs.sort((a,b) => a.name.localeCompare(b.name));
-            
-            if (dirs.length === 0) {
-                list.innerHTML = '<div style="padding:16px; color:var(--muted); text-align:center;">No subfolders</div>';
+        if (data && data.ok && data.path) {
+            inputEl.value = data.path;
+            if (targetId === 'builder-sources-root' || targetId === 'setup-sources-root') {
+                window.builderRefreshSources();
             }
-            
-            dirs.forEach(d => {
-                const div = document.createElement('div');
-                div.style = "padding:8px; cursor:pointer; border-radius:6px; display:flex; align-items:center; gap:8px;";
-                div.onmouseover = () => div.style.background = 'var(--bg3)';
-                div.onmouseout = () => div.style.background = 'transparent';
-                div.onclick = () => window.builderPickerLoad(d.path);
-                div.innerHTML = `<i class="fas fa-folder" style="color:var(--accent);"></i> <span style="color:var(--text);">${d.name}</span>`;
-                list.appendChild(div);
-            });
-        } else {
-            await window.builderPickerLoadDrives();
         }
-    } catch (e) { console.error(e);
-        window.builderLog('An unexpected error occurred: ' + e.message, 'error'); }
-};
-
-window.builderPickerUp = async function() {
-    if (!currentPickerPath) return; 
-    let parts = currentPickerPath.replace(/\\/g, '/').split('/').filter(p => p.length > 0);
-    if (parts.length <= 1) {
-        await window.builderPickerLoadDrives();
-    } else {
-        parts.pop();
-        let upPath = parts.join('\\');
-        if (upPath.length === 2 && upPath.endsWith(':')) upPath += '\\';
-        await window.builderPickerLoad(upPath);
+    } catch(e) {
+        console.error('Picker error:', e);
+        window.builderLog('Error opening file picker: ' + e.message, 'error');
     }
-};
-
-window.builderPickerConfirm = function() {
-    if (currentPickerPath && currentPickerTarget) {
-        document.getElementById(currentPickerTarget).value = currentPickerPath;
-        if (currentPickerTarget === 'builder-sources-root') {
-            window.builderRefreshSources();
-        }
-    }
-    document.getElementById('hpm-folder-picker-modal').style.display = 'none';
 };

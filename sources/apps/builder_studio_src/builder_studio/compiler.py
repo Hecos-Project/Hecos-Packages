@@ -42,14 +42,18 @@ if not success:
         info("Compilation finished successfully.")
         
         final_out_dir = out_dir
+        hpkg_path = None
         for line in result.stdout.splitlines():
             if line.startswith("FINAL_OUT_DIR="):
                 final_out_dir = line.split("=", 1)[1]
+            if "DONE -> " in line:
+                # [INFO] DONE -> C:\path\to\pkg.hpkg (1.2 KB)
+                hpkg_path = line.split("DONE -> ")[1].split(" (")[0].strip()
                 
         if result.stdout:
             info(f"Builder STDOUT: {result.stdout}")
             
-        return {"ok": True, "out_dir": final_out_dir, "logs": result.stdout}
+        return {"ok": True, "out_dir": final_out_dir, "hpkg_path": hpkg_path, "logs": result.stdout}
     except subprocess.CalledProcessError as e:
         error(f"Error compiling package (Subprocess failed):\nSTDOUT: {e.stdout}\nSTDERR: {e.stderr}")
         return {"ok": False, "error": "Build failed (check logs).", "logs": e.stdout + "\n" + e.stderr}

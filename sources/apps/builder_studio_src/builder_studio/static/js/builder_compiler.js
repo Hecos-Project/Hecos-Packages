@@ -61,9 +61,15 @@ window.builderRunBuild = async function(autoInstall = false) {
         }
         
         if (data && data.ok && autoInstall) {
-            window.builderLog('Auto-install requested. Triggering Dev Sync...', 'info');
-            if (typeof window.builderDevSync === 'function') {
-                await window.builderDevSync();
+            window.builderLog('Auto-install requested. Triggering Local Install...', 'info');
+            if (data.hpkg_path) {
+                if (typeof window.builderInstallLocal === 'function') {
+                    await window.builderInstallLocal(data.hpkg_path);
+                } else {
+                    window.builderLog('builderInstallLocal function not found.', 'error');
+                }
+            } else {
+                window.builderLog('Cannot auto-install: hpkg_path not returned by builder.', 'error');
             }
         }
     } catch (e) {
@@ -201,6 +207,64 @@ window.builderGenerateCatalog = async function() {
 function _getPackagesDir() {
     return window.builderLoadSetup().dest || 'C:\\Hecos-Packages\\packages';
 }
+
+window.builderInstallLocal = async function(hpkgPath) {
+    window.builderLog(`Starting Local Install for ${hpkgPath}...`, 'warn');
+    
+    try {
+        const resp = await fetch('/api/hpm/builder/install-local', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ hpkg_path: hpkgPath })
+        });
+        
+        if (!resp.ok) {
+            window.builderLog(`Failed to start installation: HTTP ${resp.status}`, 'error');
+            return;
+        }
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split("\n\n");
+            buffer = lines.pop(); // Keep incomplete event
+
+            for (const block of lines) {
+                if (!block.trim()) continue;
+                const lines = block.split('\n');
+                let eventType = "message";
+                let data = {};
+
+                for (const line of lines) {
+                    if (line.startsWith("event:")) eventType = line.substring(6).trim();
+                    else if (line.startsWith("data:")) {
+                        try { data = JSON.parse(line.substring(5).trim()); } catch (e) {}
+                    }
+                }
+
+                if (eventType === "progress") {
+                    window.builderLog(`[Install] ${data.message || data.step}`, 'info');
+                } else if (eventType === "error") {
+                    window.builderLog(`[Install Error] ${data.message}`, 'error');
+                    _builderModal("Installation Failed:\n" + data.message, true);
+                } else if (eventType === "success") {
+                    window.builderLog(`[Install Success] ${data.message}`, 'success');
+                    if (data.install_path) window.builderLog(`Installed to: ${data.install_path}`, 'info');
+                } else {
+                    window.builderLog(`[Install] ${JSON.stringify(data)}`, 'info');
+                }
+            }
+        }
+    } catch(e) {
+        window.builderLog('Error during Local Install: ' + e.message, 'error');
+    }
+};
 
 // ─── Dev Sync ─────────────────────────────────────────────────────────────────
 window.builderDevSync = async function() {

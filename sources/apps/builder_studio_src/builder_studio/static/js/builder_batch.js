@@ -181,10 +181,7 @@ window.builderBuildAll = async function() {
 
 window.builderBuildAllConfirmed = async function() {
     const sources = window.builderSourcesData || [];
-    const packages = sources.map(s => {
-        const parts = s.rel_path.replace(/\\\\/g, '/').split('/');
-        return parts[parts.length - 1] || parts[parts.length - 2] || s.name;
-    });
+    const packages = sources.map(s => s.rel_path);
 
     const baseDir = document.getElementById('builder-sources-root')?.value || '';
     const outDir  = document.getElementById('builder-dest-root')?.value || '';
@@ -207,6 +204,16 @@ window.builderBuildAllConfirmed = async function() {
         const data = await resp.json();
         _builderModal(false);
         if (data.ok) {
+            if (data.logs) {
+                const lines = data.logs.split('\n');
+                lines.forEach(l => {
+                    if (l.trim()) {
+                        if (l.includes("[ERROR]")) window.builderLog(l, "error");
+                        else if (l.includes("[WARN]")) window.builderLog(l, "warning");
+                        else window.builderLog(l, "info");
+                    }
+                });
+            }
             window.builderLog(`Build All complete. Success: ${data.success_count}, Failed: ${data.fail_count}`, data.fail_count > 0 ? 'warn' : 'success');
         } else {
             window.builderLog('Build All failed: ' + data.error, 'error');

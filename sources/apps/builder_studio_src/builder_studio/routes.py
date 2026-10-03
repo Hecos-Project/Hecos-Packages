@@ -75,7 +75,7 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
         if not build_res.get("ok"):
             return jsonify({'ok': False, 'error': build_res.get("error"), 'logs': build_res.get("logs")})
             
-        return jsonify({'ok': True, 'out_dir': build_res.get("out_dir"), 'logs': build_res.get("logs")})
+        return jsonify({'ok': True, 'out_dir': build_res.get("out_dir"), 'hpkg_path': build_res.get("hpkg_path"), 'logs': build_res.get("logs")})
 
     @app.route('/api/hpm/builder/add-image', methods=['POST'])
     @login_required
@@ -205,23 +205,32 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
             if file.filename == '':
                 return jsonify({'ok': False, 'error': 'No selected file'})
                 
-            from pathlib import Path
-            import shutil
+            from manifest_io import add_preview_image, list_preview_images
+            add_preview_image(src_dir, file_data=file)
             
-            src_path = Path(src_dir)
-            if not src_path.exists():
-                return jsonify({'ok': False, 'error': 'Source directory does not exist'})
-                
-            # Always overwrite preview_1.png for the Builder technical sheet
-            new_name = "preview_1.png"
-            dest_path = src_path / new_name
-            
-            file.save(str(dest_path))
-            
-            images = ["preview_1.png"]
+            images = list_preview_images(src_dir)
             return jsonify({'ok': True, 'images': images})
         except Exception as e:
             error(f"Failed to upload image: {e}")
+            return jsonify({'ok': False, 'error': str(e)})
+
+    @app.route('/api/hpm/builder/delete-image-upload', methods=['POST'])
+    @login_required
+    def builder_delete_image_upload():
+        try:
+            data = request.get_json() or {}
+            src_dir = data.get('src_dir')
+            image_name = data.get('image_name')
+            
+            if not src_dir or not image_name:
+                return jsonify({'ok': False, 'error': 'Missing src_dir or image_name'})
+                
+            from manifest_io import delete_preview_image
+            images = delete_preview_image(src_dir, image_name)
+            
+            return jsonify({'ok': True, 'images': images})
+        except Exception as e:
+            error(f"Failed to delete image: {e}")
             return jsonify({'ok': False, 'error': str(e)})
 
     @app.route('/api/hpm/builder/batch-build', methods=['POST'])
@@ -243,27 +252,29 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
             
             info(f"Starting Batch Build for {len(packages)} packages...")
             
-            for pkg_name in packages:
-                # Find the package in the base_dir
-                pkg_path = None
-                for manifest in sources_dir.rglob("hpkg_manifest.toml"):
-                    if manifest.parent.name == pkg_name:
-                        pkg_path = manifest.parent
-                        break
-                
-                if pkg_path:
-                    # Compile it
+            all_logs = []
+            for rel_path in packages:
+                pkg_path = sources_dir / rel_path
+                if pkg_path.exists() and (pkg_path / "hpkg_manifest.toml").exists():
                     cli_dir = data.get('builder_cli_dir')
                     success = compile_package(str(pkg_path), out_dir, builder_path=cli_dir)
-                    if success:
+                    
+                    pkg_logs = success.get("logs", "")
+                    if pkg_logs:
+                        all_logs.append(pkg_logs)
+                        
+                    if success.get("ok"):
                         success_count += 1
                     else:
                         fail_count += 1
                 else:
                     fail_count += 1
-                    error(f"Batch Build: Package {pkg_name} not found in {base_dir}")
+                    error_msg = f"Batch Build: Package at {rel_path} not found in {base_dir}"
+                    error(error_msg)
+                    all_logs.append(error_msg)
                     
-            return jsonify({'ok': True, 'success_count': success_count, 'fail_count': fail_count})
+            combined_logs = "\n\n".join(all_logs)
+            return jsonify({'ok': True, 'success_count': success_count, 'fail_count': fail_count, 'logs': combined_logs})
         except Exception as e:
             error(f"Batch Build Failed: {e}")
             return jsonify({'ok': False, 'error': str(e)})
@@ -274,8 +285,8 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
         import subprocess, sys
         data = request.get_json() or {}
         cli_dir = data.get('builder_cli_dir') or r"C:\Hecos-Packages\Hecos_HPM_Builder"
-        priv_path = data.get('builder_priv_key') or r"C:\Hecos\data\trusted_keys\hpm_private.pem"
-        pub_path = data.get('builder_pub_key') or r"C:\Hecos\data\trusted_keys"
+        priv_path = data.get('builder_priv_key') or r"C:\Hecos\hecos\data\trusted_keys\hpm_private.pem"
+        pub_path = data.get('builder_pub_key') or r"C:\Hecos\hecos\data\trusted_keys"
         code = (
             f'import sys\n'
             f'sys.path.insert(0, r"{cli_dir}")\n'
@@ -311,6 +322,102 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
             return jsonify({'ok': True, 'logs': res.stdout})
         except subprocess.CalledProcessError as e:
             return jsonify({'ok': False, 'error': 'Catalog generation failed', 'logs': e.stdout + "\n" + e.stderr})
+
+    @app.route('/api/hpm/builder/install-local', methods=['POST'])
+    @login_required
+    def builder_install_local():
+        data = request.get_json() or {}
+        hpkg_path = data.get('hpkg_path', '')
+        if not hpkg_path:
+            return jsonify({'ok': False, 'error': 'No hpkg_path provided'})
+            
+        import threading
+        import queue
+        import json
+        from pathlib import Path
+        
+        if not Path(hpkg_path).exists():
+            return jsonify({'ok': False, 'error': f'File not found: {hpkg_path}'})
+            
+        def _sse(event: str, d: dict) -> str:
+            return f"event: {event}\ndata: {json.dumps(d)}\n\n"
+            
+        def generate():
+            yield _sse("progress", {"step": "install", "message": "Installing locally built package..."})
+            try:
+                # Use the shared HPM helper
+                import sys
+                from hecos.modules.web_ui.routes_packages_helpers import _get_hpm_components
+                registry, installer, _ = _get_hpm_components(r"C:\Hecos\hecos")
+                
+                q = queue.Queue()
+                original_cb = installer._event_callback
+                
+                def _hpm_event_cb(evt_name, payload):
+                    q.put((evt_name, payload))
+                    if original_cb:
+                        original_cb(evt_name, payload)
+                        
+                installer._event_callback = _hpm_event_cb
+                
+                result_box = []
+                def _worker():
+                    try:
+                        res = installer.install_file(
+                            hpkg_path=hpkg_path,
+                            require_signature=False,
+                            skip_dep_check=False,
+                        )
+                        result_box.append(res)
+                    except Exception as e:
+                        result_box.append(e)
+                    finally:
+                        q.put(None)
+                        
+                t = threading.Thread(target=_worker)
+                t.start()
+                
+                while True:
+                    msg = q.get()
+                    if msg is None:
+                        break
+                    evt_name, payload = msg
+                    if evt_name == "hpm:progress":
+                        yield _sse("progress", payload)
+                    elif evt_name == "hpm:error":
+                        yield _sse("error", payload)
+                    else:
+                        yield _sse(evt_name.replace("hpm:", ""), payload)
+                        
+                t.join()
+                installer._event_callback = original_cb
+                
+                if not result_box:
+                    yield _sse("error", {"message": "Installation thread crashed unexpectedly."})
+                    return
+                
+                result = result_box[0]
+                if isinstance(result, Exception):
+                    yield _sse("error", {"message": f"Installation failed: {result}"})
+                    return
+                    
+                if not result.success:
+                    yield _sse("error", {"message": f"Installation failed: {result.error}"})
+                    return
+                
+                pip_installed = []
+                if result.dep_report and result.dep_report.pip_installed:
+                    pip_installed = result.dep_report.pip_installed
+                
+                yield _sse("success", {
+                    "message": "Installed successfully!",
+                    "pip_installed": pip_installed
+                })
+            except Exception as e:
+                yield _sse("error", {"message": f"Unexpected error: {e}"})
+                
+        from flask import Response
+        return Response(generate(), mimetype="text/event-stream")
 
     @app.route('/api/hpm/builder/dev-sync', methods=['POST'])
     @login_required
