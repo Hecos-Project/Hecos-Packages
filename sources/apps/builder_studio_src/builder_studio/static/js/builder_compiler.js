@@ -123,8 +123,24 @@ window._executeBatchBuild = async function(packagesCsv) {
         if (!data.ok) {
             _builderModal("ERRORE BATCH BUILD: " + (data.error || "Unknown"), true);
         } else {
-            _builderModal(`<b>Batch Build Completed!</b><br><br>Success: ${data.success_count}<br>Failed: ${data.fail_count}<br>Check the logs for details.`, false);
-            window.builderLog(`Batch Build Completed. Success: ${data.success_count}, Failed: ${data.fail_count}`, data.fail_count > 0 ? 'warn' : 'success');
+            // Print per-package logs
+            if (data.logs) {
+                data.logs.split('\n').forEach(l => {
+                    if (l.trim() && !l.includes('FINAL_OUT_DIR=')) {
+                        let t = 'info';
+                        if (l.includes('[ERROR]') || l.includes('[FAIL]')) t = 'error';
+                        else if (l.includes('[WARN]')) t = 'warn';
+                        else if (l.includes('[OK]')) t = 'success';
+                        else if (l.startsWith('─') || l.includes('📦')) t = 'warn';
+                        window.builderLog(l, t);
+                    }
+                });
+            }
+            const summary = `Batch Build Completed. ✅ Success: ${data.success_count} ❌ Failed: ${data.fail_count}`;
+            window.builderLog(summary, data.fail_count > 0 ? 'warn' : 'success');
+            _builderModal(`<b>Batch Build Completed!</b><br><br>✅ Success: ${data.success_count}<br>❌ Failed: ${data.fail_count}`, false);
+            // Refresh cards to update Built badges
+            setTimeout(() => window.builderRefreshSources(), 800);
         }
     } catch (e) {
         console.error(e);

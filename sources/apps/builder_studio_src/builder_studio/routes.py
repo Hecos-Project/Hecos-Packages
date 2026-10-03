@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, re
 _cur_dir = os.path.dirname(os.path.abspath(__file__))
 if _cur_dir not in sys.path:
     sys.path.insert(0, _cur_dir)
@@ -9,6 +9,10 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required
 from manifest_io import load_manifest, save_manifest, list_preview_images, add_preview_image
 from compiler import compile_package
+
+_ANSI_RE = re.compile(r'\x1b(?:\[[0-9;]*[a-zA-Z]|\][^\x07]*\x07)')
+def _strip_ansi(text: str) -> str:
+    return _ANSI_RE.sub('', text or '')
 
 def init_plugin_routes(app, cfg_mgr, hecos_src, log):
     @app.route('/api/hpm/builder/open-folder', methods=['POST'])
@@ -64,6 +68,20 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
             except Exception as e:
                 return jsonify({'ok': False, 'error': f"Failed to create missing README: {e}"})
                 
+        # Fix GitHub raw URLs for store generator (store generator miscalculates folder name case-sensitivity)
+        try:
+            from manifest_io import list_preview_images
+            imgs = list_preview_images(src_dir)
+            if imgs:
+                folder_name = Path(src_dir).name
+                cat_name = Path(src_dir).parent.name
+                base_raw = f"https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/{cat_name}/{folder_name}"
+                manifest['screenshots'] = [f"{base_raw}/{img}" for img in imgs]
+            else:
+                manifest['screenshots'] = []
+        except:
+            pass
+                
         # 1. Save modifications to TOML
         if not save_manifest(src_dir, manifest):
             return jsonify({'ok': False, 'error': 'Failed to save manifest'})
@@ -101,8 +119,10 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
         from pathlib import Path
         try:
             data = request.get_json() or {}
-            base_dir = data.get('base_dir') or r"C:\Hecos-Packages\sources"
-            sources_dir = Path(base_dir)
+            base_dir  = data.get('base_dir') or r"C:\Hecos-Packages\sources"
+            out_dir   = data.get('out_dir')  or r"C:\Hecos-Packages\packages"
+            sources_dir  = Path(base_dir)
+            packages_dir = Path(out_dir)
             sources = []
             if sources_dir.exists():
                 for manifest_path in sources_dir.rglob("hpkg_manifest.toml"):
@@ -111,12 +131,23 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
                     rel_path = str(parent_dir.relative_to(sources_dir))
                     
                     if manifest:
+                        pkg_id      = manifest.get("id", parent_dir.name)
+                        pkg_version = manifest.get("version", "1.0.0")
+                        # Search for built .hpkg in packages_dir tree
+                        hpkg_matches = list(packages_dir.rglob(f"{pkg_id}-{pkg_version}.hpkg"))
+                        # Also search by id only (any version)
+                        if not hpkg_matches:
+                            hpkg_matches = list(packages_dir.rglob(f"{pkg_id}-*.hpkg"))
+                        hpkg_path = str(hpkg_matches[0]) if hpkg_matches else ""
                         pkg_info = {
-                            "name": manifest.get("name", parent_dir.name),
-                            "version": manifest.get("version", "1.0.0"),
+                            "name":     manifest.get("name", parent_dir.name),
+                            "version":  pkg_version,
                             "description": manifest.get("description", ""),
-                            "type": manifest.get("type", "plugin"),
-                            "rel_path": rel_path
+                            "type":     manifest.get("type", "plugin"),
+                            "rel_path": rel_path,
+                            "id":       pkg_id,
+                            "built":    bool(hpkg_path),
+                            "hpkg_path": hpkg_path,
                         }
                     else:
                         pkg_info = {
@@ -124,7 +155,10 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
                             "version": "1.0.0",
                             "description": "",
                             "type": "plugin",
-                            "rel_path": rel_path
+                            "rel_path": rel_path,
+                            "id": parent_dir.name,
+                            "built": False,
+                            "hpkg_path": "",
                         }
                     sources.append(pkg_info)
             
@@ -256,28 +290,37 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
             for rel_path in packages:
                 pkg_path = sources_dir / rel_path
                 if pkg_path.exists() and (pkg_path / "hpkg_manifest.toml").exists():
-                    cli_dir = data.get('builder_cli_dir')
-                    success = compile_package(str(pkg_path), out_dir, builder_path=cli_dir)
+                    # Load name for separator
+                    m = load_manifest(str(pkg_path))
+                    pkg_display = m.get('name', rel_path) if m else rel_path
+                    separator = f"\n{'─' * 48}\n  📦  {pkg_display}\n{'─' * 48}\n"
+                    all_logs.append(separator)
                     
-                    pkg_logs = success.get("logs", "")
+                    cli_dir = data.get('builder_cli_dir')
+                    result = compile_package(str(pkg_path), out_dir, builder_path=cli_dir)
+                    
+                    pkg_logs = result.get("logs", "")
                     if pkg_logs:
                         all_logs.append(pkg_logs)
                         
-                    if success.get("ok"):
+                    if result.get("ok"):
                         success_count += 1
+                        all_logs.append(f"[OK] Built → {result.get('hpkg_path', 'done')}\n")
                     else:
                         fail_count += 1
+                        all_logs.append(f"[ERROR] Build failed: {result.get('error', 'unknown')}\n")
                 else:
                     fail_count += 1
-                    error_msg = f"Batch Build: Package at {rel_path} not found in {base_dir}"
+                    error_msg = f"[ERROR] Package at {rel_path} not found in {base_dir}"
                     error(error_msg)
-                    all_logs.append(error_msg)
+                    all_logs.append(error_msg + "\n")
                     
-            combined_logs = "\n\n".join(all_logs)
+            combined_logs = "".join(all_logs)
             return jsonify({'ok': True, 'success_count': success_count, 'fail_count': fail_count, 'logs': combined_logs})
         except Exception as e:
             error(f"Batch Build Failed: {e}")
             return jsonify({'ok': False, 'error': str(e)})
+
 
     @app.route('/api/hpm/builder/keys', methods=['POST'])
     @login_required
@@ -301,9 +344,9 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
         )
         try:
             res = subprocess.run([sys.executable, "-c", code], cwd=cli_dir, check=True, capture_output=True, text=True)
-            return jsonify({'ok': True, 'logs': res.stdout})
+            return jsonify({'ok': True, 'logs': _strip_ansi(res.stdout)})
         except subprocess.CalledProcessError as e:
-            return jsonify({'ok': False, 'error': 'Keys generation failed', 'logs': e.stdout + "\n" + e.stderr})
+            return jsonify({'ok': False, 'error': 'Keys generation failed', 'logs': _strip_ansi(e.stdout + "\n" + e.stderr)})
 
     @app.route('/api/hpm/builder/catalog', methods=['POST'])
     @login_required
@@ -319,9 +362,9 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
         )
         try:
             res = subprocess.run([sys.executable, "-c", code], cwd=cli_dir, check=True, capture_output=True, text=True)
-            return jsonify({'ok': True, 'logs': res.stdout})
+            return jsonify({'ok': True, 'logs': _strip_ansi(res.stdout)})
         except subprocess.CalledProcessError as e:
-            return jsonify({'ok': False, 'error': 'Catalog generation failed', 'logs': e.stdout + "\n" + e.stderr})
+            return jsonify({'ok': False, 'error': 'Catalog generation failed', 'logs': _strip_ansi(e.stdout + "\n" + e.stderr)})
 
     @app.route('/api/hpm/builder/install-local', methods=['POST'])
     @login_required
@@ -517,9 +560,9 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
         )
         try:
             res = subprocess.run([sys.executable, "-c", code], cwd=cli_dir, check=True, capture_output=True, text=True)
-            return jsonify({'ok': True, 'logs': res.stdout + res.stderr, 'hpkg_path': hpkg_path})
+            return jsonify({'ok': True, 'logs': _strip_ansi(res.stdout + res.stderr), 'hpkg_path': hpkg_path})
         except subprocess.CalledProcessError as e:
-            return jsonify({'ok': False, 'error': 'Unpack failed', 'logs': e.stdout + "\n" + e.stderr})
+            return jsonify({'ok': False, 'error': 'Unpack failed', 'logs': _strip_ansi(e.stdout + "\n" + e.stderr)})
 
     @app.route('/api/hpm/builder/capabilities', methods=['POST'])
     @login_required
@@ -554,6 +597,6 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
             )
         try:
             res = subprocess.run([sys.executable, "-c", code], cwd=cli_dir, check=True, capture_output=True, text=True)
-            return jsonify({'ok': True, 'logs': res.stdout + res.stderr})
+            return jsonify({'ok': True, 'logs': _strip_ansi(res.stdout + res.stderr)})
         except subprocess.CalledProcessError as e:
-            return jsonify({'ok': False, 'error': 'Capabilities generation failed', 'logs': e.stdout + "\n" + e.stderr})
+            return jsonify({'ok': False, 'error': 'Capabilities generation failed', 'logs': _strip_ansi(e.stdout + "\n" + e.stderr)})

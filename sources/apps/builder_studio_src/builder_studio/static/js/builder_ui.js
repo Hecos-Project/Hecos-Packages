@@ -13,10 +13,11 @@ window.builderRefreshSources = async function() {
     try {
         if (typeof window.builderLoadSetup === 'function') window.builderLoadSetup();
         const baseDir = document.getElementById('builder-sources-root') ? document.getElementById('builder-sources-root').value : '';
+        const outDir  = document.getElementById('builder-dest-root') ? document.getElementById('builder-dest-root').value : '';
         const resp = await fetch('/api/hpm/builder/scan-sources', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ base_dir: baseDir })
+            body: JSON.stringify({ base_dir: baseDir, out_dir: outDir })
         });
         const data = await resp.json();
         
@@ -220,6 +221,9 @@ window.builderRenderGrid = function() {
                 const imgUrl = '/api/local_file?path=' + encodeURIComponent(absolutePath + '\\\\preview_1.png');
                 const fallbackImg = 'https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png';
                 
+                const builtBadge = src.built
+                    ? `<span style="position:absolute;top:6px;left:6px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:9px;font-weight:800;letter-spacing:.8px;padding:2px 7px;border-radius:10px;z-index:5;box-shadow:0 2px 4px rgba(0,0,0,0.3);"><i class='fas fa-check-circle' style='margin-right:3px;'></i>BUILT</span>`
+                    : '';
                 card.innerHTML = `
                   <div style="position:absolute; top:8px; right:8px; display:${window.builderSelectMode ? 'block' : 'none'}; z-index:10;">
                       <i class="fas ${isSelected ? 'fa-check-square' : 'fa-square'}" style="color:${isSelected ? 'var(--accent)' : 'var(--muted)'}; font-size:18px; background:#000; border-radius:2px;"></i>
@@ -236,7 +240,20 @@ window.builderRenderGrid = function() {
                     </div>
                   </div>
                   <div style="width:100%;aspect-ratio:16/9;border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);background:#050505;display:flex;align-items:center;justify-content:center;margin-top:4px;position:relative;">
+                    ${builtBadge}
                     <img src="${imgUrl}" onerror="this.src='${fallbackImg}'" style="width:100%;height:100%;object-fit:cover;padding:2px;box-sizing:border-box;transition:transform .3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                  </div>
+                  <div style="display:flex;gap:6px;margin-top:6px;">
+                    <button onclick="event.stopPropagation();window.builderOpenFolder('${absolutePath.replace(/\\/g,'\\\\')}')"
+                      title="Open source folder" style="flex:1;font-size:10px;padding:3px 0;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:5px;cursor:pointer;">
+                      <i class='fas fa-folder-open'></i> Source
+                    </button>
+                    ${src.built ? `<button onclick="event.stopPropagation();window.builderOpenFolder('${src.hpkg_path.replace(/\\/g,'\\\\').replace(/[^/\\\\]+$/, '')}')"
+                      title="Open built package folder" style="flex:1;font-size:10px;padding:3px 0;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;border-radius:5px;cursor:pointer;">
+                      <i class='fas fa-box'></i> .hpkg
+                    </button>` : `<button disabled style="flex:1;font-size:10px;padding:3px 0;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);color:#4b5563;border-radius:5px;cursor:not-allowed;">
+                      <i class='fas fa-box' style='opacity:.4'></i> Not built
+                    </button>`}
                   </div>
                 `;
             } else {
@@ -263,11 +280,24 @@ window.builderRenderGrid = function() {
                       <i class="fas ${typeMeta.icon}" style="color:${typeMeta.color};font-size:12px;"></i>
                   </div>
                   <div style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;">
-                      <div style="font-weight:700;font-size:0.9em;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:250px;" title="${src.name}">${src.name}</div>
-                      <span style="font-size:0.95em; padding:6px 14px;color:var(--muted);width:80px;">v${src.version}</span>
-                      <span style="font-size:0.95em; padding:6px 14px;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${src.rel_path}</span>
+                      <div style="font-weight:700;font-size:0.9em;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:200px;" title="${src.name}">${src.name}</div>
+                      <span style="font-size:0.85em;padding:2px 8px;color:var(--muted);width:70px;">v${src.version}</span>
+                      <span style="font-size:0.8em;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${src.rel_path}</span>
                   </div>
+                  ${src.built
+                    ? `<span style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:9px;font-weight:800;letter-spacing:.8px;padding:2px 8px;border-radius:10px;white-space:nowrap;"><i class='fas fa-check-circle' style='margin-right:3px;'></i>BUILT</span>`
+                    : `<span style="background:rgba(255,255,255,0.05);color:#6b7280;font-size:9px;font-weight:700;letter-spacing:.6px;padding:2px 8px;border-radius:10px;white-space:nowrap;">NOT BUILT</span>`
+                  }
+                  <button onclick="event.stopPropagation();window.builderOpenFolder('${absolutePath.replace(/\\/g,'\\\\')}')"
+                    title="Open source" style="margin-left:4px;font-size:10px;padding:3px 8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:5px;cursor:pointer;flex-shrink:0;">
+                    <i class='fas fa-folder-open'></i>
+                  </button>
+                  ${src.built ? `<button onclick="event.stopPropagation();window.builderOpenFolder('${src.hpkg_path.replace(/\\/g,'\\\\').replace(/[^/\\\\]+$/, '')}')"
+                    title="Open .hpkg folder" style="font-size:10px;padding:3px 8px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;border-radius:5px;cursor:pointer;flex-shrink:0;">
+                    <i class='fas fa-box'></i>
+                   </button>` : ''}
                 `;
+                
                 
                 card.onmouseover = () => card.style.background = isSelected ? 'rgba(102,252,241,0.2)' : 'rgba(255,255,255,0.06)';
                 card.onmouseout = () => card.style.background = isSelected ? 'rgba(102,252,241,0.1)' : 'rgba(255,255,255,0.02)';

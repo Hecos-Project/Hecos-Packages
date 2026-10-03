@@ -1,5 +1,22 @@
 
-window.builderLog = function(msg, type='info') {
+// Strip ANSI terminal escape codes from a string
+function _stripAnsi(str) {
+    // Covers ESC[ ... m sequences (colors, bold, etc.)
+    return str.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07]*\x07/g, '');
+}
+
+window.builderLog = function(rawMsg, type='info') {
+    // Strip ANSI codes first
+    let msg = _stripAnsi(String(rawMsg));
+    
+    // Auto-detect type from content if not explicitly set or is generic 'info'
+    if (type === 'info') {
+        const m = msg.trim();
+        if (/^\[OK\]/i.test(m) || /^\[SUCCESS\]/i.test(m))       type = 'success';
+        else if (/^\[WARN\]/i.test(m) || /^\[WARNING\]/i.test(m)) type = 'warn';
+        else if (/^\[ERROR\]/i.test(m) || /^\[FAIL\]/i.test(m))  type = 'error';
+    }
+    
     const term = document.getElementById('builder-terminal');
     console.log(`[Builder] ${msg}`);
     if (!term) return;
@@ -11,9 +28,9 @@ window.builderLog = function(msg, type='info') {
     
     let color = '#a3a3a3';
     let icon = '';
-    if (type === 'error') { color = '#ef4444'; icon = 'fa-times-circle'; }
+    if (type === 'error')   { color = '#ef4444'; icon = 'fa-times-circle'; }
     if (type === 'success') { color = '#10b981'; icon = 'fa-check'; }
-    if (type === 'warn') { color = '#f59e0b'; icon = 'fa-exclamation-triangle'; }
+    if (type === 'warn')    { color = '#f59e0b'; icon = 'fa-exclamation-triangle'; }
     
     const div = document.createElement('div');
     div.style.color = color;

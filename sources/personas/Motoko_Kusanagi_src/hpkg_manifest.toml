@@ -1,5 +1,6 @@
 author = "Antonio Meloni"
 category = "PERSONAS"
+date = ""
 dependencies = []
 description = "Persona pack: Motoko Kusanagi"
 icon = "🤖"
@@ -17,10 +18,11 @@ plugin_tag = "PERSONA"
 python_requires = ">=3.11"
 readme = "README.md"
 readme_url = ""
-screenshots = []
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/personas/Motoko_Kusanagi_src/preview_1.png",
+]
 type = "persona"
 version = "1.0.1"
-date = ""
 
 [capabilities]
 llm_tools = []

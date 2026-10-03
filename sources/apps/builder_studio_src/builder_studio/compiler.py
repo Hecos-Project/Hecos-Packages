@@ -1,7 +1,13 @@
 import sys
+import re
 import subprocess
 from pathlib import Path
 from logger import info, error
+
+_ANSI_RE = re.compile(r'\x1b(?:\[[0-9;]*[a-zA-Z]|\][^\x07]*\x07)')
+
+def _strip_ansi(text: str) -> str:
+    return _ANSI_RE.sub('', text)
 
 def compile_package(src_dir: str, out_dir: str = None, builder_path: str = None) -> dict:
     info(f"Starting compilation for {src_dir}")
@@ -39,24 +45,27 @@ if not success:
     sys.exit(1)
 '''
         result = subprocess.run([sys.executable, "-c", code], check=True, capture_output=True, text=True)
+        stdout_clean = _strip_ansi(result.stdout)
         info("Compilation finished successfully.")
         
         final_out_dir = out_dir
         hpkg_path = None
-        for line in result.stdout.splitlines():
+        for line in stdout_clean.splitlines():
             if line.startswith("FINAL_OUT_DIR="):
                 final_out_dir = line.split("=", 1)[1]
             if "DONE -> " in line:
                 # [INFO] DONE -> C:\path\to\pkg.hpkg (1.2 KB)
                 hpkg_path = line.split("DONE -> ")[1].split(" (")[0].strip()
                 
-        if result.stdout:
-            info(f"Builder STDOUT: {result.stdout}")
+        if stdout_clean:
+            info(f"Builder STDOUT: {stdout_clean}")
             
-        return {"ok": True, "out_dir": final_out_dir, "hpkg_path": hpkg_path, "logs": result.stdout}
+        return {"ok": True, "out_dir": final_out_dir, "hpkg_path": hpkg_path, "logs": stdout_clean}
     except subprocess.CalledProcessError as e:
-        error(f"Error compiling package (Subprocess failed):\nSTDOUT: {e.stdout}\nSTDERR: {e.stderr}")
-        return {"ok": False, "error": "Build failed (check logs).", "logs": e.stdout + "\n" + e.stderr}
+        stdout_clean = _strip_ansi(e.stdout or '')
+        stderr_clean = _strip_ansi(e.stderr or '')
+        error(f"Error compiling package (Subprocess failed):\nSTDOUT: {stdout_clean}\nSTDERR: {stderr_clean}")
+        return {"ok": False, "error": "Build failed (check logs).", "logs": stdout_clean + "\n" + stderr_clean}
     except Exception as e:
         error(f"Error compiling package: {e}")
         return {"ok": False, "error": str(e), "logs": ""}
