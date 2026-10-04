@@ -1,25 +1,30 @@
-id = "nova_x-01"
-manifest_version = "1"
-name = "Nova X-01"
-version = "1.0.0"
 author = "Antonio Meloni"
-license = "GPL-3.0"
+category = "PERSONAS"
+date = ""
+dependencies = []
 description = "Persona pack: Nova X-01"
 icon = "🌌"
 icon_url = ""
-screenshots = []
-category = "PERSONAS"
-plugin_tag = "PERSONA"
+id = "nova_x-01"
 is_class_based = false
-type = "persona"
-pip_isolation = "shared"
-plugin_dir = "Nova_X-01"
 lazy_load = false
+license = "GPL-3.0"
+manifest_version = "1"
+name = "Nova X-01"
+pip_isolation = "shared"
+pip_requirements = []
+plugin_dir = "Nova_X-01"
+plugin_tag = "PERSONA"
+python_requires = ">=3.11"
 readme = "README.md"
 readme_url = ""
-dependencies = []
-pip_requirements = []
-python_requires = ">=3.11"
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/personas/Nova_X-01_src/preview_1.png",
+]
+type = "persona"
+version = "1.0.0"
+creation_date = "2026-10-04T06:20:51Z"
+build_date = "2026-10-04T06:20:51Z"
 
 [capabilities]
 llm_tools = []

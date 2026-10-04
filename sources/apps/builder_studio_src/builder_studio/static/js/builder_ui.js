@@ -56,7 +56,7 @@ window.builderRenderFilters = function() {
     html += `
         <button class="hpm-cat-btn filter-btn ${isAllChecked ? 'active' : ''}" 
                 onclick="window.builderToggleAllFilters()"
-                style="display:inline-flex;align-items:center;gap:6px; margin-bottom:5px; padding:4px 10px; font-size:0.8em;">
+                style="display:inline-flex;align-items:center;gap:6px; margin-bottom:0; padding:2px 6px; font-size:0.72em;">
             <i class="fas fa-layer-group"></i> All 
             <span class="badge">${window.builderSourcesData.length}</span>
         </button>
@@ -78,7 +78,7 @@ window.builderRenderFilters = function() {
             html += `
                 <button class="hpm-cat-btn filter-btn ${isActive ? 'active' : ''}" 
                         onclick="window.builderToggleCategoryFilter('${catId}')"
-                        style="display:inline-flex;align-items:center;gap:6px; margin-bottom:5px; padding:4px 10px; font-size:0.8em;">
+                        style="display:inline-flex;align-items:center;gap:6px; margin-bottom:0; padding:2px 6px; font-size:0.72em;">
                     <i class="fas ${meta.icon}" style="color:${meta.color};"></i> ${meta.label}
                     <span class="badge">${count}</span>
                 </button>`;
@@ -137,9 +137,16 @@ window.builderRenderGrid = function() {
     window.builderRenderFilters();
 
     // Filter data
+    const showSource = document.getElementById('builder-filter-source') ? document.getElementById('builder-filter-source').checked : true;
+    const showBuilt = document.getElementById('builder-filter-built') ? document.getElementById('builder-filter-built').checked : true;
+    
     const filtered = window.builderSourcesData.filter(src => {
         const type = src.type || 'other';
         if (!window.builderActiveCategoryFilters.has(type)) return false;
+        
+        if (!showBuilt && src.built) return false;
+        if (!showSource && !src.built) return false;
+        
         if (query) {
             const matchesName = src.name && src.name.toLowerCase().includes(query);
             const matchesPath = src.rel_path && src.rel_path.toLowerCase().includes(query);
@@ -175,7 +182,7 @@ window.builderRenderGrid = function() {
             <span class="cat-toggle" style="font-size:14px;color:var(--muted);width:16px;text-align:center;">${isCollapsed ? '⊕' : '⊖'}</span>
             <span style="font-size:10px;font-weight:800;letter-spacing:1.2px; text-transform:uppercase;color:${typeMeta.color};"><i class="fas ${typeMeta.icon}"></i> ${typeMeta.label}</span>
             <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
-                <button class="btn btn-sm btn-secondary" title="Build all in this category" style="padding:2px 8px; font-size:9px;" onclick="window.builderExecuteBatchBuildCat('${type}')"><i class="fas fa-hammer"></i> Build Cat</button>
+                <button class="btn btn-sm btn-secondary" title="Run batch actions on this category" style="padding:2px 8px; font-size:9px;" onclick="window.builderExecuteBatchBuildCat('${type}')"><i class="fas fa-hammer"></i> Batch Cat</button>
                 <span style="font-size:10px;color:var(--muted); background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:10px;">${pkgs.length}</span>
             </div>
         `;
@@ -235,7 +242,7 @@ window.builderRenderGrid = function() {
                     <div style="flex:1;min-width:0;">
                       <div style="font-weight:700;font-size:0.9em; padding:2px 8px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${src.name}">${src.name}</div>
                       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                        <span style="font-size:0.75em;color:var(--muted);">v${src.version}</span>
+                        <span style="font-size:0.72em;color:var(--muted);">v${src.version}</span>
                       </div>
                     </div>
                   </div>
@@ -282,18 +289,18 @@ window.builderRenderGrid = function() {
                   <div style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;">
                       <div style="font-weight:700;font-size:0.9em;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:200px;" title="${src.name}">${src.name}</div>
                       <span style="font-size:0.85em;padding:2px 8px;color:var(--muted);width:70px;">v${src.version}</span>
-                      <span style="font-size:0.8em;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${src.rel_path}</span>
+                      <span style="font-size:0.72em;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${src.rel_path}</span>
                   </div>
                   ${src.built
                     ? `<span style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:9px;font-weight:800;letter-spacing:.8px;padding:2px 8px;border-radius:10px;white-space:nowrap;"><i class='fas fa-check-circle' style='margin-right:3px;'></i>BUILT</span>`
                     : `<span style="background:rgba(255,255,255,0.05);color:#6b7280;font-size:9px;font-weight:700;letter-spacing:.6px;padding:2px 8px;border-radius:10px;white-space:nowrap;">NOT BUILT</span>`
                   }
                   <button onclick="event.stopPropagation();window.builderOpenFolder('${absolutePath.replace(/\\/g,'\\\\')}')"
-                    title="Open source" style="margin-left:4px;font-size:10px;padding:3px 8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:5px;cursor:pointer;flex-shrink:0;">
+                    title="Open source" style="margin-left:4px;font-size:10px;padding:2px 6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:5px;cursor:pointer;flex-shrink:0;">
                     <i class='fas fa-folder-open'></i>
                   </button>
                   ${src.built ? `<button onclick="event.stopPropagation();window.builderOpenFolder('${src.hpkg_path.replace(/\\/g,'\\\\').replace(/[^/\\\\]+$/, '')}')"
-                    title="Open .hpkg folder" style="font-size:10px;padding:3px 8px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;border-radius:5px;cursor:pointer;flex-shrink:0;">
+                    title="Open .hpkg folder" style="font-size:10px;padding:2px 6px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;border-radius:5px;cursor:pointer;flex-shrink:0;">
                     <i class='fas fa-box'></i>
                    </button>` : ''}
                 `;
@@ -404,7 +411,7 @@ window._builderRenderGallery = function() {
         if (images.length > 1) {
             html += `
                 <button onclick="window.builderGalleryPrev(event)" style="background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-chevron-left"></i></button>
-                <div style="background:rgba(0,0,0,0.6); color:white; padding:4px 10px; border-radius:12px; font-size:12px; display:flex; align-items:center;">${idx + 1} / ${images.length}</div>
+                <div style="background:rgba(0,0,0,0.6); color:white; padding:2px 6px; border-radius:12px; font-size:12px; display:flex; align-items:center;">${idx + 1} / ${images.length}</div>
                 <button onclick="window.builderGalleryNext(event)" style="background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-chevron-right"></i></button>
             `;
         }
@@ -435,6 +442,8 @@ window.builderLoadManifest = async function() {
     const dir = document.getElementById('builder-source-dir').value;
     if (!dir) {
         document.getElementById('builder-editor-area').style.display = 'none';
+        const btn = document.getElementById('builder-workbench-actions-btn');
+        if (btn) btn.style.display = 'none';
         return; // Empty option selected
     }
 
@@ -456,6 +465,8 @@ window.builderLoadManifest = async function() {
 
         const area = document.getElementById('builder-editor-area');
         area.style.display = 'flex';
+        const btn = document.getElementById('builder-workbench-actions-btn');
+        if (btn) btn.style.display = 'block';
         const empty = document.getElementById('builder-editor-empty');
         if(empty) empty.style.display = 'none';
         
@@ -472,6 +483,15 @@ window.builderLoadManifest = async function() {
         document.getElementById('builder-type').value = currentManifest.type || '';
         document.getElementById('builder-license').value = currentManifest.license || '';
         document.getElementById('builder-date').value = currentManifest.date || '';
+        
+        const formatDate = (isoStr) => {
+            if (!isoStr) return '-';
+            try { return new Date(isoStr).toLocaleString(); } catch(e) { return isoStr; }
+        };
+        document.getElementById('builder-creation-date').innerText = formatDate(currentManifest.creation_date);
+        document.getElementById('builder-build-date').innerText = formatDate(currentManifest.build_date);
+        document.getElementById('builder-update-date').innerText = formatDate(currentManifest.update_date);
+
         const descEl = document.getElementById('builder-desc');
         descEl.value = currentManifest.description || '';
         setTimeout(() => {
@@ -495,3 +515,10 @@ window.builderSyncVersion = function() {
     const patch = document.getElementById('builder-version-patch').value || '0';
     document.getElementById('builder-version').value = `${major}.${minor}.${patch}`;
 };
+
+
+
+
+
+
+

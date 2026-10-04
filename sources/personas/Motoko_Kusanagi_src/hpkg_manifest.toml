@@ -23,6 +23,8 @@ screenshots = [
 ]
 type = "persona"
 version = "1.0.1"
+creation_date = "2026-10-04T05:20:33Z"
+build_date = "2026-10-04T05:20:33Z"
 
 [capabilities]
 llm_tools = []

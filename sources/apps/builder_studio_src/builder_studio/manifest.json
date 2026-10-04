@@ -1,7 +1,7 @@
 {
     "tag": "BUILDER_STUDIO",
     "name": "Builder Studio",
-    "version": "1.1.4",
+    "version": "1.3.2",
     "description": "Visual IDE for building, compiling, inspecting and managing Hecos packages (.hpkg).",
     "lazy_load": false,
     "is_class_based": false,

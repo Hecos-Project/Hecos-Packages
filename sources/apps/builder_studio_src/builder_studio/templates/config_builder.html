@@ -1,8 +1,8 @@
   <!-- ── BUILDER PANE ──────────────────────────────────────────────── -->
-  <div id="tab-builder" class="panel" style="margin: -16px; padding: 16px; flex-direction:column; min-height:calc(100vh - 120px);">
+  <div id="tab-builder" class="panel" style="scroll-margin-top: 90px; margin: -16px; padding: 16px; flex-direction:column; min-height:calc(100vh - 120px);">
     
     <!-- Global Header -->
-    <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:16px;">
+    <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:16px; padding:16px; background:#09090b; border:1px solid rgba(255,255,255,0.08); border-radius:8px;">
         
         <!-- Header Top Row (Like Web UI header) -->
         <div style="display:flex; justify-content:space-between; align-items:center; padding: 0 4px;">
@@ -17,68 +17,85 @@
         </div>
 
         <!-- Categories Row (Like filter-tabs) -->
-        <div id="builder-category-filters" class="filter-tabs" style="margin-bottom:0; display:flex; gap:8px; flex-wrap:wrap; padding: 0 4px;">
+        <div id="builder-category-filters" class="filter-tabs custom-scrollbar" style="margin-bottom:0; display:flex; gap:4px; flex-wrap:nowrap; overflow-x:auto; padding: 0 4px 8px 4px; white-space:nowrap;">
             <!-- Filter checkboxes injected via JS -->
         </div>
 
-        <!-- Toolbar Row (Like Tabs Bar) -->
-        <div class="tabs-container" style="display:flex; gap:16px; align-items:center; padding: 12px; border-radius:8px; background:var(--bg2); border:1px solid var(--border-color); flex-wrap:wrap;">
+        <!-- Toolbar Area (Drag and Drop enabled) -->
+        <div style="display:flex; flex-direction:column; gap:16px; align-items: stretch;">
             
-            <div style="display:flex; gap:8px;">
-                <button type="button" class="btn btn-sm btn-primary" style="background:var(--accent); border:none;" onclick="window.builderNewPackage()" title="Create a new package from template"><i class="fas fa-plus"></i> New Package</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="window.builderBuildAll()" title="Compile all packages in the sources directory"><i class="fas fa-layer-group"></i> Build All</button>
-                <button type="button" class="btn btn-sm btn-secondary" id="builder-btn-auto-caps-global" onclick="window.builderAutoCapabilities()" title="Regenerate capabilities for ALL packages"><i class="fas fa-bolt"></i> Auto-Caps</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="window.builderViewAllCaps()" title="View capabilities across all packages"><i class="fas fa-list-ul"></i> View Caps</button>
-            </div>
-            
-            <div style="width:1px; height:24px; background:var(--border-color);"></div>
-            
-            <div style="flex:1; display:flex; align-items:center; background:var(--bg3); border:1px solid var(--border-color); border-radius:6px; padding:0 12px; height:32px;">
-                <i class="fas fa-search" style="color:var(--muted); font-size:0.85em;"></i>
-                <input type="text" id="builder-search-input" placeholder="Search by name or path..." style="width:100%; background:transparent; border:none; color:var(--text); padding:6px; font-size:0.9em; outline:none;" oninput="window.builderRenderGrid()">
-            </div>
-            
-            <div style="display:flex; gap:8px; align-items:center;">
-                <div style="display:flex;background:var(--bg3);border-radius:6px;padding:3px;border:1px solid var(--border-color);">
-                    <button type="button" class="switcher-btn btn-icon" onclick="window.builderToggleAllCategories(true)" title="Expand All" style="padding:4px 8px;border-radius:4px;font-size:0.8em;"><i class="fas fa-plus-circle"></i></button>
-                    <button type="button" class="switcher-btn btn-icon" onclick="window.builderToggleAllCategories(false)" title="Collapse All" style="padding:4px 8px;border-radius:4px;font-size:0.8em;"><i class="fas fa-minus-circle"></i></button>
+            <div class="tabs-container" style="position:relative; display:flex; align-items:center; padding: 12px; border-radius:8px; background:var(--bg2); border:1px solid var(--border-color);"
+                 title="Click File menu or drag and drop a folder here"
+                 ondragenter="event.preventDefault(); document.getElementById('builder-drop-overlay').style.display='flex';"
+                 ondragover="event.preventDefault();"
+                 ondrop="event.preventDefault(); document.getElementById('builder-drop-overlay').style.display='none'; window.builderHandleFolderDrop(event, this);">
+                
+                <div id="builder-drop-overlay" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; z-index:50; background:rgba(0,0,0,0.85); border:2px dashed var(--accent); border-radius:8px; align-items:center; justify-content:center; color:var(--text); flex-direction:column; gap:8px; cursor:pointer;"
+                     ondragleave="event.preventDefault(); this.style.display='none';"
+                     ondragover="event.preventDefault();"
+                     ondrop="event.preventDefault(); this.style.display='none'; window.builderHandleFolderDrop(event, this);"
+                     onclick="document.getElementById('builder-folder-input').click(); this.style.display='none';">
+                    <i class="fas fa-folder-open" style="color:var(--accent); font-size:24px; pointer-events:none;"></i>
+                    <div style="font-weight:bold; font-size:14px; text-transform:uppercase; letter-spacing:1px; pointer-events:none;">Click or Drag & Drop Source Folder</div>
                 </div>
                 
-                <div style="display:flex;background:var(--bg3);border-radius:6px;padding:3px;border:1px solid var(--border-color);">
-                    <button type="button" class="switcher-btn btn-icon builder-view-btn" id="builder-view-btn-wall" onclick="window.builderSetView('wall')" title="Wall View" style="padding:4px 8px;border-radius:4px;font-size:0.8em; background:rgba(255,255,255,0.1);"><i class="fas fa-th"></i></button>
-                    <button type="button" class="switcher-btn btn-icon builder-view-btn" id="builder-view-btn-list" onclick="window.builderSetView('list')" title="List View" style="padding:4px 8px;border-radius:4px;font-size:0.8em;"><i class="fas fa-list"></i></button>
+                <input type="file" id="builder-folder-input" webkitdirectory directory style="display:none;" onchange="window.builderHandleFolderInput(event)">
+
+                
+                <div style="display:flex; gap:8px; align-items:center; width:100%;">
+                    <!-- File Menu Dropdown -->
+                    <div style="position:relative;">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('builder-action-menu').style.display = document.getElementById('builder-action-menu').style.display === 'block' ? 'none' : 'block';" onblur="setTimeout(()=>document.getElementById('builder-action-menu').style.display='none', 200);" style="padding:6px 12px; font-size:0.8em; border-radius:6px; background:var(--accent); color:#000; border:none;" title="Package Actions">
+                            <i class="fas fa-bars"></i> File
+                        </button>
+                        <div id="builder-action-menu" style="display:none; position:absolute; top:100%; left:0; z-index:100; margin-top:4px; background:var(--bg2); border:1px solid var(--border-color); border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.5); min-width:180px; padding:4px 0;">
+                            <div onclick="document.getElementById('builder-folder-input').click()" style="padding:8px 12px; cursor:pointer; font-size:0.85em; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-folder-open" style="color:var(--accent); width:16px; text-align:center;"></i> Open Folder...</div>
+                              <div onclick="window.builderNewPackage()" style="padding:8px 12px; cursor:pointer; font-size:0.85em; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-plus" style="color:var(--accent); width:16px; text-align:center;"></i> New Package</div>
+                            <div onclick="window.builderBuildAll()" style="padding:8px 12px; cursor:pointer; font-size:0.85em; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-layer-group" style="width:16px; text-align:center;"></i> Build All</div>
+                            <div onclick="window.builderAutoCapabilities()" style="padding:8px 12px; cursor:pointer; font-size:0.85em; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-bolt" style="width:16px; text-align:center;"></i> Auto-Caps</div>
+                            <div onclick="window.builderViewAllCaps()" style="padding:8px 12px; cursor:pointer; font-size:0.85em; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-list-ul" style="width:16px; text-align:center;"></i> View Caps</div>
+                        </div>
+                    </div>
+
+                    <div style="flex:1; display:flex; align-items:center; background:var(--bg3); border:1px solid var(--border-color); border-radius:6px; padding:0 12px; height:32px;">
+                        <i class="fas fa-search" style="color:var(--muted); font-size:0.85em;"></i>
+                        <input type="text" id="builder-search-input" placeholder="Search..." title="Search by name or path..." style="width:100%; background:transparent; border:none; color:var(--text); padding:6px; font-size:0.9em; outline:none;" oninput="window.builderRenderGrid()">
+                        
+                        <div style="display:flex; gap:8px; border-left:1px solid rgba(255,255,255,0.1); padding-left:8px; align-items:center; height:100%;">
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:0.85em; color:var(--muted);" title="Show Source Packages (Not Built)">
+                                <input type="checkbox" id="builder-filter-source" checked onchange="window.builderRenderGrid()" style="cursor:pointer;"> <i class="fas fa-folder"></i>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:0.85em; color:var(--muted);" title="Show Built Packages">
+                                <input type="checkbox" id="builder-filter-built" checked onchange="window.builderRenderGrid()" style="cursor:pointer;"> <i class="fas fa-box"></i>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex;background:var(--bg3);border-radius:6px;padding:3px;border:1px solid var(--border-color);">
+                        <button type="button" class="switcher-btn btn-icon" onclick="window.builderToggleAllCategories(true)" title="Expand All" style="padding:4px 8px;border-radius:4px;font-size:0.8em;"><i class="fas fa-plus-circle"></i></button>
+                        <button type="button" class="switcher-btn btn-icon" onclick="window.builderToggleAllCategories(false)" title="Collapse All" style="padding:4px 8px;border-radius:4px;font-size:0.8em;"><i class="fas fa-minus-circle"></i></button>
+                    </div>
+                    
+                    <div style="display:flex;background:var(--bg3);border-radius:6px;padding:3px;border:1px solid var(--border-color);">
+                        <button type="button" class="switcher-btn btn-icon builder-view-btn" id="builder-view-btn-wall" onclick="window.builderSetView('wall')" title="Wall View" style="padding:4px 8px;border-radius:4px;font-size:0.8em; background:rgba(255,255,255,0.1);"><i class="fas fa-th"></i></button>
+                        <button type="button" class="switcher-btn btn-icon builder-view-btn" id="builder-view-btn-list" onclick="window.builderSetView('list')" title="List View" style="padding:4px 8px;border-radius:4px;font-size:0.8em;"><i class="fas fa-list"></i></button>
+                    </div>
+                    
+                    <button type="button" class="btn btn-secondary btn-sm" id="builder-btn-multiselect" onclick="window.builderToggleSelectMode()" style="padding:6px 12px; font-size:0.8em; border-radius:6px;" title="Select multiple packages for batch actions"><i class="fas fa-check-square"></i> Multi</button>
+                    <button type="button" class="btn btn-primary btn-sm builder-batch-action" id="builder-btn-batch" style="display:none; padding:6px 12px; font-size:0.8em; border-radius:6px;" onclick="window.builderExecuteBatchActions()"><i class="fas fa-hammer"></i> Batch (<span id="builder-batch-count">0</span>)</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderRefreshSources()" style="padding:6px 10px; font-size:0.8em; border-radius:6px;" title="Refresh list"><i class="fas fa-sync-alt"></i></button>
                 </div>
                 
-                <button type="button" class="btn btn-secondary btn-sm" id="builder-btn-multiselect" onclick="window.builderToggleSelectMode()" style="padding:6px 12px; font-size:0.8em; border-radius:6px;" title="Select multiple packages for batch actions"><i class="fas fa-check-square"></i> Multi</button>
-                <button type="button" class="btn btn-primary btn-sm builder-batch-action" id="builder-btn-batch" style="display:none; padding:6px 12px; font-size:0.8em; border-radius:6px;" onclick="window.builderExecuteBatchActions()"><i class="fas fa-hammer"></i> Batch (<span id="builder-batch-count">0</span>)</button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderRefreshSources()" style="padding:6px 10px; font-size:0.8em; border-radius:6px;" title="Refresh list"><i class="fas fa-sync-alt"></i></button>
             </div>
-            
-        </div>
-        
-        <!-- Dropzone -->
-        <input type="file" id="builder-folder-input" webkitdirectory directory style="display:none;" onchange="window.builderHandleFolderInput(event)">
-        <div id="builder-dropzone"
-             style="border:1px dashed var(--border-color);border-radius:8px;
-                    padding:12px;text-align:center;cursor:pointer;
-                    transition:border-color .2s,background .2s;
-                    background:rgba(0,0,0,0.15);"
-             ondragover="event.preventDefault(); this.style.borderColor='var(--accent)';"
-             ondragleave="event.preventDefault(); this.style.borderColor='';"
-             ondrop="window.builderHandleFolderDrop(event, this)"
-             onclick="document.getElementById('builder-folder-input').click()">
-          <div style="color:var(--text);font-weight:600; font-size:0.9em; display:flex; align-items:center; justify-content:center; gap:8px;">
-            <i class="fas fa-folder-open" style="color:var(--accent);"></i> Click or Drag & Drop Source Folder
-          </div>
         </div>
 
     </div>
     
     <!-- Top Row: Build Console -->
-    <div style="flex-shrink:0; display:flex; flex-direction:column; height:180px; min-height:80px; margin-bottom:16px; resize:vertical; overflow:hidden; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:#09090b; padding:8px;">
-        <div style="font-size:10px; color:var(--muted); text-transform:uppercase; font-weight:700; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
-            <span><i class="fas fa-terminal"></i> Hecos Build Console</span>
-            <button type="button" class="btn btn-sm btn-outline" style="padding:2px 8px; font-size:10px; border-color:transparent;" onclick="document.getElementById('builder-terminal').innerHTML=''"><i class="fas fa-eraser"></i> Clear</button>
+    <div id="builder-console-container" style="flex-shrink:0; display:flex; flex-direction:column; height:75px; min-height:75px; margin-bottom:16px; resize:vertical; overflow:hidden; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:#09090b; padding:8px; transition: height 0.2s ease, min-height 0.2s ease;">
+        <div style="font-size:10px; color:var(--muted); text-transform:uppercase; font-weight:700; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="const c=document.getElementById('builder-console-container'), i=document.getElementById('builder-console-toggle-icon'); if(c.style.height==='75px'){c.style.height='180px';c.style.minHeight='80px';i.className='fas fa-chevron-up';}else{c.style.height='75px';c.style.minHeight='75px';i.className='fas fa-chevron-down';}">
+            <span onclick="document.getElementById('builder-console-container').scrollIntoView({behavior:'smooth', block:'center'}); " style="cursor:pointer;" title="Center Console"><i class="fas fa-terminal"></i> Hecos Build Console <i id="builder-console-toggle-icon" class="fas fa-chevron-down" style="margin-left:8px; font-size:12px; color:var(--accent);"></i></span>
+            <button type="button" class="btn btn-sm btn-outline" style="padding:2px 8px; font-size:10px; border-color:transparent;" onclick="event.stopPropagation(); document.getElementById('builder-terminal').innerHTML=''"><i class="fas fa-eraser"></i> Clear</button>
         </div>
         <div id="builder-terminal" class="custom-scrollbar" style="font-family:'Consolas', 'Courier New', monospace; font-size:11.5px; color:#a3a3a3; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:4px; padding:4px;">
             <div style="color:#10b981;"><i class="fas fa-check"></i> Hecos Builder Studio initialized and ready.</div>
@@ -101,9 +118,36 @@
         </div>
 
         <!-- RIGHT PANE: Workbench -->
-        <div style="flex: 4; display:flex; flex-direction:column; overflow:hidden; resize:vertical; min-height:max-content; margin-bottom:0;" class="card">
-            <div class="card-title" style="margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
-                <i class="fas fa-laptop-code" style="color:var(--accent);margin-right:6px;"></i> Workbench
+        <div style="position:relative; flex: 4; display:flex; flex-direction:column; overflow:hidden; resize:vertical; min-height:max-content; margin-bottom:0;" class="card"
+             ondragenter="event.preventDefault(); document.getElementById('builder-workbench-overlay').style.display='flex';"
+             ondragover="event.preventDefault();"
+             ondrop="event.preventDefault(); document.getElementById('builder-workbench-overlay').style.display='none'; window.builderHandleFolderDrop(event, this);">
+            
+            <div id="builder-workbench-overlay" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; z-index:150; background:rgba(0,0,0,0.85); border:2px dashed var(--accent); border-radius:8px; align-items:center; justify-content:center; color:var(--text); flex-direction:column; gap:8px; cursor:pointer;"
+                 ondragleave="event.preventDefault(); this.style.display='none';"
+                 ondragover="event.preventDefault();"
+                 ondrop="event.preventDefault(); this.style.display='none'; window.builderHandleFolderDrop(event, this);"
+                 onclick="document.getElementById('builder-folder-input').click(); this.style.display='none';">
+                <i class="fas fa-folder-open" style="color:var(--accent); font-size:24px; pointer-events:none;"></i>
+                <div style="font-weight:bold; font-size:14px; text-transform:uppercase; letter-spacing:1px; pointer-events:none;">Click or Drag & Drop Source Folder</div>
+            </div>
+            
+            <div class="card-title" style="margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                <div onclick="this.closest('.card').scrollIntoView({behavior:'smooth', block:'center'})" style="cursor:pointer;" title="Center Workbench"><i class="fas fa-laptop-code" style="color:var(--accent);margin-right:6px;"></i> Workbench</div>
+                
+                <div id="builder-workbench-actions-btn" style="position:relative; display:none;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('builder-workbench-menu').style.display = document.getElementById('builder-workbench-menu').style.display === 'block' ? 'none' : 'block';" onblur="setTimeout(()=>document.getElementById('builder-workbench-menu').style.display='none', 200);" style="padding:4px 10px; font-size:13px; text-transform:none; border-radius:6px; background:var(--bg3); border:1px solid var(--border-color); color:var(--text);" title="Package Actions">
+                        <i class="fas fa-ellipsis-v"></i> Actions
+                    </button>
+                    <div id="builder-workbench-menu" style="display:none; position:absolute; top:100%; right:0; z-index:100; margin-top:4px; background:var(--bg2); border:1px solid var(--border-color); border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.5); min-width:160px; padding:4px 0; font-weight:normal; text-transform:none; font-family:var(--font-sans); letter-spacing:normal; font-size:14px;">
+                        <div onclick="window.builderDevSync()" style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-sync" style="color:var(--accent); width:16px; text-align:center;"></i> Dev Sync</div>
+                        <div onclick="window.builderInspect()" style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-file-archive" style="width:16px; text-align:center;"></i> Inspect .hpkg</div>
+                        <div onclick="window.builderUnpack()" style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-box-open" style="width:16px; text-align:center;"></i> Unpack</div>
+                        <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
+                        <div onclick="window.builderRegenCapabilities()" style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-sync-alt" style="width:16px; text-align:center;"></i> Regen Caps</div>
+                        <div onclick="window.builderViewCapabilities()" style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-clipboard-list" style="width:16px; text-align:center;"></i> View Caps</div>
+                    </div>
+                </div>
             </div>
             
             <input type="hidden" id="builder-source-dir" value="">
@@ -111,16 +155,6 @@
             <input type="hidden" id="builder-dest-root" value="C:\Hecos-Packages\packages">
 
             <div id="builder-editor-area" style="display:none; flex-direction:column; gap:20px; flex:1;">
-                
-                <!-- Single Package Actions Toolbar -->
-                <div style="display:flex; gap:8px; flex-wrap:wrap; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid var(--border-color); justify-content:flex-start;">
-                    <button type="button" id="builder-btn-sync" class="btn btn-sm btn-outline" onclick="window.builderDevSync()" title="Sync source to live Hecos installation"><i class="fas fa-sync"></i> Dev Sync</button>
-                    <button type="button" id="builder-btn-inspect" class="btn btn-sm btn-outline" onclick="window.builderInspect()" title="Verify the COMPILED binary archive (.hpkg file). Checks if the build succeeded, file sizes, and cryptographic signature."><i class="fas fa-file-archive"></i> Inspect .hpkg <i class="fas fa-question-circle" style="opacity:0.6; margin-left:4px;" title="Verifies the final compiled .hpkg archive (sizes, files, and signature) exactly as the end user will receive it."></i></button>
-                    <button type="button" id="builder-btn-unpack" class="btn btn-sm btn-outline" onclick="window.builderUnpack()" title="Unpack the built .hpkg"><i class="fas fa-box-open"></i> Unpack</button>
-                      <button type="button" class="btn btn-sm btn-outline" onclick="window.builderRegenCapabilities()" title="Regenerate capabilities in your SOURCE code based on the actual scripts."><i class="fas fa-sync-alt"></i> Regen Caps <i class="fas fa-question-circle" style="opacity:0.6; margin-left:4px;" title="Scans your python source files and automatically rewrites the [capabilities] section in your source manifest."></i></button>
-                      <button type="button" class="btn btn-sm btn-outline" onclick="window.builderViewCapabilities()" title="View the capabilities currently in your SOURCE code manifest."><i class="fas fa-clipboard-list"></i> View Caps <i class="fas fa-question-circle" style="opacity:0.6; margin-left:4px;" title="Reads the manifest in your source folder. Shows the current state of what you are developing, before building."></i></button>
-                      
-                </div>
 
                 <!-- Form -->
                 <div style="display:flex; flex-direction:column; gap:14px;">
@@ -172,7 +206,22 @@
                     
                     <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Description</label>
                     <textarea id="builder-desc" class="config-input" style="min-height:60px; height:auto; overflow:hidden; resize:vertical;" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
-                </div>
+
+                      <div style="display:flex; gap:16px; margin-top:8px; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">
+                          <div style="display:flex; flex-direction:column; gap:2px;">
+                              <label style="font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">Created</label>
+                              <span id="builder-creation-date" style="font-size:10px; color:var(--text); opacity:0.8; font-family:monospace;">-</span>
+                          </div>
+                          <div style="display:flex; flex-direction:column; gap:2px;">
+                              <label style="font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">First Build</label>
+                              <span id="builder-build-date" style="font-size:10px; color:var(--text); opacity:0.8; font-family:monospace;">-</span>
+                          </div>
+                          <div style="display:flex; flex-direction:column; gap:2px;">
+                              <label style="font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">Last Update</label>
+                              <span id="builder-update-date" style="font-size:10px; color:var(--text); opacity:0.8; font-family:monospace;">-</span>
+                          </div>
+                      </div>
+                  </div>
                 
                 <div style="flex:1;"></div>
                 
@@ -354,3 +403,19 @@ document.addEventListener('keydown', function(e) {
         }, 100);
     }
 </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

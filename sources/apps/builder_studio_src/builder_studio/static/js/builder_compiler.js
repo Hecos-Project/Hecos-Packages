@@ -14,10 +14,12 @@ window.builderRunBuild = async function(autoInstall = false) {
     currentManifest.date = document.getElementById('builder-date').value;
     currentManifest.description = document.getElementById('builder-desc').value;
 
-    const btn = document.getElementById('builder-btn-build');
-    const oldText = btn.innerHTML;
+    const btn = autoInstall ? document.getElementById('builder-btn-build-install') : document.getElementById('builder-btn-build');
+    const oldText = btn.innerHTML.replace(/<i class="fas fa-check" style="color:white; margin-left:8px;"><\/i>/g, '');
     btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> BUILDING...';
     btn.disabled = true;
+    
+    let isSuccess = false;
     
     window.builderLog(`Starting build process for ${currentManifest.name}...`, 'warn');
     window.builderLog(`Source Directory: ${dir}`, 'info');
@@ -49,6 +51,7 @@ window.builderRunBuild = async function(autoInstall = false) {
             _builderModal("BUILD FAILED: " + (data ? data.error : "Unknown error"), true);
             window.builderLog(`Build Failed: ${data ? data.error : 'Unknown error'}`, 'error');
         } else {
+            isSuccess = true;
             // Success Animation
             window.builderLog(`Package successfully built and saved!`, 'success');
             if (data.out_dir) {
@@ -77,7 +80,14 @@ window.builderRunBuild = async function(autoInstall = false) {
         window.builderLog('An unexpected error occurred: ' + e.message, 'error');
         _builderModal("Error connecting to Hecos Backend: " + e.message, true);
     } finally {
-        btn.innerHTML = oldText;
+        if (isSuccess) {
+            btn.innerHTML = oldText + '<i class="fas fa-check" style="color:white; margin-left:8px;"></i>';
+            setTimeout(() => {
+                btn.innerHTML = oldText;
+            }, 3000);
+        } else {
+            btn.innerHTML = oldText;
+        }
         btn.disabled = false;
     }
 };

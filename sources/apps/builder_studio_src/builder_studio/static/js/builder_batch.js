@@ -22,6 +22,9 @@ window.builderExecuteBatchActions = function() {
             <button class="btn btn-secondary" onclick="window.builderExecuteBatchActionLoop('view-caps')" title="View info sheets for selected packages" style="padding:10px;">
                 <i class="fas fa-list-ul"></i> Selected Info Sheets
             </button>
+            <button class="btn btn-secondary" onclick="window.builderExecuteBatchActionLoop('unpack')" title="Unpack selected .hpkg files to source directories" style="padding:10px; border-top:1px solid rgba(255,255,255,0.1);">
+                <i class="fas fa-box-open"></i> Unpack Packages
+            </button>
         </div>
     </div>`;
     
@@ -71,6 +74,29 @@ window.builderExecuteBatchActionLoop = async function(action) {
                     const html = window.builderGenerateInfoSheetHTML(data.manifest);
                     combinedReport.push(html);
                     successCount++;
+                } else {
+                    failCount++;
+                }
+            }
+            else if (action === 'unpack') {
+                const loadResp = await fetch('/api/hpm/builder/load', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ src_dir: path }) });
+                const loadData = await loadResp.json();
+                if (loadData.ok && loadData.manifest && loadData.manifest.id) {
+                    const setup = window.builderLoadSetup();
+                    const unpackDest = setup.unpackDest || setup.src || 'C:\\Hecos-Packages\\sources';
+                    const resp = await fetch('/api/hpm/builder/unpack', { 
+                        method: 'POST', 
+                        headers: {'Content-Type': 'application/json'}, 
+                        body: JSON.stringify({ 
+                            builder_cli_dir: setup.cli,
+                            pkg_id: loadData.manifest.id,
+                            packages_dir: setup.dest,
+                            unpack_dest: unpackDest,
+                            src_dir_root: setup.src
+                        }) 
+                    });
+                    const data = await resp.json();
+                    if (data.ok) successCount++; else failCount++;
                 } else {
                     failCount++;
                 }
@@ -148,6 +174,7 @@ window.builderExecuteBatchBuildCat = function(type) {
         window.builderSelectedPackages.add(d + src.rel_path);
     });
     window.builderRenderGrid();
+    window.builderExecuteBatchActions();
 };
 
 

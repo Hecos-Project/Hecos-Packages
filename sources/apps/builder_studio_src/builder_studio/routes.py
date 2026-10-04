@@ -81,6 +81,19 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
                 manifest['screenshots'] = []
         except:
             pass
+            
+        # Update timestamps
+        try:
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if not manifest.get('creation_date'):
+                manifest['creation_date'] = now
+            if not manifest.get('build_date'):
+                manifest['build_date'] = now
+            else:
+                manifest['update_date'] = now
+        except Exception as e:
+            pass
                 
         # 1. Save modifications to TOML
         if not save_manifest(src_dir, manifest):
