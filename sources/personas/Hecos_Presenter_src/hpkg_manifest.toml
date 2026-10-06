@@ -1,0 +1,27 @@
+author = "Hecos"
+build_date = "2026-10-05T14:18:54Z"
+category = "PERSONAS"
+creation_date = "2026-10-05T14:18:54Z"
+date = ""
+description = "A specialized neutral commentator Persona designed exclusively for the Hecos Presenter module. Acts as a third-party observer and does not answer user queries."
+id = "hecos_presenter"
+license = ""
+manifest_version = "1"
+name = "Hecos - Presenter"
+plugin_dir = "Hecos_Presenter"
+plugin_tag = "PERSONA"
+readme = "README.md"
+screenshots = []
+type = "persona"
+update_date = "2026-10-05T18:29:20Z"
+version = "1.0.0"
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = false
+has_api_routes = false
+has_system_calls = false
+syscall_notes = ""
+notes = ""
