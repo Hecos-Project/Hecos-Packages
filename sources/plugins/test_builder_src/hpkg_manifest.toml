@@ -1,12 +1,19 @@
-author = "Antigravity"
-date = ""
+author = "Urania 9800"
+build_date = "2026-10-09T12:14:08Z"
+creation_date = "2026-10-09T12:14:08Z"
+date = "2030-10-24"
 description = "Questo è un pacchetto fittizio creato per testare la nuova GUI del Package Builder di Hecos."
-id = "org.hecos.testbuilder"
-license = ""
-name = "Test Builder Plugin"
+id = "org.hecos.testbuilder2"
+license = "Commercial"
+name = "Test Builder Plugin2"
 readme = "README.md"
 requires_restart = false
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/plugins/test_builder_src/preview_1.png",
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/plugins/test_builder_src/preview_2.png",
+]
 type = "plugin"
+update_date = "2026-10-09T12:22:58Z"
 version = "7.3.3"
 
 [capabilities]

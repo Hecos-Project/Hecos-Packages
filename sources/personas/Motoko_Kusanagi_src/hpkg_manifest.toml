@@ -1,5 +1,7 @@
 author = "Antonio Meloni"
+build_date = "2026-10-04T05:20:33Z"
 category = "PERSONAS"
+creation_date = "2026-10-04T05:20:33Z"
 date = ""
 dependencies = []
 description = "Persona pack: Motoko Kusanagi"
@@ -23,8 +25,7 @@ screenshots = [
 ]
 type = "persona"
 version = "1.0.1"
-creation_date = "2026-10-04T05:20:33Z"
-build_date = "2026-10-04T05:20:33Z"
+update_date = "2026-10-09T04:10:45Z"
 
 [capabilities]
 llm_tools = []

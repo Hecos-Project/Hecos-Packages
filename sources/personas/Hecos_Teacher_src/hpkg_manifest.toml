@@ -1,0 +1,29 @@
+author = "Antonio Meloni"
+build_date = "2026-10-09T06:05:32Z"
+category = "PERSONAS"
+creation_date = "2026-10-09T06:05:32Z"
+date = ""
+description = "A specialized Teacher Persona designed exclusively to teach."
+id = "hecos_teacher"
+license = "GPL-3.0"
+manifest_version = "1"
+name = "Hecos - Teacher"
+plugin_dir = "hecos_teacher"
+plugin_tag = "PERSONA"
+readme = "README.md"
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/personas/Hecos_Teacher_src/preview_1.png",
+]
+type = "persona"
+update_date = "2026-10-09T12:57:31Z"
+version = "1.0.0"
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = false
+has_api_routes = false
+has_system_calls = false
+syscall_notes = ""
+notes = ""

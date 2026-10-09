@@ -1,13 +1,20 @@
-author = "Antigravity"
+author = "Antonio Meloni"
+build_date = "2026-10-09T12:14:41Z"
+creation_date = "2026-10-09T12:14:41Z"
 date = ""
 description = "Questo è un pacchetto fittizio creato per testare la nuova GUI del Package Builder di Hecos."
 id = "org.hecos.testbuilder"
-license = ""
+license = "GPL-3.0"
 name = "Test Builder Plugin"
 readme = "README.md"
 requires_restart = false
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/sources/org.hecos.testbuilder_src/preview_1.png",
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/sources/org.hecos.testbuilder_src/preview_2.png",
+]
 signature = "IrOzbqPVkjk7+sXkQuUUR6hPMfv1OYrz740lMgGdTFHpgjdP2aLN+sCaQ4WUMzvcGr9wLTaYLDuDF9b4EbgwCw=="
 type = "plugin"
+update_date = "2026-10-09T12:28:14Z"
 version = "3.1.4"
 
 [capabilities]
