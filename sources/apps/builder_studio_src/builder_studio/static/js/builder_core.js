@@ -151,4 +151,98 @@ window.builderOpenSetup = function() {
 
 // Auto load on init
 setTimeout(window.builderLoadSetup, 500);
+window.builderInitialLists = {
+    author: ['Hecos Developer', 'Antonio Meloni'],
+    type: ['plugin', 'persona', 'theme', 'app', 'widget', 'system_app', 'core_module', 'extension', 'skill_pack', 'library'],
+    license: ['MIT', 'GPL-3.0', 'Apache-2.0', 'Proprietary', 'admin']
+};
+
+window.builderPrimaryDefaults = {
+    author: 'Antonio Meloni',
+    license: 'GPL-3.0'
+};
+
+window.builderDefaultLists = JSON.parse(JSON.stringify(window.builderInitialLists));
+
+window.builderLoadDefaults = function() {
+    let saved = localStorage.getItem('hecos_builder_defaults');
+    if (saved) {
+        try {
+            let parsed = JSON.parse(saved);
+            Object.keys(parsed).forEach(k => { window.builderDefaultLists[k] = parsed[k]; });
+        } catch(e) {}
+    }
+    let savedPrim = localStorage.getItem('hecos_builder_primary');
+    if (savedPrim) {
+        try {
+            let parsed = JSON.parse(savedPrim);
+            Object.keys(parsed).forEach(k => { 
+                if(k !== 'type') window.builderPrimaryDefaults[k] = parsed[k]; 
+            });
+        } catch(e) {}
+    }
+    
+    // Populate the dropdowns
+    ['author', 'type', 'license'].forEach(field => {
+        const select = document.getElementById('builder-' + field + '-select');
+        if (!select) return;
+        select.innerHTML = '<option value="" selected></option>';
+        const list = window.builderDefaultLists[field] || [];
+        list.forEach(val => {
+            let opt = document.createElement('option');
+            opt.value = val;
+            let isPrimary = window.builderPrimaryDefaults[field] === val;
+            opt.innerText = isPrimary ? val + ' ★' : val;
+            select.appendChild(opt);
+        });
+    });
+};
+
+window.builderSaveDefaults = function() {
+    localStorage.setItem('hecos_builder_defaults', JSON.stringify(window.builderDefaultLists));
+    localStorage.setItem('hecos_builder_primary', JSON.stringify(window.builderPrimaryDefaults));
+    window.builderLoadDefaults();
+};
+
+window.builderAddDefault = function(field) {
+    const input = document.getElementById('builder-' + field);
+    if (!input || !input.value.trim()) return;
+    const val = input.value.trim();
+    if (!window.builderDefaultLists[field]) window.builderDefaultLists[field] = [];
+    if (!window.builderDefaultLists[field].includes(val)) {
+        window.builderDefaultLists[field].push(val);
+        window.builderSaveDefaults();
+        window.builderLog('Added \'' + val + '\' to ' + field + ' presets.', 'success');
+    }
+};
+
+window.builderRemoveDefault = function(field) {
+    const input = document.getElementById('builder-' + field);
+    if (!input || !input.value.trim()) return;
+    const val = input.value.trim();
+    if (window.builderDefaultLists[field] && window.builderDefaultLists[field].includes(val)) {
+        window.builderDefaultLists[field] = window.builderDefaultLists[field].filter(item => item !== val);
+        window.builderSaveDefaults();
+        window.builderLog('Removed \'' + val + '\' from ' + field + ' presets.', 'warn');
+        input.value = '';
+    }
+};
+
+window.builderSetPrimaryDefault = function(field) {
+    const input = document.getElementById('builder-' + field);
+    if (!input || !input.value.trim()) return;
+    const val = input.value.trim();
+    
+    // Auto-add to list if not present
+    if (!window.builderDefaultLists[field]) window.builderDefaultLists[field] = [];
+    if (!window.builderDefaultLists[field].includes(val)) {
+        window.builderDefaultLists[field].push(val);
+    }
+    
+    window.builderPrimaryDefaults[field] = val;
+    window.builderSaveDefaults();
+    window.builderLog('Set \'' + val + '\' as the primary default for ' + field + '.', 'success');
+};
+
+setTimeout(window.builderLoadDefaults, 600);
 

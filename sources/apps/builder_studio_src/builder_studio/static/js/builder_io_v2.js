@@ -25,6 +25,7 @@ window.builderPickNativeImage = async function() {
                 _builderModal("Failed to add image: " + addData.error, true);
             } else {
                 _builderUpdateImages(dir, addData.images);
+                if (typeof window.builderRefreshSources === 'function') setTimeout(() => window.builderRefreshSources(), 100);
             }
         }
     } catch (e) {
@@ -56,6 +57,7 @@ window.builderUploadImage = async function(event) {
             _builderModal("Failed to upload image: " + data.error, true);
         } else {
             _builderUpdateImages(dir, data.images);
+            if (typeof window.builderRefreshSources === 'function') setTimeout(() => window.builderRefreshSources(), 100);
         }
     } catch (e) {
         console.error("Image upload error", e);
@@ -79,6 +81,7 @@ window.builderDeleteImage = function(imageName) {
                 _builderModal("Failed to delete image: " + data.error, true);
             } else {
                 _builderUpdateImages(dir, data.images);
+                if (typeof window.builderRefreshSources === 'function') setTimeout(() => window.builderRefreshSources(), 100);
             }
         } catch (e) {
             console.error("Image delete error", e);

@@ -59,7 +59,7 @@
 
                     <div style="flex:1; display:flex; align-items:center; background:var(--bg3); border:1px solid var(--border-color); border-radius:6px; padding:0 12px; height:32px;">
                         <i class="fas fa-search" style="color:var(--muted); font-size:0.85em;"></i>
-                        <input type="text" id="builder-search-input" placeholder="Search..." title="Search by name or path..." style="width:100%; background:transparent; border:none; color:var(--text); padding:6px; font-size:0.9em; outline:none;" oninput="window.builderRenderGrid()">
+                        <input type="text" id="builder-search-input" name="search_prevent_autofill" autocomplete="new-password" placeholder="Search..." title="Search by name or path..." style="width:100%; background:transparent; border:none; color:var(--text); padding:6px; font-size:0.9em; outline:none;" oninput="window.builderRenderGrid()">
                         
                         <div style="display:flex; gap:8px; border-left:1px solid rgba(255,255,255,0.1); padding-left:8px; align-items:center; height:100%;">
                             <label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:0.85em; color:var(--muted);" title="Show Source Packages (Not Built)">
@@ -140,12 +140,12 @@
                         <i class="fas fa-ellipsis-v"></i> Actions
                     </button>
                     <div id="builder-workbench-menu" style="display:none; position:absolute; top:100%; right:0; z-index:100; margin-top:4px; background:var(--bg2); border:1px solid var(--border-color); border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.5); min-width:160px; padding:4px 0; font-weight:normal; text-transform:none; font-family:var(--font-sans); letter-spacing:normal; font-size:14px;">
-                        <div onclick="window.builderDevSync()" style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-sync" style="color:var(--accent); width:16px; text-align:center;"></i> Dev Sync</div>
-                        <div onclick="window.builderInspect()" style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-file-archive" style="width:16px; text-align:center;"></i> Inspect .hpkg</div>
-                        <div onclick="window.builderUnpack()" style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-box-open" style="width:16px; text-align:center;"></i> Unpack</div>
+                        <div onclick="window.builderDevSync()" title="Synchronize local changes directly to the installed package without rebuilding." style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-sync" style="color:var(--accent); width:16px; text-align:center;"></i> Dev Sync</div>
+                        <div onclick="window.builderInspect()" title="Inspect the contents of the built .hpkg file." style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-file-archive" style="width:16px; text-align:center;"></i> Inspect .hpkg</div>
+                        <div onclick="window.builderUnpack()" title="Unpack a .hpkg file back into the sources directory." style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-box-open" style="width:16px; text-align:center;"></i> Unpack</div>
                         <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
-                        <div onclick="window.builderRegenCapabilities()" style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-sync-alt" style="width:16px; text-align:center;"></i> Regen Caps</div>
-                        <div onclick="window.builderViewCapabilities()" style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-clipboard-list" style="width:16px; text-align:center;"></i> View Caps</div>
+                        <div onclick="window.builderRegenCapabilities()" title="Regenerate the capabilities.json matrix from package files." style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-sync-alt" style="width:16px; text-align:center;"></i> Regen Caps</div>
+                        <div onclick="window.builderViewCapabilities()" title="View the generated capabilities matrix." style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-clipboard-list" style="width:16px; text-align:center;"></i> View Caps</div>
                     </div>
                 </div>
             </div>
@@ -187,16 +187,51 @@
                     
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
                         <div style="display:flex; flex-direction:column; gap:4px;">
-                            <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Author</label>
-                            <input type="text" id="builder-author" class="config-input">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Author</label>
+                                <div style="display:flex; gap:6px;">
+                                    <i class="fas fa-star" title="Set as default" style="cursor:pointer; font-size:10px; color:#eab308;" onclick="window.builderSetPrimaryDefault('author')"></i>
+                                    <i class="fas fa-plus" title="Save to list" style="cursor:pointer; font-size:10px; color:var(--accent);" onclick="window.builderAddDefault('author')"></i>
+                                    <i class="fas fa-trash" title="Remove from list" style="cursor:pointer; font-size:10px; color:#ff4a4a;" onclick="window.builderRemoveDefault('author')"></i>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:4px;">
+                                <input type="text" id="builder-author" class="config-input" style="flex:1;" autocomplete="off">
+                                <select id="builder-author-select" class="config-input" style="width:36px; padding:0 4px; cursor:pointer; -webkit-appearance:menulist; appearance:menulist; text-align:center;" onchange="if(this.value) { document.getElementById('builder-author').value = this.value; this.value=''; }">
+                                     <option value="" selected></option>
+                                </select>
+                            </div>
                         </div>
                         <div style="display:flex; flex-direction:column; gap:4px;">
-                            <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Type</label>
-                            <input type="text" id="builder-type" class="config-input" placeholder="plugin">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Type</label>
+                                <div style="display:flex; gap:6px;">
+                                    <i class="fas fa-plus" title="Save to list" style="cursor:pointer; font-size:10px; color:var(--accent);" onclick="window.builderAddDefault('type')"></i>
+                                    <i class="fas fa-trash" title="Remove from list" style="cursor:pointer; font-size:10px; color:#ff4a4a;" onclick="window.builderRemoveDefault('type')"></i>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:4px;">
+                                <input type="text" id="builder-type" class="config-input" placeholder="plugin" style="flex:1;" autocomplete="off">
+                                <select id="builder-type-select" class="config-input" style="width:36px; padding:0 4px; cursor:pointer; -webkit-appearance:menulist; appearance:menulist; text-align:center;" onchange="if(this.value) { document.getElementById('builder-type').value = this.value; this.value=''; }">
+                                     <option value="" selected></option>
+                                </select>
+                            </div>
                         </div>
                         <div style="display:flex; flex-direction:column; gap:4px;">
-                            <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">License</label>
-                            <input type="text" id="builder-license" class="config-input" placeholder="GPL-3.0">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">License</label>
+                                <div style="display:flex; gap:6px;">
+                                    <i class="fas fa-star" title="Set as default" style="cursor:pointer; font-size:10px; color:#eab308;" onclick="window.builderSetPrimaryDefault('license')"></i>
+                                    <i class="fas fa-plus" title="Save to list" style="cursor:pointer; font-size:10px; color:var(--accent);" onclick="window.builderAddDefault('license')"></i>
+                                    <i class="fas fa-trash" title="Remove from list" style="cursor:pointer; font-size:10px; color:#ff4a4a;" onclick="window.builderRemoveDefault('license')"></i>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:4px;">
+                                <input type="text" id="builder-license" class="config-input" placeholder="GPL-3.0" style="flex:1;" autocomplete="off">
+                                <select id="builder-license-select" class="config-input" style="width:36px; padding:0 4px; cursor:pointer; -webkit-appearance:menulist; appearance:menulist; text-align:center;" onchange="if(this.value) { document.getElementById('builder-license').value = this.value; this.value=''; }">
+                                     <option value="" selected></option>
+                                </select>
+                            </div>
                         </div>
                         <div style="display:flex; flex-direction:column; gap:4px;">
                             <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Date</label>

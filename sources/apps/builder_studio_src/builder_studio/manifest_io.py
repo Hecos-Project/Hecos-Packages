@@ -66,6 +66,14 @@ def add_preview_image(src_dir: str, image_path: str = None, file_data = None) ->
         shutil.copy2(Path(image_path), dest_path)
     elif file_data:
         file_data.save(str(dest_path))
+
+    # Support for personas: automatically treat the first preview image as the avatar
+    manifest = load_manifest(src_dir)
+    if manifest and manifest.get("type") in ["persona", "theme"]:
+        avatars_dir = src_path / "avatars"
+        avatars_dir.mkdir(parents=True, exist_ok=True)
+        avatar_name = f"{manifest.get('id', 'persona')}_Avatar.png"
+        shutil.copy2(dest_path, avatars_dir / avatar_name)
         
     info(f"Added preview image {new_name} to {src_dir}")
     return new_name

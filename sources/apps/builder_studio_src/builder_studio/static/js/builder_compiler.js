@@ -5,6 +5,17 @@ window.builderRunBuild = async function(autoInstall = false) {
         return;
     }
 
+    ['author', 'license'].forEach(field => {
+        let el = document.getElementById('builder-' + field);
+        if (el && window.builderPrimaryDefaults && window.builderPrimaryDefaults[field]) {
+            let origVal = currentManifest[field] || '';
+            let currentVal = el.value.trim();
+            if (!currentVal || currentVal === origVal) {
+                el.value = window.builderPrimaryDefaults[field];
+            }
+        }
+    });
+
     currentManifest.id = document.getElementById('builder-id').value;
     currentManifest.name = document.getElementById('builder-name').value;
     currentManifest.version = document.getElementById('builder-version').value;
@@ -85,6 +96,11 @@ window.builderRunBuild = async function(autoInstall = false) {
             setTimeout(() => {
                 btn.innerHTML = oldText;
             }, 3000);
+            if (!autoInstall) {
+                // If autoInstall is true, builderInstallLocal will refresh it later.
+                if (typeof window.builderRefreshSources === 'function') setTimeout(() => window.builderRefreshSources(), 500);
+                if (typeof window.builderLoadManifest === 'function') setTimeout(() => window.builderLoadManifest(), 600);
+            }
         } else {
             btn.innerHTML = oldText;
         }
@@ -282,6 +298,8 @@ window.builderInstallLocal = async function(hpkgPath) {
                 } else if (eventType === "success") {
                     window.builderLog(`[Install Success] ${data.message}`, 'success');
                     if (data.install_path) window.builderLog(`Installed to: ${data.install_path}`, 'info');
+                    if (typeof window.builderRefreshSources === 'function') setTimeout(() => window.builderRefreshSources(), 500);
+                    if (typeof window.builderLoadManifest === 'function') setTimeout(() => window.builderLoadManifest(), 600);
                 } else {
                     window.builderLog(`[Install] ${JSON.stringify(data)}`, 'info');
                 }
@@ -318,6 +336,7 @@ window.builderDevSync = async function() {
         }
         if (data.ok) {
             window.builderLog(`Dev Sync completed for ${currentManifest.name || 'package'}.`, 'success');
+            if (typeof window.builderRefreshSources === 'function') setTimeout(() => window.builderRefreshSources(), 500);
         } else {
             window.builderLog('Dev Sync Failed: ' + data.error, 'error');
             _builderModal("Dev Sync Failed:\n" + data.error, true);

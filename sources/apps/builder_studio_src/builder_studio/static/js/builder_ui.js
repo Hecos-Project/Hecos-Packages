@@ -502,6 +502,11 @@ window.builderLoadManifest = async function() {
         // Update images
         _builderUpdateImages(dir, data.images);
         
+        // Re-initialize dropdown menus now that the editor is visible
+        if (typeof window.builderLoadDefaults === 'function') {
+            window.builderLoadDefaults();
+        }
+        
     } catch (e) {
         console.error(e);
         window.builderLog('An unexpected error occurred: ' + e.message, 'error');
