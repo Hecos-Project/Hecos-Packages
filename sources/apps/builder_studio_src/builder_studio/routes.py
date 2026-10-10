@@ -509,8 +509,12 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
             logs = []
         try:
             ignore = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo', '.git')
-            shutil.copytree(str(src), str(dest), dirs_exist_ok=True, ignore=ignore)
-            logs.append(f'[INFO] Dev Sync OK: {src.name} -> {dest}')
+            if (src / pkg_id).is_dir():
+                src_to_copy = src / pkg_id
+            else:
+                src_to_copy = src
+            shutil.copytree(str(src_to_copy), str(dest), dirs_exist_ok=True, ignore=ignore)
+            logs.append(f'[INFO] Dev Sync OK: {src_to_copy.name} -> {dest}')
             return jsonify({'ok': True, 'logs': '\n'.join(logs)})
         except Exception as e:
             return jsonify({'ok': False, 'error': str(e)})
@@ -551,6 +555,77 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
                     'size_kb': round(hpkg.stat().st_size / 1024, 1),
                     'hpkg_path': str(hpkg)
                 })
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)})
+
+    @app.route('/api/hpm/builder/live-backup', methods=['POST'])
+    @login_required
+    def builder_live_backup():
+        from pathlib import Path
+        import shutil
+        import datetime
+        data = request.get_json() or {}
+        hecos_root = data.get('hecos_root') or r"C:\Hecos\hecos"
+        backup_dir = data.get('backup_dir')
+        if not backup_dir:
+            import os
+            backup_dir = os.path.join(os.path.expanduser('~'), 'Desktop', 'HecosBackups')
+        
+        try:
+            hpm_dir = Path(hecos_root) / 'hpm'
+            live_builder = hpm_dir / 'builder_studio'
+            
+            if not live_builder.exists():
+                return jsonify({'ok': False, 'error': 'Live builder_studio non trovato in hpm'})
+                
+            out_path = Path(backup_dir)
+            out_path.mkdir(parents=True, exist_ok=True)
+            
+            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_name = f'builder_studio_live_{timestamp}'
+            archive_path = out_path / backup_name
+            
+            shutil.make_archive(str(archive_path), 'zip', str(live_builder))
+            
+            return jsonify({'ok': True, 'msg': f'Backup salvato in {archive_path}.zip'})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)})
+
+    @app.route('/api/hpm/builder/backup-package', methods=['POST'])
+    @login_required
+    def builder_backup_package():
+        from pathlib import Path
+        import shutil
+        import datetime
+        data = request.get_json() or {}
+        pkg_id = data.get('pkg_id')
+        hecos_root = data.get('hecos_root') or r"C:\Hecos\hecos"
+        dest_dir = data.get('dest_dir')
+        if not pkg_id:
+            return jsonify({'ok': False, 'error': 'No pkg_id specified.'})
+        if not dest_dir:
+            return jsonify({'ok': False, 'error': 'No destination folder specified.'})
+
+        try:
+            # Cerca la cartella live del pacchetto
+            base_dir = Path(hecos_root)
+            live_path = None
+            for sub in ['hpm', 'hpm/libraries', 'hpm/plugins', 'modules', 'plugins']:
+                test_path = base_dir / sub / pkg_id
+                if test_path.is_dir():
+                    live_path = test_path
+                    break
+
+            if not live_path:
+                return jsonify({'ok': False, 'error': f'Live version of {pkg_id} not found in the installation.'})
+
+            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_folder_name = f'{pkg_id}_{timestamp}'
+            dest_path = Path(dest_dir) / backup_folder_name
+
+            shutil.copytree(str(live_path), str(dest_path))
+
+            return jsonify({'ok': True, 'msg': f'LIVE backup of {pkg_id} copied to:\n{dest_path}'})
         except Exception as e:
             return jsonify({'ok': False, 'error': str(e)})
 

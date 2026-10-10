@@ -85,8 +85,11 @@ def generate_store_catalog():
         #   3. Legacy single preview.png fallback
         #   4. Default Hecos placeholder image
         PREVIEW_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp")
-        # Determine the category from the package file location
-        pkg_category = filepath.parent.name  # e.g. 'apps', 'plugins', 'widgets'
+        # Determine the category from the package manifest
+        manifest_category = manifest_data.get("category")
+        if not manifest_category and manifest_data.get("type"):
+            manifest_category = manifest_data.get("type") + "s"
+        pkg_category = manifest_category or filepath.parent.name
         BASE_RAW = f"https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/{pkg_category}/{pkg_id}_src"
 
         screenshots = manifest_data.get("screenshots", [])

@@ -31,7 +31,7 @@ def info():
         "tag": TAG,
         "display_name": "Builder Studio",
         "description": _plugin.desc,
-        "version": "1.0.0",
+        "version": "1.6.1",
         "author": "Hecos Community",
         "status": _plugin.status,
     }

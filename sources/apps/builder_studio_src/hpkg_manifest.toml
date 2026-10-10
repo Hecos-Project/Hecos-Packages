@@ -1,43 +1,30 @@
-id = "builder_studio"
-manifest_version = "1"
-name = "Builder Studio"
-version = "1.5.4"
 author = "Antonio Meloni"
-license = "GPL-3.0"
+build_date = "2026-10-10T09:47:00Z"
+category = "SYSTEM"
+creation_date = "2026-10-10T09:47:00Z"
+date = ""
+dependencies = []
 description = "Visual IDE for building, compiling, inspecting and managing Hecos packages (.hpkg)."
 icon = "fas fa-hammer"
 icon_url = ""
-screenshots = []
-category = "SYSTEM"
-plugin_tag = "BUILDER"
+id = "builder_studio"
 is_class_based = false
-type = "system_app"
-pip_isolation = "shared"
-plugin_dir = "builder_studio"
 lazy_load = false
-readme = "README.md"
-dependencies = []
+license = "GPL-3.0"
+manifest_version = "1"
+name = "Builder Studio"
+pip_isolation = "shared"
 pip_requirements = [
     "tomli_w",
 ]
+plugin_dir = "builder_studio"
+plugin_tag = "BUILDER"
 python_requires = ">=3.11"
-
-[config_panel]
-tab_id = "builder"
-tab_label = "Builder Studio"
-tab_icon = "fas fa-hammer"
-template_file = "builder_studio/templates/config_builder.html"
-js_files = [
-    "builder_studio/static/js/builder_core.js",
-    "builder_studio/static/js/builder_ui.js",
-    "builder_studio/static/js/builder_io_v2.js",
-    "builder_studio/static/js/builder_wizard.js",
-    "builder_studio/static/js/builder_info_sheets.js",
-    "builder_studio/static/js/builder_batch.js",
-    "builder_studio/static/js/builder_compiler.js",
-]
-api_routes_file = "builder_studio/routes.py"
-category = "SISTEMA"
+readme = "README.md"
+screenshots = []
+type = "system_app"
+version = "1.6.2"
+update_date = "2026-10-10T09:47:25Z"
 
 [capabilities]
 llm_tools = []
@@ -48,3 +35,20 @@ has_api_routes = true
 has_system_calls = true
 syscall_notes = "Executes subprocess calls to Hecos_HPM_Builder CLI for compilation, key generation, and capabilities scanning."
 notes = "Full package development studio. Build, inspect, sign, and publish .hpkg packages."
+
+[config_panel]
+api_routes_file = "builder_studio/routes.py"
+category = "SISTEMA"
+js_files = [
+    "builder_studio/static/js/builder_core.js",
+    "builder_studio/static/js/builder_ui.js",
+    "builder_studio/static/js/builder_io_v2.js",
+    "builder_studio/static/js/builder_wizard.js",
+    "builder_studio/static/js/builder_info_sheets.js",
+    "builder_studio/static/js/builder_batch.js",
+    "builder_studio/static/js/builder_compiler.js",
+]
+tab_icon = "fas fa-hammer"
+tab_id = "builder"
+tab_label = "Builder Studio"
+template_file = "builder_studio/templates/config_builder.html"

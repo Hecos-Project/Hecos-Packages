@@ -10,8 +10,10 @@ window.builderRefreshSources = async function() {
     grid.innerHTML = '<div style="color:var(--muted); padding:16px; text-align:center;"><i class="fas fa-circle-notch fa-spin"></i> Scanning local sources...</div>';
     window.builderLog('Scanning local workspace for packages...', 'info');
     
+    window.builderCategoryFiltersInitialized = false;
+    window.builderActiveCategoryFilters = new Set();
+    
     try {
-        if (typeof window.builderLoadSetup === 'function') window.builderLoadSetup();
         const baseDir = document.getElementById('builder-sources-root') ? document.getElementById('builder-sources-root').value : '';
         const outDir  = document.getElementById('builder-dest-root') ? document.getElementById('builder-dest-root').value : '';
         const resp = await fetch('/api/hpm/builder/scan-sources', {
@@ -179,7 +181,7 @@ window.builderRenderGrid = function() {
         header.onclick = (e) => { if (e.target.tagName !== 'BUTTON' && !e.target.closest('button')) window.builderToggleCategory(type); };
         
         header.innerHTML = `
-            <span class="cat-toggle" style="font-size:14px;color:var(--muted);width:16px;text-align:center;">${isCollapsed ? '⊕' : '⊖'}</span>
+            <span class="cat-toggle" style="font-size:14px;color:var(--muted);width:16px;text-align:center;">${isCollapsed ? '+' : '-'}</span>
             <span style="font-size:10px;font-weight:800;letter-spacing:1.2px; text-transform:uppercase;color:${typeMeta.color};"><i class="fas ${typeMeta.icon}"></i> ${typeMeta.label}</span>
             <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
                 <button class="btn btn-sm btn-secondary" title="Run batch actions on this category" style="padding:2px 8px; font-size:9px;" onclick="window.builderExecuteBatchBuildCat('${type}')"><i class="fas fa-hammer"></i> Batch Cat</button>
@@ -527,3 +529,46 @@ window.builderSyncVersion = function() {
 
 
 
+
+window.builderDevSync = async function() {
+    const srcDir = document.getElementById('builder-source-dir').value;
+    if (!srcDir) {
+        if (typeof _builderModal === 'function') _builderModal("Please select a package source first.", true);
+        else alert("Please select a package source first.");
+        return;
+    }
+    let hecosRoot = 'C:\\Hecos\\hecos';
+    try {
+        const h = localStorage.getItem('hpm-builder-hecos');
+        if (h) hecosRoot = h;
+    } catch(e) {}
+    
+    const doSync = async () => {
+        window.builderLog("Running Dev Sync for: " + srcDir, "info");
+        try {
+            const resp = await fetch('/api/hpm/builder/dev-sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ src_dir: srcDir, hecos_root: hecosRoot })
+            });
+            const data = await resp.json();
+            if (data && data.ok) {
+                window.builderLog("Dev Sync completed successfully.", "success");
+                if (typeof _builderModal === 'function') _builderModal("Dev Sync completed successfully! <br><br>" + data.logs.replace(/\n/g, '<br>'), false);
+            } else {
+                const err = data ? data.error : 'Unknown';
+                window.builderLog("Dev Sync failed: " + err, "error");
+                if (typeof _builderModal === 'function') _builderModal("Dev Sync Failed:<br>" + err, true);
+            }
+        } catch (e) {
+            window.builderLog("Dev Sync error: " + e.message, "error");
+            if (typeof _builderModal === 'function') _builderModal("Connection Error: " + e.message, true);
+        }
+    };
+
+    if (typeof _builderConfirmModal === 'function') {
+        _builderConfirmModal("This will synchronize all files from the local source directly to Hecos core, overwriting existing ones. Proceed?", doSync);
+    } else {
+        if (confirm("Proceed with Dev Sync?")) doSync();
+    }
+};

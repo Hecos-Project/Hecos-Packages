@@ -1,0 +1,28 @@
+{
+    "id": "playbooks",
+    "name": "Presenter Playbooks",
+    "type": "system_app",
+    "version": "1.0.0",
+    "readme": "README.md",
+    "tag": "PLAYBOOKS",
+    "description": "A dynamic knowledge base and instruction injection system for the Hecos Presenter. Use Playbooks to turn the Presenter into a specialized trainer, an engaging roleplay partner, a strict coach, or a domain expert. Create structured, multi-tab text courses to feed custom scripts, educational content, rules, and scenarios directly into the AI's mind.",
+    "lazy_load": false,
+    "is_class_based": false,
+    "commands": {},
+    "tool_schema": [],
+    "slash_commands": [],
+    "icon": "<i class='fas fa-book-open'></i>",
+    "config_panel": {
+        "tab_id": "playbooks",
+        "tab_label": "Playbooks",
+        "tab_icon": "<i class='fas fa-book-open'></i>",
+        "template_file": "web_ui/templates/config_playbooks.html",
+        "js_file": null,
+        "js_files": null,
+        "css_file": null,
+        "category": "SISTEMA",
+        "api_routes_file": "api.py",
+        "config_api_get": null,
+        "config_api_post": null
+    }
+}

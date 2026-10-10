@@ -1,0 +1,8 @@
+id = "test-playbook"
+name = "Test Playbook"
+version = "1.0.0"
+type = "playbook"
+category = "playbooks"
+author = "Agent"
+description = "A test playbook package"
+hecos_min_version = "0.1.0"

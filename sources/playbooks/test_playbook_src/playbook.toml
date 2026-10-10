@@ -1,0 +1,18 @@
+[meta]
+name = "Test Playbook"
+description = "A test playbook installed via package manager"
+icon = "fa-book-open"
+
+[[tabs]]
+id = "tab-1"
+name = "Rules"
+file = "rules.txt"
+enabled = true
+order = 1
+
+[[tabs]]
+id = "tab-2"
+name = "Context"
+file = "context.txt"
+enabled = true
+order = 2

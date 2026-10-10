@@ -1,4 +1,4 @@
-  <!-- ── BUILDER PANE ──────────────────────────────────────────────── -->
+  <!-- â”€â”€ BUILDER PANE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
   <div id="tab-builder" class="panel" style="scroll-margin-top: 90px; margin: -16px; padding: 16px; flex-direction:column; min-height:calc(100vh - 120px);">
     
     <!-- Global Header -->
@@ -9,7 +9,13 @@
             <div style="font-size:1.6em; font-weight:700; color:var(--text); display:flex; align-items:center;">
                 <i class="fas fa-hammer" style="color:var(--accent);margin-right:10px;"></i> Hecos Builder Studio
             </div>
-            <div style="display:flex; gap:8px;">
+            <div style="display:flex; gap:8px; align-items:center;">
+                <div style="display:flex; align-items:center; gap:6px; background:var(--bg2); border:1px solid var(--border-color); border-radius:6px; padding:4px 10px;">
+                    <i class="fas fa-database" style="color:var(--accent); font-size:12px;"></i>
+                    <select id="builder-repo-selector" onchange="window.builderChangeRepo()" style="background:#222; border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:2px 4px; color:#fff; font-size:13px; font-weight:600; cursor:pointer; outline:none; max-width:180px;">
+                        <option value="0">Hecos Packages</option>
+                    </select>
+                </div>
                 <button type="button" class="btn btn-sm btn-outline" title="Generate Keys" onclick="window.builderGenerateKeys()"><i class="fas fa-key"></i> Keys</button>
                 <button type="button" class="btn btn-sm btn-outline" title="Build Store Catalog" onclick="window.builderGenerateCatalog()"><i class="fas fa-globe"></i> Catalog</button>
                 <button type="button" class="btn btn-sm btn-outline" title="Settings" onclick="window.builderOpenSetup()"><i class="fas fa-cog"></i> Setup</button>
@@ -110,7 +116,10 @@
           <div style="position: absolute; top:0; left:0; right:0; bottom:0; display:flex; flex-direction:column; gap:12px; overflow-y:auto; padding-right:8px;" class="custom-scrollbar">
           
           <div class="card" style="margin-bottom:0; min-height:min-content; padding: 16px;">
-            <div id="builder-sources-grid">
+            <h2 id="builder-active-repo-title" style="margin-top:0; font-size:1.4em; color:var(--text); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px; margin-bottom:16px;">
+                <i class="fas fa-database" style="color:var(--accent); margin-right:8px;"></i> <span id="builder-active-repo-name">Local Repository</span>
+              </h2>
+              <div id="builder-sources-grid">
                 <div style="color:var(--muted);"><i class="fas fa-circle-notch fa-spin"></i> Scanning local sources...</div>
             </div>
           </div>
@@ -140,7 +149,8 @@
                         <i class="fas fa-ellipsis-v"></i> Actions
                     </button>
                     <div id="builder-workbench-menu" style="display:none; position:absolute; top:100%; right:0; z-index:100; margin-top:4px; background:var(--bg2); border:1px solid var(--border-color); border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.5); min-width:160px; padding:4px 0; font-weight:normal; text-transform:none; font-family:var(--font-sans); letter-spacing:normal; font-size:14px;">
-                        <div onclick="window.builderDevSync()" title="Synchronize local changes directly to the installed package without rebuilding." style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-sync" style="color:var(--accent); width:16px; text-align:center;"></i> Dev Sync</div>
+                        <div onclick="window.builderDevSync()" title="Synchronize live installation directly from local source folder without rebuilding." style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-sync" style="color:var(--accent); width:16px; text-align:center;"></i> Dev Sync</div>
+                        <div onclick="window.builderBackupPackage()" title="Backup the live installation folder of this package to a chosen destination (no compression)." style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-archive" style="color:#3b82f6; width:16px; text-align:center;"></i> Backup Now</div>
                         <div onclick="window.builderInspect()" title="Inspect the contents of the built .hpkg file." style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-file-archive" style="width:16px; text-align:center;"></i> Inspect .hpkg</div>
                         <div onclick="window.builderUnpack()" title="Unpack a .hpkg file back into the sources directory." style="padding:8px 12px; cursor:pointer; font-size:13px; display:flex; gap:8px; align-items:center; color:var(--text);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'"><i class="fas fa-box-open" style="width:16px; text-align:center;"></i> Unpack</div>
                         <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
@@ -326,72 +336,303 @@ document.addEventListener('keydown', function(e) {
 </script>
 
 
-<!-- Builder Setup Modal -->
+<!-- Builder Setup Modal - Multi-Repository -->
 <div id="hpm-builder-setup-modal" class="modal-bg" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center;">
-    <div class="modal-content" style="background:var(--bg2, #1e1e1e); border:1px solid var(--border-color); border-radius:12px; width:500px; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-        <h2 style="margin-top:0; color:var(--text); font-size:1.4em; border-bottom:1px solid var(--border-color); padding-bottom:12px;"><i class="fas fa-cog" style="color:var(--accent); margin-right:8px;"></i> Builder Setup</h2>
+    <div class="modal-content" style="background:var(--bg2, #1e1e1e); border:1px solid var(--border-color); border-radius:12px; width:780px; max-width:95vw; max-height:90vh; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,0.5); display:flex; flex-direction:column; overflow:hidden;">
+        <h2 style="margin-top:0; color:var(--text); font-size:1.4em; border-bottom:1px solid var(--border-color); padding-bottom:12px; flex-shrink:0;"><i class="fas fa-cog" style="color:var(--accent); margin-right:8px;"></i> Builder Setup</h2>
         
-        <div style="display:flex; flex-direction:column; gap:16px; margin-top:16px;">
-            <div>
-                <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Sources Root Directory (Workspace)</label>
-                <div style="display:flex; gap:6px; margin-top:4px;">
-                    <input type="text" id="setup-sources-root" class="config-input" style="flex:1;">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-sources-root')"><i class="fas fa-folder-open"></i></button>
+        <!-- Two-column layout: left=repo tabs, right=form -->
+        <div style="display:flex; gap:16px; flex:1; overflow:hidden; margin-top:16px;">
+            
+            <!-- LEFT: Repo list -->
+            <div style="width:180px; flex-shrink:0; display:flex; flex-direction:column; gap:8px;">
+                <div style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; font-weight:700; padding:0 4px;">Repositories</div>
+                <div id="setup-repo-list" style="flex:1; overflow-y:auto;" class="custom-scrollbar">
+                    <!-- Tabs injected by JS -->
                 </div>
-            </div>
-            <div>
-                <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Packages Output Directory (Dest)</label>
-                <div style="display:flex; gap:6px; margin-top:4px;">
-                    <input type="text" id="setup-dest-root" class="config-input" style="flex:1;">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-dest-root')"><i class="fas fa-folder-open"></i></button>
-                </div>
-            </div>
-            <div>
-                <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">HPM CLI Builder Directory</label>
-                <div style="display:flex; gap:6px; margin-top:4px;">
-                    <input type="text" id="setup-cli-root" class="config-input" style="flex:1;">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-cli-root')"><i class="fas fa-folder-open"></i></button>
+                <div style="display:flex; gap:4px; flex-shrink:0;">
+                    <button type="button" class="btn btn-secondary btn-sm" style="flex:1; font-size:11px;" onclick="window.builderAddRepoTab()"><i class="fas fa-plus"></i> Add</button>
+                    <button type="button" class="btn btn-sm" style="flex:1; font-size:11px; background:#ff4a4a; color:white; border:none;" onclick="window.builderDeleteRepoTab()"><i class="fas fa-trash"></i> Del</button>
                 </div>
             </div>
             
-            <div>
-                <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Private Key (hpm_private.pem)</label>
-                <div style="display:flex; gap:6px; margin-top:4px;">
-                    <input type="text" id="setup-private-key" class="config-input" style="flex:1;" placeholder="C:\Hecos\data\trusted_keys\hpm_private.pem">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-private-key')"><i class="fas fa-folder-open"></i></button>
+            <!-- RIGHT: Form -->
+            <div id="setup-repo-form" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:14px;" class="custom-scrollbar">
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                    <div>
+                        <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Repository Name</label>
+                        <input type="text" id="setup-repo-name" class="config-input" style="width:100%; margin-top:4px;" placeholder="e.g. Hecos Elite" onkeyup="window.builderLiveUpdateName(this.value)">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Description</label>
+                        <input type="text" id="setup-repo-desc" class="config-input" style="width:100%; margin-top:4px;" placeholder="e.g. Premium Packages">
+                    </div>
                 </div>
-            </div>
-            
-            <div>
-                <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Trusted Keys Directory</label>
-                <div style="display:flex; gap:6px; margin-top:4px;">
-                    <input type="text" id="setup-public-keys" class="config-input" style="flex:1;" placeholder="C:\Hecos\data\trusted_keys">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-public-keys')"><i class="fas fa-folder-open"></i></button>
+                
+                <div>
+                    <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Sources Root (Workspace)</label>
+                    <div style="display:flex; gap:6px; margin-top:4px;">
+                        <input type="text" id="setup-sources-root" class="config-input" style="flex:1;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-sources-root')"><i class="fas fa-folder-open"></i></button>
+                    </div>
                 </div>
-            </div>
-            
-            <div>
-                <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Unpack Destination Root</label>
-                <div style="display:flex; gap:6px; margin-top:4px;">
-                    <input type="text" id="setup-unpack-dest" class="config-input" style="flex:1;" placeholder="C:\Hecos-Packages\sources">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-unpack-dest')"><i class="fas fa-folder-open"></i></button>
+                <div>
+                    <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Packages Output (Dest)</label>
+                    <div style="display:flex; gap:6px; margin-top:4px;">
+                        <input type="text" id="setup-dest-root" class="config-input" style="flex:1;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-dest-root')"><i class="fas fa-folder-open"></i></button>
+                    </div>
                 </div>
-            </div>
-            <div>
-                <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Hecos Root Directory</label>
-                <div style="display:flex; gap:6px; margin-top:4px;">
-                    <input type="text" id="setup-hecos-root" class="config-input" style="flex:1;" placeholder="C:\Hecos\hecos">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-hecos-root')"><i class="fas fa-folder-open"></i></button>
+                
+                <div style="border-top:1px solid var(--border-color); padding-top:14px; margin-top:4px;">
+                    <div style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-bottom:10px;">Global Settings</div>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <div>
+                            <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">HPM CLI Builder Directory</label>
+                            <div style="display:flex; gap:6px; margin-top:4px;">
+                                <input type="text" id="setup-cli-root" class="config-input" style="flex:1;">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-cli-root')"><i class="fas fa-folder-open"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Private Key (hpm_private.pem)</label>
+                            <div style="display:flex; gap:6px; margin-top:4px;">
+                                <input type="text" id="setup-private-key" class="config-input" style="flex:1;" placeholder="C:\Hecos\data\trusted_keys\hpm_private.pem">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-private-key')"><i class="fas fa-folder-open"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Trusted Keys Directory</label>
+                            <div style="display:flex; gap:6px; margin-top:4px;">
+                                <input type="text" id="setup-public-keys" class="config-input" style="flex:1;" placeholder="C:\Hecos\data\trusted_keys">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-public-keys')"><i class="fas fa-folder-open"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size:11px; color:var(--muted); text-transform:uppercase;">Unpack Destination Root</label>
+                            <div style="display:flex; gap:6px; margin-top:4px;">
+                                <input type="text" id="setup-unpack-dest" class="config-input" style="flex:1;" placeholder="C:\Hecos-Packages\sources">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="window.builderShowCustomPicker('setup-unpack-dest')"><i class="fas fa-folder-open"></i></button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:24px;">
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px; flex-shrink:0; border-top:1px solid var(--border-color); padding-top:16px;">
             <button type="button" class="btn btn-secondary" onclick="document.getElementById('hpm-builder-setup-modal').style.display='none'">Cancel</button>
-            <button type="button" class="btn btn-primary" onclick="window.builderSaveSetup()">Save Settings</button>
+            <button type="button" class="btn btn-primary" onclick="window.builderSaveAllSetup()"><i class="fas fa-save" style="margin-right:6px;"></i>Save Settings</button>
         </div>
     </div>
 </div>
+
+<script>
+// â”€â”€ Repository Management Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+window.builderRepos = [];
+window.builderCurrentRepoIndex = 0;
+
+function _initBuilderRepos() {
+    try {
+        const stored = localStorage.getItem('hpm-builder-repos');
+        if (stored) {
+            window.builderRepos = JSON.parse(stored);
+        } else {
+            window.builderRepos = [
+                { id: 'repo-1', name: 'Hecos Packages', desc: 'Free / Core Packages', src: 'C:\\Hecos-Packages\\sources', dest: 'C:\\Hecos-Packages\\packages' },
+                { id: 'repo-2', name: 'Hecos Elite', desc: 'Premium Packages', src: 'C:\\Hecos-Elite\\sources', dest: 'C:\\Hecos-Elite\\packages' }
+            ];
+            localStorage.setItem('hpm-builder-repos', JSON.stringify(window.builderRepos));
+        }
+    } catch(e) { window.builderRepos = []; }
+}
+
+window.builderRenderSetupTabs = function() {
+    const listEl = document.getElementById('setup-repo-list');
+    if (!listEl) return;
+    let h = '';
+    window.builderRepos.forEach((repo, i) => {
+        const isActive = (i === window.builderCurrentRepoIndex);
+        const name = (repo.name && repo.name.trim() !== '') ? repo.name : ('Repo ' + (i+1));
+        h += '<div style="padding:8px 12px; border-radius:6px; cursor:pointer; margin-bottom:4px; font-size:13px; font-weight:bold; ' +
+             (isActive ? 'background:var(--accent); color:#000;' : 'background:transparent; color:var(--text);') +
+             '" onclick="window.builderSelectRepoTab(' + i + ')">' +
+             '<i class="fas fa-database" style="margin-right:6px;"></i> ' + name + '</div>';
+    });
+    listEl.innerHTML = h;
+};
+
+window.builderSelectRepoTab = function(idx) {
+    window.builderSaveRepoFormToMemory();
+    window.builderCurrentRepoIndex = idx;
+    window.builderRenderSetupTabs();
+    window.builderRenderRepoForm();
+};
+
+window.builderSaveRepoFormToMemory = function() {
+    if (!window.builderRepos.length || window.builderCurrentRepoIndex >= window.builderRepos.length) return;
+    const r = window.builderRepos[window.builderCurrentRepoIndex];
+    const n = document.getElementById('setup-repo-name'); if (n) r.name = n.value;
+    const d = document.getElementById('setup-repo-desc'); if (d) r.desc = d.value;
+    const s = document.getElementById('setup-sources-root'); if (s) r.src = s.value;
+    const t = document.getElementById('setup-dest-root'); if (t) r.dest = t.value;
+};
+
+window.builderLiveUpdateName = function(val) {
+    if (!window.builderRepos.length || window.builderCurrentRepoIndex >= window.builderRepos.length) return;
+    window.builderRepos[window.builderCurrentRepoIndex].name = val;
+    window.builderRenderSetupTabs();
+    window.builderSyncHeaderDropdown(true);
+};
+
+window.builderRenderRepoForm = function() {
+    if (!window.builderRepos.length) return;
+    const r = window.builderRepos[window.builderCurrentRepoIndex];
+    const n = document.getElementById('setup-repo-name'); if (n) n.value = r.name || '';
+    const d = document.getElementById('setup-repo-desc'); if (d) d.value = r.desc || '';
+    const s = document.getElementById('setup-sources-root'); if (s) s.value = r.src || '';
+    const t = document.getElementById('setup-dest-root'); if (t) t.value = r.dest || '';
+};
+
+window.builderAddRepoTab = function() {
+    window.builderSaveRepoFormToMemory();
+    const newIdx = window.builderRepos.length + 1;
+    window.builderRepos.push({ id: 'repo-' + Date.now(), name: 'Repo ' + newIdx, desc: '', src: '', dest: '' });
+    window.builderCurrentRepoIndex = window.builderRepos.length - 1;
+    window.builderRenderSetupTabs();
+    window.builderRenderRepoForm();
+    window.builderSyncHeaderDropdown(true);
+    const nameInput = document.getElementById('setup-repo-name');
+    if (nameInput) { nameInput.focus(); nameInput.select(); }
+};
+
+window.builderDeleteRepoTab = function() {
+    if (window.builderRepos.length <= 1) {
+        if (typeof _builderModal === 'function') _builderModal("Cannot delete the last repository.", true);
+        else alert("Cannot delete the last repository.");
+        return;
+    }
+    const doDelete = () => {
+        window.builderRepos.splice(window.builderCurrentRepoIndex, 1);
+        window.builderCurrentRepoIndex = 0;
+        window.builderRenderSetupTabs();
+        window.builderRenderRepoForm();
+        window.builderSyncHeaderDropdown(true);
+    };
+    if (typeof _builderConfirmModal === 'function') _builderConfirmModal("Delete this repository?", doDelete);
+    else if (confirm("Delete this repository?")) doDelete();
+};
+
+window.builderSaveAllSetup = function() {
+    window.builderSaveRepoFormToMemory();
+    window.builderRepos.forEach((r, i) => { if (!r.name || !r.name.trim()) r.name = 'Repo ' + (i+1); });
+    localStorage.setItem('hpm-builder-repos', JSON.stringify(window.builderRepos));
+    const cli = document.getElementById('setup-cli-root'); if (cli) localStorage.setItem('hpm-builder-cli', cli.value);
+    const priv = document.getElementById('setup-private-key'); if (priv) localStorage.setItem('hpm-builder-priv', priv.value);
+    const pub = document.getElementById('setup-public-keys'); if (pub) localStorage.setItem('hpm-builder-pub', pub.value);
+    const unpack = document.getElementById('setup-unpack-dest'); if (unpack) localStorage.setItem('hpm-builder-unpack', unpack.value);
+
+    window.builderSyncHeaderDropdown(false);
+    document.getElementById('hpm-builder-setup-modal').style.display = 'none';
+    window.builderLog('Builder repositories saved successfully.', 'success');
+};
+
+window.builderSyncHeaderDropdown = function(skipTrigger) {
+    if (!window.builderRepos.length) _initBuilderRepos();
+    const sel = document.getElementById('builder-repo-selector');
+    if (!sel) return;
+    const prev = sel.value;
+    let h = '';
+    window.builderRepos.forEach((r, i) => {
+        const name = (r.name && r.name.trim()) ? r.name : ('Repo ' + (i+1));
+        h += '<option value="' + i + '">' + name + '</option>';
+    });
+    sel.innerHTML = h;
+    if (prev && parseInt(prev) < window.builderRepos.length) sel.value = prev;
+    if (!skipTrigger) window.builderChangeRepo();
+};
+
+window.builderChangeRepo = function() {
+    const sel = document.getElementById('builder-repo-selector');
+    if (!sel || !window.builderRepos || !window.builderRepos.length) return;
+    const idx = parseInt(sel.value) || 0;
+    const r = window.builderRepos[idx];
+    if (r) {
+        document.getElementById('builder-sources-root').value = r.src;
+        document.getElementById('builder-dest-root').value = r.dest;
+        const titleSpan = document.getElementById('builder-active-repo-name');
+        if (titleSpan) titleSpan.innerText = r.name || 'Unnamed Repository';
+        window.builderLog('Repository loaded: ' + r.name, 'info');
+        if (typeof window.builderRefreshSources === 'function') window.builderRefreshSources();
+    }
+};
+
+window.builderOpenSetup = function() {
+    _initBuilderRepos();
+    const sel = document.getElementById('builder-repo-selector');
+    if (sel) window.builderCurrentRepoIndex = parseInt(sel.value) || 0;
+    const cli = document.getElementById('setup-cli-root'); if (cli) cli.value = localStorage.getItem('hpm-builder-cli') || 'C:\\Hecos-Packages\\Hecos_HPM_Builder';
+    const priv = document.getElementById('setup-private-key'); if (priv) priv.value = localStorage.getItem('hpm-builder-priv') || 'C:\\Hecos\\data\\trusted_keys\\hpm_private.pem';
+    const pub = document.getElementById('setup-public-keys'); if (pub) pub.value = localStorage.getItem('hpm-builder-pub') || 'C:\\Hecos\\data\\trusted_keys';
+    const unpack = document.getElementById('setup-unpack-dest'); if (unpack) unpack.value = localStorage.getItem('hpm-builder-unpack') || '';
+
+    document.getElementById('hpm-builder-setup-modal').style.display = 'flex';
+    window.builderRenderSetupTabs();
+    window.builderRenderRepoForm();
+};
+
+// Also keep builderSaveSetup as alias for back-compat
+window.builderSaveSetup = window.builderSaveAllSetup;
+
+window.builderBackupPackage = async function() {
+    const pkgId = document.getElementById('builder-id') ? document.getElementById('builder-id').value : '';
+    const srcDir = document.getElementById('builder-source-dir') ? document.getElementById('builder-source-dir').value : '';
+    if (!pkgId && !srcDir) {
+        window.builderLog('No package selected. Please open a package from the sources panel first.', 'warn');
+        if (typeof _builderModal === 'function') _builderModal('No package selected.<br>Please open a package from the sources panel first.', true);
+        return;
+    }
+    const packageId = pkgId || srcDir.split('\\').pop() || srcDir.split('/').pop();
+    const lastDest = localStorage.getItem('hpm-builder-backup-last-dest') || '';
+    try {
+        const pickResp = await fetch('/api/system/explorer/pick-native', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: 'Select backup destination folder for ' + packageId,
+                initialdir: lastDest,
+                pick_dir: true
+            })
+        });
+        const pickData = await pickResp.json();
+        if (!pickData || !pickData.ok || !pickData.path) {
+            window.builderLog('Folder selection cancelled.', 'info');
+            return;
+        }
+        const destDir = pickData.path;
+        localStorage.setItem('hpm-builder-backup-last-dest', destDir);
+        window.builderLog('Backing up LIVE version of ' + packageId + '...', 'info');
+        const resp = await fetch('/api/hpm/builder/backup-package', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pkg_id: packageId, dest_dir: destDir })
+        });
+        const data = await resp.json();
+        if (data && data.ok) {
+            window.builderLog(data.msg, 'success');
+            if (typeof _builderModal === 'function') _builderModal('<i class="fas fa-check-circle" style="color:#22c55e;margin-right:8px;"></i>' + data.msg.replace(/\n/g, '<br>'), false);
+        } else {
+            window.builderLog('Backup Error: ' + (data ? data.error : 'Unknown'), 'error');
+            if (typeof _builderModal === 'function') _builderModal('Backup Error:<br>' + (data ? data.error : 'Unknown'), true);
+        }
+    } catch(e) {
+        window.builderLog('Error: ' + e.message, 'error');
+    }
+};
+
+setTimeout(() => { _initBuilderRepos(); window.builderSyncHeaderDropdown(true); }, 600);
+</script>
 
 <div id="builder-info-modal" class="modal-bg" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center;">
     <div class="modal-content" style="background:var(--bg); border:1px solid var(--border-color); border-radius:12px; padding:24px; max-width:800px; width:90%; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,0.5);">

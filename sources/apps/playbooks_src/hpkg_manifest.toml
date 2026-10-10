@@ -1,0 +1,47 @@
+author = "Antonio Meloni"
+build_date = "2026-10-10T06:34:39Z"
+creation_date = "2026-10-10T06:34:39Z"
+date = ""
+description = "A dynamic knowledge base and instruction injection system for the Hecos Presenter. Use Playbooks to turn the Presenter into a specialized trainer, an engaging roleplay partner, a strict coach, or a domain expert. Create structured, multi-tab text courses to feed custom scripts, educational content, rules, and scenarios directly into the AI's mind."
+hecos_min_version = "0.42.0"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+id = "playbooks"
+is_class_based = false
+lazy_load = false
+license = "GPL-3.0"
+manifest_version = "1"
+name = "Presenter Playbooks"
+plugin_dir = "."
+readme = "README.md"
+screenshots = []
+tag = "PLAYBOOKS"
+type = "system_app"
+update_date = "2026-10-10T06:35:48Z"
+version = "1.0.0"
+signature = "9p5bEPKrl8nP//nciiUuXqsdL/9LigQ+FWYsqYdlLsnPIGSxX2g8qVwHVjNSsiGgIqZUIYgZNEUlzd6PZBnnDA=="
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = "Injects user-defined text material into the Presenter's system prompt."
+
+[config_panel]
+api_routes_file = "api.py"
+category = "SISTEMA"
+tab_icon = "<i class='fas fa-book-open'></i>"
+tab_id = "playbooks"
+tab_label = "Playbooks"
+template_file = "web_ui/templates/config_playbooks.html"
+
+[file_hashes]
+"api.py" = "53ad58fad5faf601b19abfaf3c5c8dfbdd97d921ee8f173a1810373695a50d52"
+"manifest.json" = "d4fa087d5d748244ec684fafe4e0fed239a05abf4d4a62a455c1f0217f76fc42"
+"README.md" = "3c7eeaa6536c2e1ba67fadacb38fa60d9959da65d0b19637bd79c365f20585be"
+"playbooks/storage.py" = "3ad9edec829a0cf0eb24e9be04e4a65f742b3668bb1e03129308a7c668a1106b"
+"playbooks/__init__.py" = "f01a374e9c81e3db89b3a42940c4d6a5447684986a1296e42bf13f196eed6295"
+"web_ui/templates/config_playbooks.html" = "9e10f613cfe6886cf5c19eaf3d4c308513b1e8064a294f28f59d33b54e3cea75"
