@@ -1,8 +1,25 @@
-id = "test-playbook"
-name = "Test Playbook"
-version = "1.0.0"
-type = "playbook"
+author = "Antonio Meloni"
+build_date = "2026-10-11T04:02:50Z"
 category = "playbooks"
-author = "Agent"
+creation_date = "2026-10-11T04:02:50Z"
+date = ""
 description = "A test playbook package"
 hecos_min_version = "0.1.0"
+id = "test-playbook"
+license = "GPL-3.0"
+name = "Test Playbook"
+readme = "README.md"
+screenshots = []
+type = "playbook"
+update_date = "2026-10-11T04:49:53Z"
+version = "1.0.0"
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = false
+has_api_routes = false
+has_system_calls = false
+syscall_notes = ""
+notes = ""

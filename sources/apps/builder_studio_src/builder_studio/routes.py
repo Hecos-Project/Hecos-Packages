@@ -92,7 +92,7 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
                 manifest['build_date'] = now
             else:
                 manifest['update_date'] = now
-        except Exception as e:
+        except Exception:
             pass
                 
         # 1. Save modifications to TOML
@@ -607,14 +607,43 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
             return jsonify({'ok': False, 'error': 'No destination folder specified.'})
 
         try:
-            # Cerca la cartella live del pacchetto
-            base_dir = Path(hecos_root)
+            # 1. Cerca la cartella live del pacchetto in packages.db
+            import sqlite3
             live_path = None
-            for sub in ['hpm', 'hpm/libraries', 'hpm/plugins', 'modules', 'plugins']:
-                test_path = base_dir / sub / pkg_id
-                if test_path.is_dir():
-                    live_path = test_path
-                    break
+            db_path = Path(hecos_root) / 'data' / 'packages.db'
+            if not db_path.is_file():
+                db_path = Path(r"C:\Hecos\hecos\data\packages.db")
+            if db_path.is_file():
+                try:
+                    conn = sqlite3.connect(str(db_path))
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "SELECT install_path FROM packages WHERE id = ? OR name = ? OR id = ? OR id = ?",
+                        (pkg_id, pkg_id, pkg_id.replace('_', '-'), pkg_id.replace('-', '_'))
+                    )
+                    row = cursor.fetchone()
+                    if row and row[0] and Path(row[0]).is_dir():
+                        live_path = Path(row[0])
+                    conn.close()
+                except Exception as e_db:
+                    logger.warning(f"[BUILDER] packages.db check failed: {e_db}")
+
+            # 2. Se non trovato nel DB, scansiona le cartelle dell'installazione
+            if not live_path:
+                base_dir = Path(hecos_root)
+                subdirs = [
+                    'modules', 'hpm', 'hpm/playbooks', 'hpm/libraries',
+                    'hpm/plugins', 'plugins', 'personas', 'widgets'
+                ]
+                candidates = [pkg_id, pkg_id.replace('_', '-'), pkg_id.replace('-', '_')]
+                for sub in subdirs:
+                    for cand in candidates:
+                        test_path = base_dir / sub / cand
+                        if test_path.is_dir():
+                            live_path = test_path
+                            break
+                    if live_path:
+                        break
 
             if not live_path:
                 return jsonify({'ok': False, 'error': f'Live version of {pkg_id} not found in the installation.'})
@@ -622,8 +651,9 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
             timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
             backup_folder_name = f'{pkg_id}_{timestamp}'
             dest_path = Path(dest_dir) / backup_folder_name
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
 
-            shutil.copytree(str(live_path), str(dest_path))
+            shutil.copytree(str(live_path), str(dest_path), dirs_exist_ok=True)
 
             return jsonify({'ok': True, 'msg': f'LIVE backup of {pkg_id} copied to:\n{dest_path}'})
         except Exception as e:

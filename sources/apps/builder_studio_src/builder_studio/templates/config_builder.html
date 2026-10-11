@@ -22,9 +22,39 @@
             </div>
         </div>
 
-        <!-- Categories Row (Like filter-tabs) -->
-        <div id="builder-category-filters" class="filter-tabs custom-scrollbar" style="margin-bottom:0; display:flex; gap:4px; flex-wrap:nowrap; overflow-x:auto; padding: 0 4px 8px 4px; white-space:nowrap;">
-            <!-- Filter checkboxes injected via JS -->
+        <style>
+            #builder-category-filters::-webkit-resizer {
+                background: transparent;
+                border-bottom: 2px solid var(--accent, #66fcf1);
+                border-right: 2px solid var(--accent, #66fcf1);
+                cursor: se-resize;
+            }
+            #builder-category-resizer:hover span,
+            #builder-category-resizer.is-resizing span {
+                background: var(--accent, #66fcf1) !important;
+                width: 48px !important;
+                box-shadow: 0 0 10px var(--accent, #66fcf1);
+            }
+            #builder-category-resizer:hover,
+            #builder-category-resizer.is-resizing {
+                opacity: 1 !important;
+                background: rgba(255, 255, 255, 0.08) !important;
+            }
+        </style>
+
+        <!-- Categories Row (Auto-wrapping & Resizable) -->
+        <div style="display:flex; flex-direction:column; gap:0;">
+            <div id="builder-category-filters" class="filter-tabs custom-scrollbar" 
+                 style="margin-bottom:0; display:flex; gap:6px; flex-wrap:wrap; overflow-y:auto; overflow-x:hidden; padding:8px 10px; height:auto; min-height:36px; max-height:260px; resize:vertical; align-items:center; border:1px solid rgba(255,255,255,0.08); border-radius:8px 8px 0 0; background:rgba(255,255,255,0.02); transition:border-color 0.2s;" 
+                 title="Categories (auto-wrap on multiple rows • drag handle to resize)">
+                <!-- Filter checkboxes injected via JS -->
+            </div>
+            <!-- Bottom Resizer Grip Bar for Mouse Dragging -->
+            <div id="builder-category-resizer" 
+                 title="Drag up/down with mouse to adjust height • Double-click to auto-fit" 
+                 style="height:8px; cursor:ns-resize; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-top:none; border-radius:0 0 8px 8px; opacity:0.6; transition:opacity 0.2s, background 0.2s; user-select:none;">
+                <span style="width:36px; height:3px; background:rgba(255,255,255,0.25); border-radius:2px; pointer-events:none; transition:background 0.2s, width 0.2s, box-shadow 0.2s;"></span>
+            </div>
         </div>
 
         <!-- Toolbar Area (Drag and Drop enabled) -->
@@ -309,6 +339,58 @@
       };
       checkAndRun();
   })();
+
+  // Category Bar Mouse Resizing Logic
+  (function initBuilderCategoryResizer() {
+      const init = () => {
+          const resizer = document.getElementById('builder-category-resizer');
+          const container = document.getElementById('builder-category-filters');
+          if (!resizer || !container) {
+              setTimeout(init, 100);
+              return;
+          }
+          if (resizer._initialized) return;
+          resizer._initialized = true;
+
+          let isDragging = false;
+          let startY = 0;
+          let startHeight = 0;
+
+          resizer.addEventListener('mousedown', function(e) {
+              isDragging = true;
+              resizer.classList.add('is-resizing');
+              startY = e.clientY;
+              startHeight = container.getBoundingClientRect().height;
+              document.body.style.cursor = 'ns-resize';
+              document.body.style.userSelect = 'none';
+              e.preventDefault();
+          });
+
+          window.addEventListener('mousemove', function(e) {
+              if (!isDragging) return;
+              const delta = e.clientY - startY;
+              const newHeight = Math.max(34, Math.min(500, startHeight + delta));
+              container.style.height = newHeight + 'px';
+              container.style.maxHeight = 'none';
+          });
+
+          window.addEventListener('mouseup', function() {
+              if (isDragging) {
+                  isDragging = false;
+                  resizer.classList.remove('is-resizing');
+                  document.body.style.cursor = '';
+                  document.body.style.userSelect = '';
+              }
+          });
+
+          // Double-click resets back to auto-fit
+          resizer.addEventListener('dblclick', function() {
+              container.style.height = 'auto';
+              container.style.maxHeight = '260px';
+          });
+      };
+      init();
+  })();
 // Safety guard: prevent Enter key from accidentally confirming the Wipe/Confirm modal
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') {
@@ -585,34 +667,29 @@ window.builderOpenSetup = function() {
 // Also keep builderSaveSetup as alias for back-compat
 window.builderSaveSetup = window.builderSaveAllSetup;
 
-window.builderBackupPackage = async function() {
-    const pkgId = document.getElementById('builder-id') ? document.getElementById('builder-id').value : '';
-    const srcDir = document.getElementById('builder-source-dir') ? document.getElementById('builder-source-dir').value : '';
-    if (!pkgId && !srcDir) {
-        window.builderLog('No package selected. Please open a package from the sources panel first.', 'warn');
-        if (typeof _builderModal === 'function') _builderModal('No package selected.<br>Please open a package from the sources panel first.', true);
-        return;
-    }
-    const packageId = pkgId || srcDir.split('\\').pop() || srcDir.split('/').pop();
-    const lastDest = localStorage.getItem('hpm-builder-backup-last-dest') || '';
-    try {
-        const pickResp = await fetch('/api/system/explorer/pick-native', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                title: 'Select backup destination folder for ' + packageId,
-                initialdir: lastDest,
-                pick_dir: true
-            })
-        });
-        const pickData = await pickResp.json();
-        if (!pickData || !pickData.ok || !pickData.path) {
-            window.builderLog('Folder selection cancelled.', 'info');
-            return;
+// Lazy-load the shared in-browser folder picker (not included by default in the config page)
+window._builderEnsureFilePicker = function() {
+    return new Promise((resolve, reject) => {
+        if (window.HecosFilePicker) return resolve(window.HecosFilePicker);
+        if (!document.querySelector('link[href*="hecos_file_picker.css"]')) {
+            const css = document.createElement('link');
+            css.rel = 'stylesheet';
+            css.href = '/static/css/hecos_file_picker.css';
+            document.head.appendChild(css);
         }
-        const destDir = pickData.path;
-        localStorage.setItem('hpm-builder-backup-last-dest', destDir);
-        window.builderLog('Backing up LIVE version of ' + packageId + '...', 'info');
+        const s = document.createElement('script');
+        s.src = '/static/js/hecos_file_picker.js?v=' + Date.now();
+        s.onload = () => window.HecosFilePicker ? resolve(window.HecosFilePicker) : reject(new Error('File picker failed to initialize'));
+        s.onerror = () => reject(new Error('Unable to load file picker script'));
+        document.head.appendChild(s);
+    });
+};
+
+window._builderRunBackup = async function(packageId, destDir) {
+    localStorage.setItem('hpm-builder-backup-last-dest', destDir);
+    window.builderLog('Selected destination: ' + destDir, 'info');
+    window.builderLog('Backing up LIVE version of ' + packageId + '...', 'info');
+    try {
         const resp = await fetch('/api/hpm/builder/backup-package', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -628,6 +705,33 @@ window.builderBackupPackage = async function() {
         }
     } catch(e) {
         window.builderLog('Error: ' + e.message, 'error');
+        if (typeof _builderModal === 'function') _builderModal('Error:<br>' + e.message, true);
+    }
+};
+
+window.builderBackupPackage = async function() {
+    const pkgId = document.getElementById('builder-id') ? document.getElementById('builder-id').value : '';
+    const srcDir = document.getElementById('builder-source-dir') ? document.getElementById('builder-source-dir').value : '';
+    if (!pkgId && !srcDir) {
+        window.builderLog('No package selected. Please open a package from the sources panel first.', 'warn');
+        if (typeof _builderModal === 'function') _builderModal('No package selected.<br>Please open a package from the sources panel first.', true);
+        return;
+    }
+    const packageId = pkgId || srcDir.split('\\').pop() || srcDir.split('/').pop();
+    const lastDest = localStorage.getItem('hpm-builder-backup-last-dest') || 'C:\\';
+
+    try {
+        const picker = await window._builderEnsureFilePicker();
+        window.builderLog('Choose the backup destination folder for ' + packageId + '...', 'info');
+        picker.open({
+            title: 'Backup destination for ' + packageId,
+            mode: 'dir',
+            initialPath: lastDest,
+            onSelect: (destDir) => window._builderRunBackup(packageId, destDir)
+        });
+    } catch(e) {
+        window.builderLog('Error: ' + e.message, 'error');
+        if (typeof _builderModal === 'function') _builderModal('Error:<br>' + e.message, true);
     }
 };
 

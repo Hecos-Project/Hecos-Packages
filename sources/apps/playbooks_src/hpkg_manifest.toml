@@ -13,12 +13,14 @@ manifest_version = "1"
 name = "Presenter Playbooks"
 plugin_dir = "."
 readme = "README.md"
-screenshots = []
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/apps/playbooks_src/preview_1.png",
+]
+signature = "9p5bEPKrl8nP//nciiUuXqsdL/9LigQ+FWYsqYdlLsnPIGSxX2g8qVwHVjNSsiGgIqZUIYgZNEUlzd6PZBnnDA=="
 tag = "PLAYBOOKS"
 type = "system_app"
-update_date = "2026-10-10T06:35:48Z"
+update_date = "2026-10-11T09:22:11Z"
 version = "1.0.0"
-signature = "9p5bEPKrl8nP//nciiUuXqsdL/9LigQ+FWYsqYdlLsnPIGSxX2g8qVwHVjNSsiGgIqZUIYgZNEUlzd6PZBnnDA=="
 
 [capabilities]
 llm_tools = []
@@ -33,15 +35,16 @@ notes = "Injects user-defined text material into the Presenter's system prompt."
 [config_panel]
 api_routes_file = "api.py"
 category = "SISTEMA"
+js_file = "web_ui/static/js/playbooks.js"
 tab_icon = "<i class='fas fa-book-open'></i>"
 tab_id = "playbooks"
 tab_label = "Playbooks"
 template_file = "web_ui/templates/config_playbooks.html"
 
 [file_hashes]
+"README.md" = "3c7eeaa6536c2e1ba67fadacb38fa60d9959da65d0b19637bd79c365f20585be"
 "api.py" = "53ad58fad5faf601b19abfaf3c5c8dfbdd97d921ee8f173a1810373695a50d52"
 "manifest.json" = "d4fa087d5d748244ec684fafe4e0fed239a05abf4d4a62a455c1f0217f76fc42"
-"README.md" = "3c7eeaa6536c2e1ba67fadacb38fa60d9959da65d0b19637bd79c365f20585be"
-"playbooks/storage.py" = "3ad9edec829a0cf0eb24e9be04e4a65f742b3668bb1e03129308a7c668a1106b"
 "playbooks/__init__.py" = "f01a374e9c81e3db89b3a42940c4d6a5447684986a1296e42bf13f196eed6295"
+"playbooks/storage.py" = "3ad9edec829a0cf0eb24e9be04e4a65f742b3668bb1e03129308a7c668a1106b"
 "web_ui/templates/config_playbooks.html" = "9e10f613cfe6886cf5c19eaf3d4c308513b1e8064a294f28f59d33b54e3cea75"

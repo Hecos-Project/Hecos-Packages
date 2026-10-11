@@ -31,9 +31,51 @@ def init_plugin_routes(app, cfg_mgr, hecos_root=None, logger=None, **kwargs):
     def api_playbooks_list():
         try:
             storage = _playbooks()
-            return jsonify({"ok": True, "playbooks": storage.list_playbooks()})
+            return jsonify({
+                "ok": True,
+                "playbooks": storage.list_playbooks(),
+                "settings": storage.get_playbooks_settings()
+            })
         except Exception as e:
             _log.error(f"Error listing playbooks: {e}\n{traceback.format_exc()}")
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @app.route("/api/ext/presenter/playbooks/settings", methods=["GET"])
+    @login_required
+    def api_playbooks_get_settings():
+        try:
+            storage = _playbooks()
+            return jsonify({"ok": True, "settings": storage.get_playbooks_settings()})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @app.route("/api/ext/presenter/playbooks/settings", methods=["POST"])
+    @login_required
+    def api_playbooks_update_settings():
+        try:
+            storage = _playbooks()
+            data = request.json or {}
+            single_mode = data.get("single_mode")
+            active_pid = data.get("active_pid")
+            if single_mode is not None:
+                settings = storage.set_single_mode(bool(single_mode), active_pid=active_pid)
+            else:
+                settings = storage.save_playbooks_settings(data)
+            return jsonify({"ok": True, "settings": settings, "playbooks": storage.list_playbooks()})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @app.route("/api/ext/presenter/playbooks/toggle_all", methods=["POST"])
+    @login_required
+    def api_playbooks_toggle_all():
+        try:
+            storage = _playbooks()
+            data = request.json or {}
+            enabled = bool(data.get("enabled", False))
+            active_pid = data.get("active_pid")
+            playbooks = storage.toggle_all_playbooks(enabled, active_pid=active_pid)
+            return jsonify({"ok": True, "playbooks": playbooks, "settings": storage.get_playbooks_settings()})
+        except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
     @app.route("/api/ext/presenter/playbooks", methods=["POST"])
@@ -169,3 +211,46 @@ def init_plugin_routes(app, cfg_mgr, hecos_root=None, logger=None, **kwargs):
             return jsonify({"ok": True, "playbook": pb})
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
+
+    @app.route("/api/ext/presenter/playbooks/<playbook_id>/export", methods=["GET"])
+    @login_required
+    def api_playbooks_export_single(playbook_id):
+        try:
+            from flask import send_file
+            import io
+            storage = _playbooks()
+            zip_bytes = storage.export_playbook(playbook_id)
+            return send_file(io.BytesIO(zip_bytes), mimetype="application/zip", as_attachment=True, download_name=f"{playbook_id}.zip")
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @app.route("/api/ext/presenter/playbooks/export_all", methods=["GET"])
+    @login_required
+    def api_playbooks_export_all():
+        try:
+            from flask import send_file
+            import io
+            storage = _playbooks()
+            zip_bytes = storage.export_all_playbooks()
+            return send_file(io.BytesIO(zip_bytes), mimetype="application/zip", as_attachment=True, download_name="playbooks_backup.zip")
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @app.route("/api/ext/presenter/playbooks/import", methods=["POST"])
+    @login_required
+    def api_playbooks_import():
+        try:
+            storage = _playbooks()
+            if "file" not in request.files:
+                return jsonify({"ok": False, "error": "No file uploaded"}), 400
+            
+            file = request.files["file"]
+            if file.filename == '':
+                return jsonify({"ok": False, "error": "No file selected"}), 400
+                
+            zip_bytes = file.read()
+            storage.import_all_playbooks(zip_bytes)
+            return jsonify({"ok": True})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+

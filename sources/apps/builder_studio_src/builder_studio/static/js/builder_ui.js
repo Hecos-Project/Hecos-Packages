@@ -50,6 +50,18 @@ window.builderRenderFilters = function() {
     const catContainer = document.getElementById('builder-category-filters');
     if (!catContainer || !window.builderSourcesData) return;
     
+    if (!window.HPM_TYPE_META) {
+        window.HPM_TYPE_META = {};
+    }
+    if (!window.HPM_TYPE_META.playbook) {
+        window.HPM_TYPE_META.playbook = { 
+            label: (window.hpm_ti ? window.hpm_ti('Playbooks', 'Playbook', 'Playbooks') : 'Playbooks'), 
+            icon: 'fa-book-open', 
+            color: '#06b6d4', 
+            order: 8.5 
+        };
+    }
+    
     const uniqueTypes = new Set(window.builderSourcesData.map(s => s.type || 'other'));
     let html = '';
     
@@ -58,7 +70,7 @@ window.builderRenderFilters = function() {
     html += `
         <button class="hpm-cat-btn filter-btn ${isAllChecked ? 'active' : ''}" 
                 onclick="window.builderToggleAllFilters()"
-                style="display:inline-flex;align-items:center;gap:6px; margin-bottom:0; padding:2px 6px; font-size:0.72em;">
+                style="display:inline-flex;align-items:center;gap:6px; margin-bottom:0; padding:3px 8px; font-size:0.75em; white-space:nowrap; flex-shrink:0;">
             <i class="fas fa-layer-group"></i> All 
             <span class="badge">${window.builderSourcesData.length}</span>
         </button>
@@ -80,7 +92,7 @@ window.builderRenderFilters = function() {
             html += `
                 <button class="hpm-cat-btn filter-btn ${isActive ? 'active' : ''}" 
                         onclick="window.builderToggleCategoryFilter('${catId}')"
-                        style="display:inline-flex;align-items:center;gap:6px; margin-bottom:0; padding:2px 6px; font-size:0.72em;">
+                        style="display:inline-flex;align-items:center;gap:6px; margin-bottom:0; padding:3px 8px; font-size:0.75em; white-space:nowrap; flex-shrink:0;">
                     <i class="fas ${meta.icon}" style="color:${meta.color};"></i> ${meta.label}
                     <span class="badge">${count}</span>
                 </button>`;

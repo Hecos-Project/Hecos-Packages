@@ -18,6 +18,102 @@ try:
 except ImportError:
     _HAS_TOMLI_W = False
 
+def get_playbooks_settings() -> dict:
+    try:
+        from hecos.core.constants import HECOS_DIR
+        data_file = os.path.join(HECOS_DIR, "data", "playbooks_settings.json")
+    except Exception:
+        data_file = os.path.join(os.getcwd(), "hecos", "data", "playbooks_settings.json")
+    
+    defaults = {
+        "single_mode": False,
+        "master_enabled": True
+    }
+    if os.path.isfile(data_file):
+        try:
+            import json
+            with open(data_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                defaults.update(data)
+        except Exception as e:
+            logger.warning(f"[Playbooks] Error reading settings: {e}")
+    return defaults
+
+def save_playbooks_settings(settings: dict) -> dict:
+    try:
+        from hecos.core.constants import HECOS_DIR
+        data_dir = os.path.join(HECOS_DIR, "data")
+        os.makedirs(data_dir, exist_ok=True)
+        data_file = os.path.join(data_dir, "playbooks_settings.json")
+    except Exception:
+        data_file = os.path.join(os.getcwd(), "hecos", "data", "playbooks_settings.json")
+        os.makedirs(os.path.dirname(data_file), exist_ok=True)
+        
+    current = get_playbooks_settings()
+    current.update(settings)
+    try:
+        import json
+        with open(data_file, "w", encoding="utf-8") as f:
+            json.dump(current, f, indent=2)
+    except Exception as e:
+        logger.error(f"[Playbooks] Error saving settings: {e}")
+    return current
+
+def _set_pb_enabled_silent(playbook_id: str, enabled: bool):
+    try:
+        pdir, _ = _find_playbook_dir(playbook_id)
+        if pdir:
+            fpath = _get_pb_file(pdir)
+            if os.path.isfile(fpath):
+                data = _read_toml(fpath)
+                if "meta" not in data: data["meta"] = {}
+                data["meta"]["enabled"] = enabled
+                _write_toml(fpath, data)
+    except Exception as e:
+        logger.error(f"[Playbooks] Error setting enabled for {playbook_id}: {e}")
+
+def set_single_mode(enabled: bool, active_pid: str = None) -> dict:
+    settings = save_playbooks_settings({"single_mode": enabled})
+    if enabled:
+        # Enforce single mode: ensure at most 1 is active
+        playbooks = list_playbooks()
+        active_pbs = [p for p in playbooks if p.get("meta", {}).get("enabled")]
+        if len(active_pbs) > 1:
+            keep_pid = active_pid or active_pbs[0].get("meta", {}).get("id")
+            for p in active_pbs:
+                pid = p.get("meta", {}).get("id")
+                if pid and pid != keep_pid:
+                    _set_pb_enabled_silent(pid, False)
+    return settings
+
+def toggle_all_playbooks(enabled: bool, active_pid: str = None) -> list[dict]:
+    settings = get_playbooks_settings()
+    single_mode = settings.get("single_mode", False)
+    
+    playbooks = list_playbooks()
+    if not playbooks:
+        return []
+        
+    if not enabled:
+        for pb in playbooks:
+            pid = pb.get("meta", {}).get("id")
+            if pid:
+                _set_pb_enabled_silent(pid, False)
+    else:
+        if single_mode:
+            target_pid = active_pid or playbooks[0].get("meta", {}).get("id")
+            for pb in playbooks:
+                pid = pb.get("meta", {}).get("id")
+                if pid:
+                    _set_pb_enabled_silent(pid, (pid == target_pid))
+        else:
+            for pb in playbooks:
+                pid = pb.get("meta", {}).get("id")
+                if pid:
+                    _set_pb_enabled_silent(pid, True)
+                    
+    return list_playbooks()
+
 def _get_playbooks_dir() -> str:
     try:
         from hecos.core.constants import HECOS_DIR
@@ -64,34 +160,103 @@ def _write_file(path: str, content: str) -> None:
         logger.error(f"[Playbooks] Error writing file {path}: {e}")
 
 def _get_pb_file(pb_dir: str) -> str:
-    p1 = os.path.join(pb_dir, "playbook.toml")
-    if os.path.isfile(p1):
-        return p1
-    p2 = os.path.join(pb_dir, "manifest.toml")
-    if os.path.isfile(p2):
-        return p2
-    return p1
+    for fname in ["playbook.toml", "manifest.toml", "hpkg_manifest.toml"]:
+        p = os.path.join(pb_dir, fname)
+        if os.path.isfile(p):
+            return p
+    return os.path.join(pb_dir, "playbook.toml")
 
-def list_playbooks() -> List[dict]:
+def _get_hpm_playbooks_dir() -> str:
+    try:
+        from hecos.core.constants import HECOS_DIR
+        return os.path.join(HECOS_DIR, "hpm", "playbooks")
+    except Exception:
+        return os.path.join(os.getcwd(), "hecos", "hpm", "playbooks")
+
+def _find_playbook_dir(playbook_id: str):
+    """Return (dir_path, source) for the given playbook id, or (None, None)."""
+    # 1. Local workspace playbooks
+    local_dir = os.path.join(_get_playbooks_dir(), playbook_id)
+    if os.path.isdir(local_dir):
+        return local_dir, "local"
+    # 2. HPM playbooks directory
+    hpm_dir = os.path.join(_get_hpm_playbooks_dir(), playbook_id)
+    if os.path.isdir(hpm_dir):
+        return hpm_dir, "hpm"
+    # 3. Via HPM PackageRegistry
+    try:
+        from hecos.core.package_manager.registry import PackageRegistry
+        from hecos.core.constants import HECOS_DIR
+        reg = PackageRegistry(os.path.join(HECOS_DIR, "data"))
+        pkg = reg.get(playbook_id)
+        if pkg and pkg.get("install_path") and os.path.isdir(pkg["install_path"]):
+            return pkg["install_path"], "hpm"
+    except Exception:
+        pass
+    return None, None
+
+def list_playbooks() -> list[dict]:
     res = []
-    base_dir = _get_playbooks_dir()
-    if not os.path.exists(base_dir):
-        return res
+    seen_ids = set()
+    
+    dirs_to_check = [
+        (_get_playbooks_dir(), "local"),
+        (_get_hpm_playbooks_dir(), "hpm")
+    ]
 
-    for item in os.listdir(base_dir):
-        pb_dir = os.path.join(base_dir, item)
-        if os.path.isdir(pb_dir):
+    try:
+        from hecos.core.package_manager.registry import PackageRegistry
+        from hecos.core.constants import HECOS_DIR
+        reg = PackageRegistry(os.path.join(HECOS_DIR, "data"))
+        for pkg in reg.list_all():
+            if pkg.get("type") == "playbook" or (pkg.get("manifest_snapshot") or {}).get("category") == "playbooks":
+                ipath = pkg.get("install_path")
+                if ipath and os.path.isdir(ipath):
+                    parent_dir = os.path.dirname(ipath)
+                    if (parent_dir, "hpm") not in dirs_to_check:
+                        dirs_to_check.append((parent_dir, "hpm"))
+    except Exception as e:
+        logger.debug(f"[Playbooks] Registry scan: {e}")
+
+    for base_dir, default_source in dirs_to_check:
+        if not os.path.exists(base_dir):
+            continue
+
+        for item in os.listdir(base_dir):
+            pb_dir = os.path.join(base_dir, item)
+            if not os.path.isdir(pb_dir):
+                continue
+
             file_path = _get_pb_file(pb_dir)
             if os.path.isfile(file_path):
                 data = _read_toml(file_path)
                 meta = data.get("meta", {})
-                if not meta.get("id"):
-                    meta["id"] = item
+                pid = meta.get("id") or item
+                if pid in seen_ids:
+                    continue
+                seen_ids.add(pid)
+
+                meta["id"] = pid
+                if "source" not in meta:
+                    meta["source"] = default_source
+                if "enabled" not in meta:
+                    meta["enabled"] = True
+
+                # Enrich with hpkg_manifest.toml if available and fields are missing
+                hpkg_manifest_file = os.path.join(pb_dir, "hpkg_manifest.toml")
+                if os.path.isfile(hpkg_manifest_file):
+                    hpkg_data = _read_toml(hpkg_manifest_file)
+                    if not meta.get("name") and hpkg_data.get("name"):
+                        meta["name"] = hpkg_data["name"]
+                    if not meta.get("description") and hpkg_data.get("description"):
+                        meta["description"] = hpkg_data["description"]
+                    if not meta.get("version") and hpkg_data.get("version"):
+                        meta["version"] = hpkg_data["version"]
+                    if not meta.get("author") and hpkg_data.get("author"):
+                        meta["author"] = hpkg_data["author"]
                 
-                # Fetch tabs content
                 tabs = data.get("tabs", [])
                 for tab in tabs:
-                    # Tab content can be in TOML directly or in external file
                     if "content" not in tab or not tab["content"]:
                         fname = tab.get("file")
                         if fname:
@@ -134,12 +299,23 @@ def create_playbook(name: str, description: str = "", icon: str = "fa-book-open"
     return data
 
 def update_playbook(playbook_id: str, **kwargs) -> dict:
-    pb_dir = os.path.join(_get_playbooks_dir(), playbook_id)
-    file_path = _get_pb_file(pb_dir)
-    
-    if not os.path.isfile(file_path):
+    pb_dir, _ = _find_playbook_dir(playbook_id)
+    if not pb_dir:
         raise ValueError(f"Playbook '{playbook_id}' not found")
         
+    file_path = _get_pb_file(pb_dir)
+    if not os.path.isfile(file_path):
+        raise ValueError(f"Playbook config not found in '{pb_dir}'")
+        
+    # If enabling and single_mode is active, disable all others first
+    if kwargs.get("enabled") is True:
+        settings = get_playbooks_settings()
+        if settings.get("single_mode", False):
+            for other_pb in list_playbooks():
+                other_id = other_pb.get("meta", {}).get("id")
+                if other_id and other_id != playbook_id and other_pb.get("meta", {}).get("enabled"):
+                    _set_pb_enabled_silent(other_id, False)
+
     data = _read_toml(file_path)
     if "meta" not in data: data["meta"] = {}
     
@@ -151,22 +327,23 @@ def update_playbook(playbook_id: str, **kwargs) -> dict:
     return get_playbook(playbook_id)
 
 def delete_playbook(playbook_id: str) -> bool:
-    pb_dir = os.path.join(_get_playbooks_dir(), playbook_id)
-    if os.path.isdir(pb_dir):
-        file_path = _get_pb_file(pb_dir)
-        data = _read_toml(file_path)
-        if data.get("meta", {}).get("source") == "hpm":
-            raise ValueError("Cannot delete HPM-managed playbook directly.")
+    pb_dir, source = _find_playbook_dir(playbook_id)
+    if pb_dir and os.path.isdir(pb_dir):
+        if source == "hpm":
+            raise ValueError("Cannot delete HPM-managed playbook directly. Please uninstall it via Package Manager.")
             
         shutil.rmtree(pb_dir)
         return True
     return False
 
 def add_tab(playbook_id: str, name: str, content: str = "") -> dict:
-    pb_dir = os.path.join(_get_playbooks_dir(), playbook_id)
+    pb_dir, _ = _find_playbook_dir(playbook_id)
+    if not pb_dir:
+        raise ValueError(f"Playbook '{playbook_id}' not found")
+        
     file_path = _get_pb_file(pb_dir)
     if not os.path.isfile(file_path):
-        raise ValueError(f"Playbook '{playbook_id}' not found")
+        raise ValueError(f"Playbook config not found in '{pb_dir}'")
         
     data = _read_toml(file_path)
     if "tabs" not in data: data["tabs"] = []
@@ -191,10 +368,13 @@ def add_tab(playbook_id: str, name: str, content: str = "") -> dict:
     return tab_meta
 
 def update_tab(playbook_id: str, tab_id: str, **kwargs) -> dict:
-    pb_dir = os.path.join(_get_playbooks_dir(), playbook_id)
+    pb_dir, _ = _find_playbook_dir(playbook_id)
+    if not pb_dir:
+        raise ValueError(f"Playbook '{playbook_id}' not found")
+        
     file_path = _get_pb_file(pb_dir)
     if not os.path.isfile(file_path):
-        raise ValueError(f"Playbook '{playbook_id}' not found")
+        raise ValueError(f"Playbook config not found in '{pb_dir}'")
         
     data = _read_toml(file_path)
     tabs = data.get("tabs", [])
@@ -225,7 +405,9 @@ def update_tab(playbook_id: str, tab_id: str, **kwargs) -> dict:
     return target_tab
 
 def delete_tab(playbook_id: str, tab_id: str) -> bool:
-    pb_dir = os.path.join(_get_playbooks_dir(), playbook_id)
+    pb_dir, _ = _find_playbook_dir(playbook_id)
+    if not pb_dir: return False
+    
     file_path = _get_pb_file(pb_dir)
     if not os.path.isfile(file_path): return False
     
@@ -251,7 +433,9 @@ def delete_tab(playbook_id: str, tab_id: str) -> bool:
     return True
 
 def reorder_tabs(playbook_id: str, ordered_ids: List[str]) -> bool:
-    pb_dir = os.path.join(_get_playbooks_dir(), playbook_id)
+    pb_dir, _ = _find_playbook_dir(playbook_id)
+    if not pb_dir: return False
+    
     file_path = _get_pb_file(pb_dir)
     if not os.path.isfile(file_path): return False
     
@@ -267,15 +451,25 @@ def reorder_tabs(playbook_id: str, ordered_ids: List[str]) -> bool:
     _write_toml(file_path, data)
     return True
 
+
 def get_active_playbook_context(max_tokens: int = 2000) -> str:
     sections = []
     total_chars = 0
     max_chars = max_tokens * 4
     
+    settings = get_playbooks_settings()
+    single_mode = settings.get("single_mode", False)
+    
     playbooks = list_playbooks()
+    active_count = 0
     for pb in playbooks:
         meta = pb.get("meta", {})
         if not meta.get("enabled"): continue
+        
+        if single_mode and active_count >= 1:
+            # Enforce single mode limit strictly
+            break
+        active_count += 1
         
         for tab in pb.get("tabs", []):
             if not tab.get("enabled"): continue
@@ -295,3 +489,76 @@ def get_active_playbook_context(max_tokens: int = 2000) -> str:
             total_chars += len(section)
             
     return "\n".join(sections)
+
+
+def export_playbook(playbook_id: str) -> bytes:
+    import zipfile
+    import io
+    
+    pb_dir, _ = _find_playbook_dir(playbook_id)
+    if not pb_dir or not os.path.isdir(pb_dir):
+        raise ValueError("Playbook not found")
+        
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, _, files in os.walk(pb_dir):
+            for file in files:
+                fpath = os.path.join(root, file)
+                arcname = os.path.relpath(fpath, pb_dir)
+                zf.write(fpath, arcname)
+    return buf.getvalue()
+
+def import_playbook(zip_bytes: bytes) -> dict:
+    import zipfile
+    import io
+    
+    buf = io.BytesIO(zip_bytes)
+    with zipfile.ZipFile(buf, "r") as zf:
+        has_toml = False
+        for name in zf.namelist():
+            if name == "playbook.toml" or name == "manifest.toml":
+                has_toml = True
+                break
+        if not has_toml:
+            raise ValueError("Invalid playbook zip: missing playbook.toml")
+            
+        pid = f"imported-{str(uuid.uuid4())[:6]}"
+        pb_dir = os.path.join(_get_playbooks_dir(), pid)
+        os.makedirs(pb_dir, exist_ok=True)
+        zf.extractall(pb_dir)
+        
+        # update the id in meta
+        file_path = _get_pb_file(pb_dir)
+        data = _read_toml(file_path)
+        if "meta" not in data:
+            data["meta"] = {}
+        data["meta"]["id"] = pid
+        data["meta"]["source"] = "local"
+        _write_toml(file_path, data)
+        
+        return get_playbook(pid)
+
+
+def export_all_playbooks() -> bytes:
+    import zipfile
+    import io
+    
+    base_dir = _get_playbooks_dir()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, _, files in os.walk(base_dir):
+            for file in files:
+                fpath = os.path.join(root, file)
+                arcname = os.path.relpath(fpath, base_dir)
+                zf.write(fpath, arcname)
+    return buf.getvalue()
+
+def import_all_playbooks(zip_bytes: bytes) -> bool:
+    import zipfile
+    import io
+    
+    base_dir = _get_playbooks_dir()
+    buf = io.BytesIO(zip_bytes)
+    with zipfile.ZipFile(buf, "r") as zf:
+        zf.extractall(base_dir)
+    return True

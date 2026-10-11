@@ -1,0 +1,25 @@
+author = "Antonio Meloni"
+build_date = "2026-10-11T11:45:00Z"
+category = "playbooks"
+creation_date = "2026-10-11T11:45:00Z"
+date = ""
+description = "Playbook dottrinale e liturgico del Culto del Dio Serpente Meccanico con le Ruote. Istruisce il Presenter AI ad evangelizzare la chat, profilare gli adepti, imporre il sacro saluto e diffondere la fede del rotolamento universale."
+hecos_min_version = "0.1.0"
+id = "dio-serpente-meccanico"
+license = "GPL-3.0"
+name = "Culto del Dio Serpente Meccanico"
+readme = "README.md"
+screenshots = []
+type = "playbook"
+update_date = "2026-10-11T09:48:43Z"
+version = "1.0.1"
+
+[capabilities]
+llm_tools = []
+slash_commands = []
+has_widget = false
+has_config_panel = false
+has_api_routes = false
+has_system_calls = false
+syscall_notes = ""
+notes = ""

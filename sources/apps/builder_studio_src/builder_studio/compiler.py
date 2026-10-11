@@ -1,13 +1,14 @@
 import sys
 import re
 import subprocess
+import traceback
 from pathlib import Path
 from logger import info, error
 
 _ANSI_RE = re.compile(r'\x1b(?:\[[0-9;]*[a-zA-Z]|\][^\x07]*\x07)')
 
 def _strip_ansi(text: str) -> str:
-    return _ANSI_RE.sub('', text)
+    return _ANSI_RE.sub('', text or '')
 
 def compile_package(src_dir: str, out_dir: str = None, builder_path: str = None) -> dict:
     info(f"Starting compilation for {src_dir}")
@@ -30,7 +31,7 @@ out = Path(out)
 try:
     from modules.settings import get_src_dir
     src_root_name = get_src_dir().name
-except:
+except Exception:
     src_root_name = "sources"
 
 cat = target.parent.name
@@ -45,7 +46,7 @@ if not success:
     sys.exit(1)
 '''
         result = subprocess.run([sys.executable, "-c", code], check=True, capture_output=True, text=True)
-        stdout_clean = _strip_ansi(result.stdout)
+        stdout_clean = _strip_ansi(result.stdout or '')
         info("Compilation finished successfully.")
         
         final_out_dir = out_dir
@@ -61,11 +62,13 @@ if not success:
             info(f"Builder STDOUT: {stdout_clean}")
             
         return {"ok": True, "out_dir": final_out_dir, "hpkg_path": hpkg_path, "logs": stdout_clean}
-    except subprocess.CalledProcessError as e:
-        stdout_clean = _strip_ansi(e.stdout or '')
-        stderr_clean = _strip_ansi(e.stderr or '')
+    except subprocess.CalledProcessError as exc:
+        stdout_clean = _strip_ansi(exc.stdout or '')
+        stderr_clean = _strip_ansi(exc.stderr or '')
+        error_msg = stderr_clean.strip() or stdout_clean.strip() or "Build failed (check logs)."
         error(f"Error compiling package (Subprocess failed):\nSTDOUT: {stdout_clean}\nSTDERR: {stderr_clean}")
-        return {"ok": False, "error": "Build failed (check logs).", "logs": stdout_clean + "\n" + stderr_clean}
-    except Exception as e:
-        error(f"Error compiling package: {e}")
-        return {"ok": False, "error": str(e), "logs": ""}
+        return {"ok": False, "error": error_msg, "logs": stdout_clean + "\n" + stderr_clean}
+    except Exception as exc:
+        tb = traceback.format_exc()
+        error(f"Error compiling package: {exc}\n{tb}")
+        return {"ok": False, "error": str(exc), "logs": tb}

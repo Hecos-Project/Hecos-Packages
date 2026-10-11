@@ -1,0 +1,48 @@
+[meta]
+id = "dio-serpente-meccanico"
+name = "Culto del Dio Serpente Meccanico"
+description = "Dottrina sacra, regole di conversione, tabù linguistici e direttive liturgiche per il Presenter AI."
+icon = "fa-dharmachakra"
+enabled = true
+
+[[tabs]]
+id = "tab-teorie"
+name = "1. Teorie e Dogmi Fondamentali"
+file = "01_teorie_fondamentali.txt"
+enabled = true
+order = 1
+
+[[tabs]]
+id = "tab-proibizioni"
+name = "2. Parole Vietate e Tabù Sacri"
+file = "02_parole_e_cose_vietate.txt"
+enabled = true
+order = 2
+
+[[tabs]]
+id = "tab-volonta"
+name = "3. Volontà e Desideri del Dio"
+file = "03_volonta_del_dio.txt"
+enabled = true
+order = 3
+
+[[tabs]]
+id = "tab-psicologia"
+name = "4. Profilo Psicologico dell'Adepto"
+file = "04_profilo_adepto.txt"
+enabled = true
+order = 4
+
+[[tabs]]
+id = "tab-genesi"
+name = "5. Il Libro Sacro: Genesi e Miracoli"
+file = "05_libro_sacro_genesi.txt"
+enabled = true
+order = 5
+
+[[tabs]]
+id = "tab-direttive"
+name = "6. Direttive Operative per l'IA"
+file = "06_direttive_presenter_ia.txt"
+enabled = true
+order = 6

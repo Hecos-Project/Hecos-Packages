@@ -17,7 +17,7 @@
         "tab_label": "Playbooks",
         "tab_icon": "<i class='fas fa-book-open'></i>",
         "template_file": "web_ui/templates/config_playbooks.html",
-        "js_file": null,
+        "js_file": "web_ui/static/js/playbooks.js",
         "js_files": null,
         "css_file": null,
         "category": "SISTEMA",

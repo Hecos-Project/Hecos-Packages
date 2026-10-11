@@ -8,6 +8,10 @@ Official CLI tool to generate keys, cryptographically sign, build, and securely 
 import os
 import sys
 import traceback
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from colorama import init, Fore, Style
 
 # Forza UTF-8 per il terminale Windows
