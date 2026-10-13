@@ -110,6 +110,9 @@ window._openIgenGallery = async function() {
       <button class="igen-tab-btn" data-target="igen-tab-presets" onclick="switchIgenTab('igen-tab-presets', this)" type="button">
         <i class="fas fa-bolt"></i> Presets
       </button>
+      <button class="igen-tab-btn" id="igen-tab-btn-directives" data-target="igen-tab-directives" onclick="switchIgenTab('igen-tab-directives', this)" type="button">
+        <i class="fas fa-brain" style="color:var(--accent);"></i> Directives / Override
+      </button>
       <button class="igen-tab-btn igen-tab-local" id="igen-tab-btn-vae" data-target="igen-tab-vae" onclick="switchIgenTab('igen-tab-vae', this)" type="button" style="display:none;">
         <i class="fas fa-database"></i> VAE
       </button>
@@ -195,6 +198,43 @@ window._openIgenGallery = async function() {
         <i class="fas fa-info-circle" style="color:var(--accent); margin-right:4px;"></i>
         A preset saves <strong>every</strong> parameter: provider, model, VAE, LoRAs, sampler, scheduler, etc.
         Mark a preset as <strong>⭐ Default</strong> to load it automatically on every restart.
+      </div>
+    </div>
+
+    <!-- Tab: Directives / Override -->
+    <div id="igen-tab-directives" class="igen-tab-pane" style="display:none; padding-top:14px;">
+      <div style="margin-bottom:14px; padding:12px 16px; background:linear-gradient(135deg, rgba(var(--accent-rgb),0.06), var(--bg2)); border:1px solid var(--border); border-radius:10px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <i class="fas fa-brain" style="color:var(--accent); font-size:16px;"></i>
+            <span style="font-weight:700; font-size:13.5px; color:var(--text);">AI Routing &amp; Behavioral Directives</span>
+          </div>
+          <span class="badge" style="font-size:10px; background:rgba(var(--accent-rgb),0.15); color:var(--accent); padding:3px 9px; border-radius:12px; font-weight:600;">System Prompt Injector</span>
+        </div>
+        <p style="font-size:11.5px; color:var(--muted); margin:0; line-height:1.45;">
+          Custom instructions for the AI on when and how to use image generation. These directives are stored in <code>routing_override.yaml</code> and dynamically injected into the agent's system prompt with top priority.
+        </p>
+      </div>
+
+      <div class="field" style="margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <label style="margin:0; font-weight:600; font-size:12px;">Autonomous Directives (System Override)</label>
+          <span style="font-size:11px; color:var(--muted);"><i class="fas fa-file-code"></i> routing_override.yaml</span>
+        </div>
+        <textarea 
+          id="igen-routing-override" 
+          class="config-input" 
+          rows="5" 
+          placeholder="e.g. Generate at most 1 image per response unless the user explicitly asks for multiple photos. If an image was already generated in this turn, do not produce another. Respond with natural narrative dialogue and tone..." 
+          data-igen-managed 
+          style="width:100%; resize:vertical; font-family:monospace; font-size:12.5px; line-height:1.45;"></textarea>
+      </div>
+
+      <div style="display:flex; align-items:flex-start; gap:10px; padding:10px 14px; background:rgba(var(--accent-rgb),0.05); border-left:3px solid var(--accent); border-radius:0 8px 8px 0; font-size:11.5px; color:var(--muted); line-height:1.45;">
+        <i class="fas fa-lightbulb" style="color:var(--accent); font-size:15px; margin-top:2px;"></i>
+        <div>
+          <strong style="color:var(--text);">Pro Tip:</strong> Leave empty for default behavior. Add rules to enforce styles, limits, or specific model behaviors when using Image Gen (e.g. <em>'Never generate more than one image per response'</em> or <em>'Always generate images in a photorealistic cinematic style'</em>). Changes are saved automatically.
+        </div>
       </div>
     </div>
 

@@ -10,8 +10,8 @@ window.builderExecuteBatchActions = function() {
             <button class="btn btn-primary" onclick="window.builderExecuteBatchBuildReal()" title="Compile all selected packages to .hpkg" style="padding:10px; font-weight:bold;">
                 <i class="fas fa-hammer"></i> Build ${paths.length} Packages
             </button>
-            <button class="btn btn-secondary" onclick="window.builderExecuteBatchActionLoop('dev-sync')" title="Compile and install directly to Hecos" style="padding:10px;">
-                <i class="fas fa-sync"></i> Build & Install (Dev Sync)
+            <button class="btn btn-secondary" onclick="window.builderExecuteBatchActionLoop('dev-sync')" title="Synchronize live installations into local source folders (Live -> Source)" style="padding:10px;">
+                <i class="fas fa-sync"></i> Dev Sync (Live -> Sources)
             </button>
             <button class="btn btn-secondary" onclick="window.builderExecuteBatchActionLoop('capabilities')" title="Regenerate capabilities automatically" style="padding:10px;">
                 <i class="fas fa-shield-alt"></i> Regenerate Capabilities

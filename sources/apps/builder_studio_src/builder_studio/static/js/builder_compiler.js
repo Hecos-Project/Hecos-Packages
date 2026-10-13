@@ -310,39 +310,77 @@ window.builderInstallLocal = async function(hpkgPath) {
     }
 };
 
-// ─── Dev Sync ─────────────────────────────────────────────────────────────────
+// ─── Dev Sync (Live -> Source) ────────────────────────────────────────────────
 window.builderDevSync = async function() {
     const srcDir = document.getElementById('builder-source-dir') ? document.getElementById('builder-source-dir').value : '';
     if (!srcDir) {
-        _builderModal("Please select a package first.", true);
+        if (typeof _builderModal === 'function') _builderModal("Please select a package first.", true);
+        else alert("Please select a package first.");
         return;
     }
+
+    if (typeof window.builderSyncVersion === 'function') window.builderSyncVersion();
+
+    let manifestToSend = null;
+    if (window.currentManifest) {
+        manifestToSend = Object.assign({}, window.currentManifest);
+        if (document.getElementById('builder-id')) manifestToSend.id = document.getElementById('builder-id').value;
+        if (document.getElementById('builder-name')) manifestToSend.name = document.getElementById('builder-name').value;
+        if (document.getElementById('builder-version')) manifestToSend.version = document.getElementById('builder-version').value;
+        if (document.getElementById('builder-author')) manifestToSend.author = document.getElementById('builder-author').value;
+        if (document.getElementById('builder-type')) manifestToSend.type = document.getElementById('builder-type').value;
+        if (document.getElementById('builder-license')) manifestToSend.license = document.getElementById('builder-license').value;
+        if (document.getElementById('builder-date')) manifestToSend.date = document.getElementById('builder-date').value;
+        if (document.getElementById('builder-desc')) manifestToSend.description = document.getElementById('builder-desc').value;
+        window.currentManifest = manifestToSend;
+    }
+
+    const pkgName = (manifestToSend && manifestToSend.name) ? manifestToSend.name : (srcDir.split('\\').pop() || srcDir.split('/').pop());
+    const pkgId = (manifestToSend && manifestToSend.id) ? manifestToSend.id : (document.getElementById('builder-id') ? document.getElementById('builder-id').value : '');
     const setup = window.builderLoadSetup();
-    window.builderLog(`Dev Sync: syncing ${currentManifest.name || srcDir} to live installation...`, 'warn');
-    try {
-        const resp = await fetch('/api/hpm/builder/dev-sync', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                src_dir: srcDir,
-                hecos_root: setup.hecos || 'C:\\Hecos\\hecos'
-            })
-        });
-        const data = await resp.json();
-        if (data.logs) {
-            data.logs.split('\n').forEach(l => {
-                if (l.trim()) window.builderLog(l.trim(), l.includes('Error') || l.includes('error') ? 'error' : 'info');
+    const hecosRoot = setup.hecos || 'C:\\Hecos\\hecos';
+
+    const doSync = async () => {
+        window.builderLog(`Dev Sync: copying LIVE installation into local source (${pkgName})...`, 'warn');
+        try {
+            const resp = await fetch('/api/hpm/builder/dev-sync', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    src_dir: srcDir,
+                    pkg_id: pkgId,
+                    hecos_root: hecosRoot,
+                    manifest: manifestToSend
+                })
             });
+            const data = await resp.json();
+            if (data.logs) {
+                data.logs.split('\n').forEach(l => {
+                    if (l.trim()) window.builderLog(l.trim(), l.includes('Error') || l.includes('error') ? 'error' : 'info');
+                });
+            }
+            if (data.ok) {
+                window.builderLog(`Dev Sync completed: LIVE -> SOURCE for ${pkgName}.`, 'success');
+                if (typeof _builderModal === 'function') {
+                    _builderModal(`<i class="fas fa-check-circle" style="color:#22c55e;margin-right:8px;"></i><strong>Dev Sync Completed!</strong><br><br>All files copied from LIVE installation to source folder.<br><br><span style="font-size:12px;opacity:0.85;">${data.logs ? data.logs.replace(/\n/g, '<br>') : ''}</span>`, false);
+                }
+                if (typeof window.builderRefreshSources === 'function') setTimeout(() => window.builderRefreshSources(), 500);
+            } else {
+                window.builderLog('Dev Sync Failed: ' + data.error, 'error');
+                if (typeof _builderModal === 'function') _builderModal("Dev Sync Failed:<br>" + data.error, true);
+                else alert("Dev Sync Failed:\n" + data.error);
+            }
+        } catch(e) {
+            window.builderLog('Error: ' + e.message, 'error');
+            if (typeof _builderModal === 'function') _builderModal("Connection Error:<br>" + e.message, true);
         }
-        if (data.ok) {
-            window.builderLog(`Dev Sync completed for ${currentManifest.name || 'package'}.`, 'success');
-            if (typeof window.builderRefreshSources === 'function') setTimeout(() => window.builderRefreshSources(), 500);
-        } else {
-            window.builderLog('Dev Sync Failed: ' + data.error, 'error');
-            _builderModal("Dev Sync Failed:\n" + data.error, true);
-        }
-    } catch(e) {
-        window.builderLog('Error: ' + e.message, 'error');
+    };
+
+    const confirmMsg = `<strong>Dev Sync (Live &rarr; Source)</strong><br><br>This will copy all files from the <strong>LIVE installation</strong> into your local <strong>SOURCE folder</strong> (${pkgName}) and save all Workbench changes into the source manifest.<br><br>Proceed?`;
+    if (typeof _builderConfirmModal === 'function') {
+        _builderConfirmModal(confirmMsg, doSync);
+    } else {
+        if (confirm(`Synchronize LIVE installation into local SOURCE folder for ${pkgName}?`)) doSync();
     }
 };
 

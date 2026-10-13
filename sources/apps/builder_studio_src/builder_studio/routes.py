@@ -486,6 +486,72 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
         from flask import Response
         return Response(generate(), mimetype="text/event-stream")
 
+    def _find_live_package_path(pkg_id: str, hecos_root: str = r"C:\Hecos\hecos", pkg_type: str = None):
+        from pathlib import Path
+        import sqlite3
+        live_path = None
+        db_path = Path(hecos_root) / 'data' / 'packages.db'
+        if not db_path.is_file():
+            db_path = Path(r"C:\Hecos\hecos\data\packages.db")
+        
+        candidates = []
+        for cand in [pkg_id, pkg_id.replace('_', '-'), pkg_id.replace('-', '_')]:
+            if cand and cand not in candidates:
+                candidates.append(cand)
+
+        if db_path.is_file():
+            try:
+                conn = sqlite3.connect(str(db_path))
+                cursor = conn.cursor()
+                for cand in candidates:
+                    cursor.execute(
+                        "SELECT install_path FROM packages WHERE id = ? OR name = ?",
+                        (cand, cand)
+                    )
+                    row = cursor.fetchone()
+                    if row and row[0] and Path(row[0]).is_dir():
+                        live_path = Path(row[0])
+                        break
+                conn.close()
+            except Exception as e_db:
+                info(f"[BUILDER] packages.db check failed: {e_db}")
+
+        if not live_path:
+            base_dir = Path(hecos_root)
+            subdirs = [
+                'modules', 'hpm', 'hpm/playbooks', 'hpm/libraries',
+                'hpm/plugins', 'hpm/skill_packs', 'plugins', 'personas', 'themes', 'widgets'
+            ]
+            if pkg_type:
+                type_dir_map = {
+                    "core_module": "modules",
+                    "system_app": "modules",
+                    "generic_module": "hpm",
+                    "plugin": "hpm",
+                    "library": "hpm",
+                    "extension": "hpm",
+                    "app": "hpm",
+                    "persona": "personas",
+                    "theme": "themes",
+                    "playbook": "hpm/playbooks",
+                    "skill_pack": "hpm/skill_packs",
+                }
+                pref = type_dir_map.get(pkg_type)
+                if pref and pref in subdirs:
+                    subdirs.remove(pref)
+                    subdirs.insert(0, pref)
+
+            for sub in subdirs:
+                for cand in candidates:
+                    test_path = base_dir / sub / cand
+                    if test_path.is_dir():
+                        live_path = test_path
+                        break
+                if live_path:
+                    break
+
+        return live_path
+
     @app.route('/api/hpm/builder/dev-sync', methods=['POST'])
     @login_required
     def builder_dev_sync():
@@ -496,27 +562,138 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
             return jsonify({'ok': False, 'error': 'No src_dir provided'})
         from pathlib import Path
         import shutil
-        src = Path(src_dir)
-        hecos_hpm = Path(hecos_root) / 'hpm'
-        if not hecos_hpm.exists():
-            return jsonify({'ok': False, 'error': f'Live HPM folder not found: {hecos_hpm}'})
-        pkg_id = src.name.replace('_src', '')
-        dest = hecos_hpm / pkg_id
-        if not dest.exists():
-            dest.mkdir(parents=True, exist_ok=True)
-            logs = [f'[INFO] Package folder created: {dest}']
-        else:
-            logs = []
+        from datetime import datetime, timezone
         try:
-            ignore = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo', '.git')
-            if (src / pkg_id).is_dir():
-                src_to_copy = src / pkg_id
-            else:
-                src_to_copy = src
-            shutil.copytree(str(src_to_copy), str(dest), dirs_exist_ok=True, ignore=ignore)
-            logs.append(f'[INFO] Dev Sync OK: {src_to_copy.name} -> {dest}')
-            return jsonify({'ok': True, 'logs': '\n'.join(logs)})
+            import tomllib
+        except ImportError:
+            import tomli as tomllib
+
+        src = Path(src_dir)
+        if not src.exists():
+            return jsonify({'ok': False, 'error': f'Source directory not found: {src_dir}'})
+
+        manifest_data = data.get('manifest')
+        manifest = {}
+        manifest_path = src / "hpkg_manifest.toml"
+        if manifest_data and isinstance(manifest_data, dict):
+            manifest = dict(manifest_data)
+        elif manifest_path.is_file():
+            try:
+                manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+            except Exception as e_toml:
+                info(f"[BUILDER] Could not parse hpkg_manifest.toml in {src}: {e_toml}")
+
+        pkg_id = data.get('pkg_id') or manifest.get('id') or src.name.replace('_src', '')
+        plugin_dir = manifest.get('plugin_dir')
+        pkg_type = manifest.get('type')
+        pkg_name = manifest.get('name', pkg_id)
+
+        # 1. Locate LIVE package installation folder
+        live_path = _find_live_package_path(pkg_id, hecos_root, pkg_type=pkg_type)
+        if not live_path:
+            return jsonify({
+                'ok': False,
+                'error': f"Live version of package '{pkg_id}' not found in the installation ({hecos_root})."
+            })
+
+        # 2. Determine target destination directory inside sources (Live -> Source)
+        dest_dir = src
+        if plugin_dir and plugin_dir != "." and (src / plugin_dir).is_dir():
+            dest_dir = src / plugin_dir
+        elif (src / pkg_id).is_dir():
+            dest_dir = src / pkg_id
+        elif (src / pkg_id.replace('-', '_')).is_dir():
+            dest_dir = src / pkg_id.replace('-', '_')
+        elif (src / pkg_id.replace('_', '-')).is_dir():
+            dest_dir = src / pkg_id.replace('_', '-')
+
+        try:
+            ignore = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo', '.git', 'Thumbs.db')
+            shutil.copytree(str(live_path), str(dest_dir), dirs_exist_ok=True, ignore=ignore)
+
+            # Sync root README.md if dest_dir is a nested folder and live has README.md
+            if dest_dir != src and (live_path / "README.md").is_file() and (src / "README.md").is_file():
+                try:
+                    shutil.copy2(str(live_path / "README.md"), str(src / "README.md"))
+                except Exception:
+                    pass
+
+            # 3. Save / Update Manifest if passed from Workbench
+            now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if manifest_data and isinstance(manifest_data, dict):
+                manifest['update_date'] = now_str
+                save_manifest(str(src), manifest)
+                info(f"[BUILDER] Saved updated manifest to {src / 'hpkg_manifest.toml'}")
+
+                # Update manifest.json in src and dest_dir if present
+                for m_json_path in [src / "manifest.json", dest_dir / "manifest.json"]:
+                    if m_json_path.is_file():
+                        try:
+                            import json
+                            with open(m_json_path, "r", encoding="utf-8") as f:
+                                mj = json.load(f)
+                            if "version" in manifest: mj["version"] = manifest["version"]
+                            if "name" in manifest: mj["name"] = manifest["name"]
+                            if "description" in manifest: mj["description"] = manifest["description"]
+                            with open(m_json_path, "w", encoding="utf-8") as f:
+                                json.dump(mj, f, indent=4, ensure_ascii=False)
+                        except Exception as e_mj:
+                            info(f"[BUILDER] Could not update {m_json_path}: {e_mj}")
+
+                # Sync manifest to live_path if present
+                if (live_path / "hpkg_manifest.toml").is_file():
+                    try:
+                        save_manifest(str(live_path), manifest)
+                    except Exception:
+                        pass
+                if (live_path / "manifest.json").is_file():
+                    try:
+                        import json
+                        with open(live_path / "manifest.json", "r", encoding="utf-8") as f:
+                            mj = json.load(f)
+                        if "version" in manifest: mj["version"] = manifest["version"]
+                        if "name" in manifest: mj["name"] = manifest["name"]
+                        if "description" in manifest: mj["description"] = manifest["description"]
+                        with open(live_path / "manifest.json", "w", encoding="utf-8") as f:
+                            json.dump(mj, f, indent=4, ensure_ascii=False)
+                    except Exception:
+                        pass
+
+                # Update packages.db version & name
+                try:
+                    import sqlite3
+                    db_path = Path(hecos_root) / 'data' / 'packages.db'
+                    if db_path.is_file():
+                        conn = sqlite3.connect(str(db_path))
+                        cursor = conn.cursor()
+                        cursor.execute(
+                            "UPDATE packages SET version = ?, name = ?, updated_at = ? WHERE id = ? OR install_path = ?",
+                            (manifest.get('version'), manifest.get('name'), now_str, pkg_id, str(live_path))
+                        )
+                        conn.commit()
+                        conn.close()
+                except Exception as e_db:
+                    info(f"[BUILDER] Could not update packages.db: {e_db}")
+
+            file_count = sum(len(files) for _, _, files in os.walk(str(dest_dir)))
+            ver_info = f" (v{manifest.get('version')})" if manifest.get('version') else ""
+            logs = [
+                f"[INFO] Package: {pkg_name} ({pkg_id}){ver_info}",
+                f"[INFO] Live path: {live_path}",
+                f"[INFO] Target source: {dest_dir}",
+                f"[INFO] Dev Sync OK: Live files and manifest synced to local source ({file_count} files in source)."
+            ]
+            info(f"[BUILDER] Dev Sync OK: {live_path} -> {dest_dir}")
+            return jsonify({
+                'ok': True,
+                'logs': '\n'.join(logs),
+                'live_path': str(live_path),
+                'dest_dir': str(dest_dir),
+                'pkg_id': pkg_id,
+                'version': manifest.get('version')
+            })
         except Exception as e:
+            error(f"[BUILDER] Dev Sync error: {e}")
             return jsonify({'ok': False, 'error': str(e)})
 
     @app.route('/api/hpm/builder/inspect', methods=['POST'])
@@ -607,44 +784,7 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
             return jsonify({'ok': False, 'error': 'No destination folder specified.'})
 
         try:
-            # 1. Cerca la cartella live del pacchetto in packages.db
-            import sqlite3
-            live_path = None
-            db_path = Path(hecos_root) / 'data' / 'packages.db'
-            if not db_path.is_file():
-                db_path = Path(r"C:\Hecos\hecos\data\packages.db")
-            if db_path.is_file():
-                try:
-                    conn = sqlite3.connect(str(db_path))
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        "SELECT install_path FROM packages WHERE id = ? OR name = ? OR id = ? OR id = ?",
-                        (pkg_id, pkg_id, pkg_id.replace('_', '-'), pkg_id.replace('-', '_'))
-                    )
-                    row = cursor.fetchone()
-                    if row and row[0] and Path(row[0]).is_dir():
-                        live_path = Path(row[0])
-                    conn.close()
-                except Exception as e_db:
-                    logger.warning(f"[BUILDER] packages.db check failed: {e_db}")
-
-            # 2. Se non trovato nel DB, scansiona le cartelle dell'installazione
-            if not live_path:
-                base_dir = Path(hecos_root)
-                subdirs = [
-                    'modules', 'hpm', 'hpm/playbooks', 'hpm/libraries',
-                    'hpm/plugins', 'plugins', 'personas', 'widgets'
-                ]
-                candidates = [pkg_id, pkg_id.replace('_', '-'), pkg_id.replace('-', '_')]
-                for sub in subdirs:
-                    for cand in candidates:
-                        test_path = base_dir / sub / cand
-                        if test_path.is_dir():
-                            live_path = test_path
-                            break
-                    if live_path:
-                        break
-
+            live_path = _find_live_package_path(pkg_id, hecos_root)
             if not live_path:
                 return jsonify({'ok': False, 'error': f'Live version of {pkg_id} not found in the installation.'})
 

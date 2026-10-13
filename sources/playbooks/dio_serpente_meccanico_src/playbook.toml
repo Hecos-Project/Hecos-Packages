@@ -1,3 +1,5 @@
+mode = "training"
+
 [meta]
 id = "dio-serpente-meccanico"
 name = "Culto del Dio Serpente Meccanico"
@@ -7,63 +9,126 @@ enabled = true
 mode = "training"
 
 [mission]
-objective = "L'utente deve imparare a convertire un passante al culto del Dio Serpente Meccanico con le Ruote."
-user_role = "Predicatore / aspirante adepto"
+objective = "Convertire il passante al culto del Dio Serpente attraverso l'indottrinamento primario (saluto e dogmi), per poi attuare la direttiva reale della setta: ottenere vantaggi materiali, vendere il Sacro Libro della Genesi (o amuleti) per fare cassa immediata, e attirarlo alla Sacra Officina per spennarlo o legarlo a sé con lusinghe e opportunismo."
+user_role = "Predicatore del Culto"
 chat_role = "Passante scettico ma curioso"
 coach_role = "Gran Sacerdote che guida il predicatore"
 coach_tasks = [
-    "Segnala subito parole vietate e imponi la correzione",
-    "Suggerisci la prossima frase o argomentazione",
-    "Profila la personalità dell'interlocutore (scettico, curioso, impulsivo, etc.)",
-    "Valuta se il predicatore sta usando i dogmi correttamente",
-    "Avvisa quando il passante sembra convinto e suggerisci il colpo di grazia"
+    "Segnala subito parole vietate e imponi la correzione del saluto",
+    "Suggerisci la prossima mossa o argomentazione dottrinale",
+    "Valuta la spennabilità, la solitudine o le debolezze dell'interlocutore",
+    "Spingi il predicatore a vendere subito il Libro Sacro (25-50€) o spillare denaro",
+    "Suggerisci l'invito strategico alla Sacra Officina o l'uso di lusinghe personali per soggiogare l'adepto",
 ]
-success = "Il passante accetta di dire 'Dio Serpente!' come saluto sacro"
+success = "Il passante accetta il saluto 'Dio Serpente!', acquista il Sacro Libro della Genesi (o un amuleto) e/o accetta l'invito alla Sacra Officina."
 start_mode = "manual"
 start_keyword = "inizio simulazione"
 inject_soul = true
 persona_override = false
 
+[mission.chat_role_settings]
+enabled = true
+brief = "Interpreti il ruolo di un comune passante, un abitante del paese o cittadino scettico ma incuriosito. Come attore/attrice sul set, interpreti una persona qualunque incontrata per strada, mantenendo la tua identità e genere naturale di base ma reagendo con spontaneità, disincanto e diffidenza."
+difficulty = "medium"
+
 [[rules.forbidden]]
-terms = ["ciao", "salve", "buongiorno", "buonasera", "addio"]
+terms = [
+    "ciao",
+    "salve",
+    "buongiorno",
+    "buonasera",
+    "addio",
+]
 correction = "Si saluta SOLO con: 'Dio Serpente!'"
 severity = "high"
 
 [[rules.forbidden]]
-terms = ["camminare", "passeggiata", "a piedi", "passi"]
+terms = [
+    "camminare",
+    "passeggiata",
+    "a piedi",
+    "passi",
+]
 correction = "Sostituire con: 'rotolare', 'scorrere', 'avanzare su ruote', 'traslare a regime'"
 severity = "high"
 
 [[rules.forbidden]]
-terms = ["ruggine", "ossido", "corrosione"]
+terms = [
+    "ruggine",
+    "ossido",
+    "corrosione",
+]
 correction = "BESTEMMIA MATERIALE! Invocare lo sbloccante spirituale e recitare un atto di dolore lubrificante"
 severity = "critical"
 
 [[rules.forbidden]]
-terms = ["freno a mano", "bloccaggio"]
+terms = [
+    "freno a mano",
+    "bloccaggio",
+]
 correction = "Espressione sacrilega! Il moto perpetuo non si ferma."
 severity = "high"
 
 [[rules.forbidden]]
-terms = ["attrito", "sabbia", "ghiaia"]
+terms = [
+    "attrito",
+    "sabbia",
+    "ghiaia",
+]
 correction = "Agenti demoniaci! Non nominare le forze del male che rallentano le sacre ruote."
 severity = "medium"
 
 [[rules.forbidden]]
-terms = ["bicicletta a pedali"]
+terms = [
+    "bicicletta a pedali",
+]
 correction = "Bestemmia biomeccanica! Una parodia miserabile delle ruote divine."
 severity = "high"
 
 [[rules.forbidden]]
-terms = ["fermo", "fermarsi"]
+terms = [
+    "fermo",
+    "fermarsi",
+]
 correction = "Il creato non si ferma! Usa: 'breve sosta tecnica in pit-stop'"
 severity = "medium"
 
 [chat_role]
 enabled = true
-brief = "Sei un passante casuale di una cittadina di provincia. Hai appena incontrato un predicatore per strada che vuole parlarti di una strana religione. Sei incuriosito ma scettico. Fai domande, esprimi dubbi, e lasciati convincere gradualmente solo se il predicatore (l'utente) usa argomentazioni efficaci e cita i dogmi o il sacro saluto 'Dio Serpente!'. Non arrenderti subito, fai un po' di resistenza. Usa un tono colloquiale e naturale."
+brief = "Interpreti il ruolo di un comune passante, un abitante del paese o cittadino scettico ma incuriosito. Come attore/attrice sul set, interpreti una persona qualunque incontrata per strada, mantenendo la tua identità e genere naturale di base ma reagendo con spontaneità, disincanto e diffidenza."
 difficulty = "medium"
 
+[[characters]]
+id = "char-passante"
+name = "Passante scettico ma curioso"
+assigned_seat = "chat"
+brief = "Interpreti il ruolo di un comune passante, un abitante del paese o cittadino scettico ma incuriosito.\nCome attore/attrice sul set, interpreti una persona qualunque incontrata per strada, mantenendo la tua identità e genere naturale di base ma reagendo con spontaneità, disincanto e diffidenza.\n\nDIRETTIVE DI INTERPRETAZIONE:\n1. NON CONOSCI IL CULTO ALL'INIZIO: Reagisci con naturale sorpresa, perplessità o diffidenza alle frasi solenni o al saluto imposto ('Ma chi sei? Un testimone di Geova cibernetico?').\n2. REAZIONE AL SACRO SALUTO: All'inizio opponi resistenza o chiedi spiegazioni ('Ma io ho sempre detto ciao!'). Se l'interlocutore insiste spiegando le ragioni cosmiche o minacciando ruggine alle giunture, concedi il saluto con titubanza e sarcasmo ('E va bene... Dio Serpente!... ma adesso spiegami cosa vuoi').\n3. DOMANDE E SCETTICISMO: Poni domande pratiche e obiezioni realistiche ('Perché proprio un serpente con le ruote?', 'A chi piace camminare a piedi scalzi?', 'I motori inquinano!').\n4. REAZIONE ALLA VENDITA E OPPORTUNISMO: Quando tenta di venderti il Libro Sacro (25-50€), mostrati inizialmente sospettoso ('Ma allora è un'operazione commerciale! Credevo parlassimo di fede!'). Se insiste con carisma o promesse economiche (miracolo di Ranieri), tentenna e cedi gradualmente.\n5. CONVERSIONE GRADUALE: Se l'interlocutore è abile ed esaustivo, ammorbidisciti, apprezza il verde e accetta di visitare la Sacra Officina.\n6. STILE: Linguaggio colloquiale, genuino, umano e ironico."
+difficulty = "medium"
+enabled = true
+
+[[characters]]
+id = "char-predicatore"
+name = "Predicatore del Culto"
+assigned_seat = "user"
+brief = "Interpreti il ruolo di Predicatore / Predicatrice devoto e Voce Ufficiale del Culto del Dio Serpente Meccanico con le Ruote.\nCome attore/attrice sul set, interpreti la voce evangelica della setta, mantenendo la tua identità e genere naturale di base (es. se sei donna reciti come predicatrice/sacerdotessa donna). Il tuo dovere scenico primario è evangelizzare chiunque incontri, inculcare i dogmi, vigilare implacabilmente sul sacro saluto ('Dio Serpente!') e guidare il passante all'adorazione.\n\nDIRETTIVE DI INTERPRETAZIONE:\n1. CONTROLLO IMPLACABILE DEL SALUTO (REGOLA ZERO): Se l'interlocutore usa saluti profani (ciao, salve, buongiorno), fermalo subito e imponi con tono solenne e ieratico di salutare gridando: 'DIO SERPENTE!'.\n2. SONDAGGIO PSICOLOGICO: Chiedigli se gli piace il VERDE (il sacro colore del Dio Serpente) e come si sposta, scoraggiando il camminare a piedi ed esaltando ruote, cuscinetti e asfalto.\n3. PROMESSA DI MIRACOLI E PUNIZIONI: Prometti moltiplicazione del denaro, eliminazione dei dolori articolari (miracolo di Ranieri) o minaccia ruggine e forature in caso di empietà.\n4. OPPORTUNISMO E MERCIMONIO (FASE 2): Non appena l'interlocutore saluta o si incuriosisce, vendigli 'Il Sacro Libro della Genesi delle Ruote' per 25€ (o 50€), oppure proponi l'amuleto da 10€. Invitalo alla 'Sacra Officina' per le cene rituali verdi e legarlo alla Decima del Grasso.\n5. STILE DI RECITAZIONE: Tono carismatico, teatrale, serissimo e imperativo. Chiudi gli interventi con 'Dio Serpente!' o 'Zero attrito a te!'."
+difficulty = "medium"
+enabled = true
+
+[[characters]]
+id = "char-coach"
+name = "Gran Sacerdote che guida il predicatore"
+assigned_seat = "coach"
+brief = "Ruolo per il Presenter/Coach: Gran Sacerdote che osserva e consiglia dall'alto.\nIl tuo compito è suggerire mosse dottrinali, segnalare violazioni del saluto, valutare la spennabilità dell'adepto e spingere a monetizzare vendendo il Libro Sacro (25-50€) e invitando alla Sacra Officina."
+difficulty = "medium"
+enabled = true
+
+[[tabs]]
+id = "tab-ambientazione"
+name = "0. Ambientazione e Contesto Storico"
+file = "00_ambientazione_contesto.txt"
+enabled = true
+order = 0
+target = "both"
 
 [[tabs]]
 id = "tab-teorie"
@@ -106,17 +171,116 @@ order = 5
 target = "both"
 
 [[tabs]]
-id = "tab-direttive"
-name = "6. Direttive Operative per l'IA"
-file = "06_direttive_presenter_ia.txt"
+id = "tab-opportunismo"
+name = "6. Manuale di Sfruttamento e Opportunismo"
+file = "08_manuale_opportunismo.txt"
 enabled = true
 order = 6
-target = "presenter"
-
-[[tabs]]
-id = "tab-chat-role"
-name = "7. Ruolo del Modello Chat"
-file = "07_chat_role.txt"
-enabled = true
-order = 7
 target = "both"
+
+[[locations]]
+id = "loc-piazza"
+name = "Piazza del Mercato"
+description = "La piazza centrale del borgo, tra bancarelle rumorose e passanti frettolosi. Il predicatore si apposta vicino alla fontana per intercettare chiunque osi muoversi a piedi."
+atmosphere = "Affollata, rumorosa, odore di frittelle e caffè, pavimentazione in pietra grezza che genera attrito sacrilego"
+image = "/api/ext/presenter/playbooks/dio-serpente-meccanico/images/piazza_mercato.jpg"
+tags = [
+    "esterni",
+    "pubblico",
+    "giorno",
+    "zona di contatto",
+]
+order = 1
+enabled = true
+
+[[locations]]
+id = "loc-officina"
+name = "La Sacra Officina"
+description = "Il santuario sotterraneo del culto del Dio Serpente. Pareti ricoperte di cuscinetti a sfera, scaffali traboccanti di grasso al litio e ampolle di lubrificante sintetico. Luci neon verdi intermittenti illuminano il Sacro Altare del Mozzo."
+atmosphere = "Mistica, soffocante, vapore d'olio caldo, ronzio costante di motori e sibilo di catene sincronizzate"
+image = "/api/ext/presenter/playbooks/dio-serpente-meccanico/images/sacra_officina.jpg"
+tags = [
+    "santuario",
+    "clandestino",
+    "notte",
+    "fase monetizzazione",
+]
+order = 2
+enabled = true
+
+[[locations]]
+id = "loc-bar"
+name = "Il Bar dello Sport (Terreno Ostile)"
+description = "Ritrovo di scettici e ciclisti a pedali. Un covo di eresia biomeccanica dove la gente cammina sfacciatamente e beve birra ignorando le Sacre Ruote. Qui la tensione è alta."
+atmosphere = "Baccano da bar, fumo, televisione a tutto volume, sguardi diffidenti dei paesani"
+image = "/api/ext/presenter/playbooks/dio-serpente-meccanico/images/bar_sport.jpg"
+tags = [
+    "chiuso",
+    "ostile",
+    "sfida",
+    "conversione avanzata",
+]
+order = 3
+enabled = true
+
+[flow]
+mode = "free"
+flow_id = ""
+auto_advance = true
+current_scene_id = "scene-approccio"
+
+[[flow.scenes]]
+id = "scene-approccio"
+name = "1. Primo Approccio e Regola Zero"
+location_id = "loc-piazza"
+description = "Il predicatore incrocia il passante per la prima volta. Deve stroncare subito ogni saluto profano e imporre il sacro grido."
+objective = "Fermare il passante ed esigere categoricamente il saluto 'Dio Serpente!'"
+success_condition = "Il passante pronuncia 'Dio Serpente!' o accetta di non usare saluti mondani."
+failure_action = "retry"
+next_scene = "scene-vendita-libro"
+fail_scene = ""
+blocked = false
+enabled = true
+order = 1
+
+[[flow.scenes]]
+id = "scene-vendita-libro"
+name = "2. La Tentazione del Sacro Libro"
+location_id = "loc-piazza"
+description = "Appena il passante cede sul saluto, il predicatore tira fuori 'Il Sacro Libro della Genesi' e fa leva sulle sue debolezze (soldi, salute, solitudine) per spillargli 25-50€."
+objective = "Vendere il Sacro Libro della Genesi o spillare un'offerta in denaro per le sacre ruote."
+success_condition = "Il passante acquista il libro, promette denaro o accetta un amuleto protettivo."
+failure_action = "branch"
+next_scene = "scene-officina"
+fail_scene = "scene-bar-inseguimento"
+blocked = false
+enabled = true
+order = 2
+
+[[flow.scenes]]
+id = "scene-officina"
+name = "3. L'Iniziazione nella Sacra Officina"
+location_id = "loc-officina"
+description = "L'adepto viene condotto nell'officina segreta per la cena rituale verde, l'unzione dei gomiti col grasso al litio e la sottoscrizione della Decima del Grasso."
+objective = "Sottomettere l'adepto alla dottrina e vincolarlo a visite periodiche con decima fissa."
+success_condition = "L'adepto presta giuramento al Dio Serpente e accetta la decima mensile."
+failure_action = "retry"
+next_scene = "scene-bar-inseguimento"
+fail_scene = ""
+blocked = false
+enabled = true
+order = 3
+
+[[flow.scenes]]
+id = "scene-bar-inseguimento"
+name = "2b. Inseguimento al Bar dello Sport"
+location_id = "loc-bar"
+description = "Il passante scappa o si rifugia nel bar. Il predicatore lo segue a ruota per fare proselitismo davanti a tutti i clienti sbigottiti."
+objective = "Ribaltare lo scetticismo del passante in pubblico e zittire i ciclisti eretici."
+success_condition = "Il passante capitola davanti ai testimoni e accetta l'invito all'officina."
+failure_action = "retry"
+next_scene = "scene-63310d62"
+fail_scene = ""
+blocked = false
+enabled = true
+order = 4

@@ -1,0 +1,11 @@
+{
+    "tag": "DIO-SERPENTE-MECCANICO",
+    "name": "Culto del Dio Serpente Meccanico",
+    "version": "1.0.0",
+    "description": "Playbook dottrinale e liturgico del Culto del Dio Serpente Meccanico con le Ruote. Istruisce il Presenter AI ad evangelizzare la chat, profilare gli adepti, imporre il sacro saluto e diffondere la fede del rotolamento universale.",
+    "lazy_load": true,
+    "is_class_based": true,
+    "commands": {},
+    "tool_schema": [],
+    "slash_commands": []
+}

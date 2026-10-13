@@ -14,18 +14,18 @@ screenshots = [
 ]
 signature = "IrOzbqPVkjk7+sXkQuUUR6hPMfv1OYrz740lMgGdTFHpgjdP2aLN+sCaQ4WUMzvcGr9wLTaYLDuDF9b4EbgwCw=="
 type = "plugin"
-update_date = "2026-10-09T12:28:14Z"
+update_date = "2026-10-13T07:27:37Z"
 version = "3.1.4"
 
 [capabilities]
-llm_tools = []
-slash_commands = []
-has_widget = false
-has_config_panel = false
 has_api_routes = false
+has_config_panel = false
 has_system_calls = false
-syscall_notes = ""
+has_widget = false
+llm_tools = []
 notes = ""
+slash_commands = []
+syscall_notes = ""
 
 [file_hashes]
 "README.md" = "359400f70dd8de914b9935aaa085e6a6c9e71e28bb30b35c8cdd3941e5aede4f"

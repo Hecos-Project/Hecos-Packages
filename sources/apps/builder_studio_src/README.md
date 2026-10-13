@@ -7,6 +7,6 @@ Visual IDE for building, compiling, inspecting and managing Hecos packages (.hpk
 - Single & batch build
 - Key generation & catalog generation
 - Capabilities scanner & regenerator
-- Dev-sync (compile + install)
+- Dev-sync (synchronize live installation to local sources)
 - Package inspector & unpacker
 - New package wizard

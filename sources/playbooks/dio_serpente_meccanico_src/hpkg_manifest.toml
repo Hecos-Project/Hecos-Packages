@@ -9,10 +9,13 @@ id = "dio-serpente-meccanico"
 license = "GPL-3.0"
 name = "Culto del Dio Serpente Meccanico"
 readme = "README.md"
-screenshots = []
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/playbooks/dio_serpente_meccanico_src/preview_1.png",
+]
 type = "playbook"
-update_date = "2026-10-11T11:45:00Z"
+update_date = "2026-10-13T05:36:10Z"
 version = "1.0.0"
+signature = "ns42qLzL0cGEwMGh58RzGk7V1dxECyJsaKpzbG+GvAipxHEwbZOYdM2+tmVoKLqvezo/MJCfEzT3750GCW9+CQ=="
 
 [capabilities]
 llm_tools = []
@@ -23,3 +26,21 @@ has_api_routes = false
 has_system_calls = false
 syscall_notes = ""
 notes = ""
+
+[file_hashes]
+"00_ambientazione_contesto.txt" = "3a63983a877d0588358ed140aed339829537feddea81903abe339e561f9284cd"
+"01_teorie_fondamentali.txt" = "6340f52d3550689bcea2f181c068788e10adbbd3b530ad8fe101d44923b4e0c9"
+"02_parole_e_cose_vietate.txt" = "147a1e41bca3ff460b3c4e54a364e76f2126697c4fc16dc926cb54ac6ad9688f"
+"03_volonta_del_dio.txt" = "525af6f6e671009900b2ccb4c2b7362322493e6acf77bec25c3717bd471a656c"
+"04_profilo_adepto.txt" = "0413224b5990f9dc188fedf937f3aad58185c7d39dbe8b11e37c2c54fc399589"
+"05_libro_sacro_genesi.txt" = "4b611fce80136d1105fe84ae95ce34fb03bc34f08c89ef75d3b80a5f8096f5cd"
+"06_direttive_presenter_ia.txt" = "55dd036302b644962f87513dd061a0b899c364314371e2b29d84ab4f053301ed"
+"07_chat_role.txt" = "7c96552971fed1d0f31dc6f1659f447d996c3c63eb643c5019973a440b039b54"
+"08_manuale_opportunismo.txt" = "30a5493e513b5d9381112258f10c8c5eccdd43a3eb392df4521aec4ca3e356fa"
+"manifest.json" = "3a5f57179ff08bb7b92cf9dcfcf90bb31939ed5293f804c0b9b2cabcbf81c1a7"
+"playbook.toml" = "eb4b994ef487c4182e18f92a73cc7dd9ae6f28d9e7abcfbf0ead8086e955f8e3"
+"preview_1.png" = "1ef6725a940acae0869a4c693605b30e74cb8f5024dd44952af617093d88b26c"
+"README.md" = "73ae1813151903f53d25c435933a9d6316be65e645d68e7f36a297acb0490a40"
+"images/bar_sport.jpg" = "63eeb9634adf68907127be5b3a8624037acba0c000485fefbab8c17135a0e290"
+"images/piazza_mercato.jpg" = "caf99af606b1f2d827ce6721053834deafe63c9a1ee7d980e45b3df5d5216448"
+"images/sacra_officina.jpg" = "ce4e1166d5f10beb753eba36b6f2071f49b37958a5ec60aef8d4ae06b59b5c74"
