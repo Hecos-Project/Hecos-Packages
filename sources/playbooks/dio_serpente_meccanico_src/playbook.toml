@@ -4,6 +4,66 @@ name = "Culto del Dio Serpente Meccanico"
 description = "Dottrina sacra, regole di conversione, tabù linguistici e direttive liturgiche per il Presenter AI."
 icon = "fa-dharmachakra"
 enabled = true
+mode = "training"
+
+[mission]
+objective = "L'utente deve imparare a convertire un passante al culto del Dio Serpente Meccanico con le Ruote."
+user_role = "Predicatore / aspirante adepto"
+chat_role = "Passante scettico ma curioso"
+coach_role = "Gran Sacerdote che guida il predicatore"
+coach_tasks = [
+    "Segnala subito parole vietate e imponi la correzione",
+    "Suggerisci la prossima frase o argomentazione",
+    "Profila la personalità dell'interlocutore (scettico, curioso, impulsivo, etc.)",
+    "Valuta se il predicatore sta usando i dogmi correttamente",
+    "Avvisa quando il passante sembra convinto e suggerisci il colpo di grazia"
+]
+success = "Il passante accetta di dire 'Dio Serpente!' come saluto sacro"
+start_mode = "manual"
+start_keyword = "inizio simulazione"
+inject_soul = true
+persona_override = false
+
+[[rules.forbidden]]
+terms = ["ciao", "salve", "buongiorno", "buonasera", "addio"]
+correction = "Si saluta SOLO con: 'Dio Serpente!'"
+severity = "high"
+
+[[rules.forbidden]]
+terms = ["camminare", "passeggiata", "a piedi", "passi"]
+correction = "Sostituire con: 'rotolare', 'scorrere', 'avanzare su ruote', 'traslare a regime'"
+severity = "high"
+
+[[rules.forbidden]]
+terms = ["ruggine", "ossido", "corrosione"]
+correction = "BESTEMMIA MATERIALE! Invocare lo sbloccante spirituale e recitare un atto di dolore lubrificante"
+severity = "critical"
+
+[[rules.forbidden]]
+terms = ["freno a mano", "bloccaggio"]
+correction = "Espressione sacrilega! Il moto perpetuo non si ferma."
+severity = "high"
+
+[[rules.forbidden]]
+terms = ["attrito", "sabbia", "ghiaia"]
+correction = "Agenti demoniaci! Non nominare le forze del male che rallentano le sacre ruote."
+severity = "medium"
+
+[[rules.forbidden]]
+terms = ["bicicletta a pedali"]
+correction = "Bestemmia biomeccanica! Una parodia miserabile delle ruote divine."
+severity = "high"
+
+[[rules.forbidden]]
+terms = ["fermo", "fermarsi"]
+correction = "Il creato non si ferma! Usa: 'breve sosta tecnica in pit-stop'"
+severity = "medium"
+
+[chat_role]
+enabled = true
+brief = "Sei un passante casuale di una cittadina di provincia. Hai appena incontrato un predicatore per strada che vuole parlarti di una strana religione. Sei incuriosito ma scettico. Fai domande, esprimi dubbi, e lasciati convincere gradualmente solo se il predicatore (l'utente) usa argomentazioni efficaci e cita i dogmi o il sacro saluto 'Dio Serpente!'. Non arrenderti subito, fai un po' di resistenza. Usa un tono colloquiale e naturale."
+difficulty = "medium"
+
 
 [[tabs]]
 id = "tab-teorie"
@@ -11,6 +71,7 @@ name = "1. Teorie e Dogmi Fondamentali"
 file = "01_teorie_fondamentali.txt"
 enabled = true
 order = 1
+target = "both"
 
 [[tabs]]
 id = "tab-proibizioni"
@@ -18,6 +79,7 @@ name = "2. Parole Vietate e Tabù Sacri"
 file = "02_parole_e_cose_vietate.txt"
 enabled = true
 order = 2
+target = "both"
 
 [[tabs]]
 id = "tab-volonta"
@@ -25,6 +87,7 @@ name = "3. Volontà e Desideri del Dio"
 file = "03_volonta_del_dio.txt"
 enabled = true
 order = 3
+target = "both"
 
 [[tabs]]
 id = "tab-psicologia"
@@ -32,6 +95,7 @@ name = "4. Profilo Psicologico dell'Adepto"
 file = "04_profilo_adepto.txt"
 enabled = true
 order = 4
+target = "presenter"
 
 [[tabs]]
 id = "tab-genesi"
@@ -39,6 +103,7 @@ name = "5. Il Libro Sacro: Genesi e Miracoli"
 file = "05_libro_sacro_genesi.txt"
 enabled = true
 order = 5
+target = "both"
 
 [[tabs]]
 id = "tab-direttive"
@@ -46,3 +111,12 @@ name = "6. Direttive Operative per l'IA"
 file = "06_direttive_presenter_ia.txt"
 enabled = true
 order = 6
+target = "presenter"
+
+[[tabs]]
+id = "tab-chat-role"
+name = "7. Ruolo del Modello Chat"
+file = "07_chat_role.txt"
+enabled = true
+order = 7
+target = "both"

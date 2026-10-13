@@ -1,0 +1,40 @@
+<!-- Live Stats Bar & Global Switches -->
+<div class="pb-stats-bar">
+  <div class="pb-stat-item">
+    <i class="fas fa-layer-group" style="color:#60a5fa;"></i>
+    <span>Playbooks: <strong id="pb-stat-total" class="pb-stat-val">0</strong></span>
+  </div>
+  <div class="pb-stat-item">
+    <i class="fas fa-toggle-on" style="color:#34d399;"></i>
+    <span>Active: <strong id="pb-stat-active" class="pb-stat-val">0</strong></span>
+  </div>
+  <div class="pb-stat-item">
+    <i class="fas fa-folder-open" style="color:#c084fc;"></i>
+    <span>Total Tabs: <strong id="pb-stat-tabs" class="pb-stat-val">0</strong></span>
+  </div>
+
+  <div class="pb-stat-divider"></div>
+
+  <!-- Switch 1: Toggle All Playbooks -->
+  <div class="pb-stat-switch-group" title="Enable or disable all Playbooks simultaneously">
+    <label class="pb-switch-mini">
+      <input type="checkbox" id="pb-toggle-all-switch" onchange="window.pbToggleAllPlaybooks(this.checked)">
+      <span class="pb-slider-mini"></span>
+    </label>
+    <span class="pb-stat-switch-label">Toggle All</span>
+  </div>
+
+  <!-- Switch 2: Single Active Playbook Mode (Exclusive Mode) -->
+  <div class="pb-stat-switch-group" title="Single Mode: Prevents multiple playbooks from being active at once to save prompt tokens and system resources">
+    <label class="pb-switch-mini purple">
+      <input type="checkbox" id="pb-single-mode-switch" onchange="window.pbToggleSingleMode(this.checked)">
+      <span class="pb-slider-mini"></span>
+    </label>
+    <span class="pb-stat-switch-label"><i class="fas fa-shield-alt" style="color:#c084fc; font-size:11px;"></i> Single Mode</span>
+  </div>
+
+  <div class="pb-stat-item" style="margin-left:auto;">
+    <i class="fas fa-microchip" style="color:#fbbf24;"></i>
+    <span>Approx. Injected Context: <strong id="pb-stat-tokens" class="pb-stat-val">~0 tokens</strong></span>
+  </div>
+</div>

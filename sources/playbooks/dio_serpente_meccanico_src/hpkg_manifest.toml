@@ -11,8 +11,8 @@ name = "Culto del Dio Serpente Meccanico"
 readme = "README.md"
 screenshots = []
 type = "playbook"
-update_date = "2026-10-11T09:48:43Z"
-version = "1.0.1"
+update_date = "2026-10-11T11:45:00Z"
+version = "1.0.0"
 
 [capabilities]
 llm_tools = []

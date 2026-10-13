@@ -255,6 +255,18 @@ def list_playbooks() -> list[dict]:
                     if not meta.get("author") and hpkg_data.get("author"):
                         meta["author"] = hpkg_data["author"]
                 
+                # Mode: training | roleplay | learning | freestyle
+                if "mode" not in meta:
+                    meta["mode"] = data.get("mode", "training")
+
+                # Chat role block
+                chat_role = data.get("chat_role", {})
+                if not isinstance(chat_role, dict):
+                    chat_role = {}
+                chat_role.setdefault("enabled", False)
+                chat_role.setdefault("brief", "")
+                chat_role.setdefault("difficulty", "medium")
+
                 tabs = data.get("tabs", [])
                 for tab in tabs:
                     if "content" not in tab or not tab["content"]:
@@ -264,9 +276,14 @@ def list_playbooks() -> list[dict]:
                             tab["content"] = _read_file(fpath)
                     if "content" not in tab:
                         tab["content"] = ""
+                    # Default target to 'presenter' for backwards compatibility
+                    if "target" not in tab or tab["target"] not in ["presenter", "chat", "both", "system"]:
+                        tab["target"] = "presenter"
                 
                 res.append({
                     "meta": meta,
+                    "mode": meta.get("mode", "training"),
+                    "chat_role": chat_role,
                     "tabs": sorted(tabs, key=lambda x: x.get("order", 0))
                 })
     return res
@@ -277,7 +294,7 @@ def get_playbook(playbook_id: str) -> dict:
             return pb
     return None
 
-def create_playbook(name: str, description: str = "", icon: str = "fa-book-open") -> dict:
+def create_playbook(name: str, description: str = "", icon: str = "fa-book-open", mode: str = "training") -> dict:
     import re
     slug = re.sub(r'[^a-zA-Z0-9_\-]+', '-', name.lower()).strip('-') or 'playbook'
     pid = f"{slug}-{str(uuid.uuid4())[:6]}"
@@ -290,8 +307,14 @@ def create_playbook(name: str, description: str = "", icon: str = "fa-book-open"
             "name": name,
             "description": description,
             "icon": icon,
+            "mode": mode,
             "enabled": True,
             "source": "local"
+        },
+        "chat_role": {
+            "enabled": False,
+            "brief": "",
+            "difficulty": "medium"
         },
         "tabs": []
     }
@@ -318,10 +341,23 @@ def update_playbook(playbook_id: str, **kwargs) -> dict:
 
     data = _read_toml(file_path)
     if "meta" not in data: data["meta"] = {}
+    if "chat_role" not in data or not isinstance(data["chat_role"], dict):
+        data["chat_role"] = {}
     
     for k, v in kwargs.items():
         if k in ["name", "description", "icon", "enabled"]:
             data["meta"][k] = v
+        elif k == "mode":
+            data["meta"]["mode"] = v
+            data["mode"] = v
+        elif k == "chat_role" and isinstance(v, dict):
+            data["chat_role"].update(v)
+        elif k == "chat_role_brief":
+            data["chat_role"]["brief"] = v
+        elif k == "chat_role_enabled":
+            data["chat_role"]["enabled"] = bool(v)
+        elif k == "chat_role_difficulty":
+            data["chat_role"]["difficulty"] = v
             
     _write_toml(file_path, data)
     return get_playbook(playbook_id)
@@ -336,7 +372,7 @@ def delete_playbook(playbook_id: str) -> bool:
         return True
     return False
 
-def add_tab(playbook_id: str, name: str, content: str = "") -> dict:
+def add_tab(playbook_id: str, name: str, content: str = "", target: str = "presenter") -> dict:
     pb_dir, _ = _find_playbook_dir(playbook_id)
     if not pb_dir:
         raise ValueError(f"Playbook '{playbook_id}' not found")
@@ -352,12 +388,15 @@ def add_tab(playbook_id: str, name: str, content: str = "") -> dict:
     fname = f"{tab_id}.txt"
     order = len(data["tabs"]) + 1
     
+    clean_target = target if target in ["presenter", "chat", "both", "system"] else "presenter"
+
     tab_meta = {
         "id": tab_id,
         "name": name,
         "file": fname,
         "enabled": True,
         "order": order,
+        "target": clean_target,
         "content": content
     }
     data["tabs"].append(tab_meta)
@@ -394,6 +433,10 @@ def update_tab(playbook_id: str, tab_id: str, **kwargs) -> dict:
         target_tab["enabled"] = bool(kwargs["enabled"])
     if "order" in kwargs:
         target_tab["order"] = int(kwargs["order"])
+    if "target" in kwargs:
+        tgt = kwargs["target"]
+        if tgt in ["presenter", "chat", "both", "system"]:
+            target_tab["target"] = tgt
         
     if "content" in kwargs:
         target_tab["content"] = kwargs["content"]
@@ -452,43 +495,119 @@ def reorder_tabs(playbook_id: str, ordered_ids: List[str]) -> bool:
     return True
 
 
-def get_active_playbook_context(max_tokens: int = 2000) -> str:
+def get_chat_playbook_context(max_tokens: int = 3500) -> str:
+    """
+    Restituisce il contesto destinato al modello CHAT (target='chat' o 'both'),
+    includendo il brief di chat_role se presente ed abilitato.
+    Prioritizza i tab con target='chat' (direttive ruolo) rispetto a target='both' (lore condiviso).
+    """
+    settings = get_playbooks_settings()
+    if not settings.get("master_enabled", True):
+        return ""
+        
+    single_mode = settings.get("single_mode", False)
+    playbooks = list_playbooks()
     sections = []
     total_chars = 0
     max_chars = max_tokens * 4
-    
-    settings = get_playbooks_settings()
-    single_mode = settings.get("single_mode", False)
-    
-    playbooks = list_playbooks()
     active_count = 0
+    
     for pb in playbooks:
         meta = pb.get("meta", {})
         if not meta.get("enabled"): continue
         
         if single_mode and active_count >= 1:
-            # Enforce single mode limit strictly
             break
         active_count += 1
         
-        for tab in pb.get("tabs", []):
-            if not tab.get("enabled"): continue
-            
+        pb_name = meta.get("name", "Active Playbook")
+        chat_role = pb.get("chat_role", {})
+        
+        # 1. Role brief for the chat model (Highest priority)
+        if chat_role.get("enabled") and chat_role.get("brief"):
+            role_text = chat_role["brief"].strip()
+            diff = chat_role.get("difficulty")
+            diff_clause = f" (Difficulty: {diff})" if diff else ""
+            role_sec = f"[PLAYBOOK CHAT ROLE: {pb_name}{diff_clause}]\n{role_text}\n"
+            if total_chars + len(role_sec) <= max_chars:
+                sections.append(role_sec)
+                total_chars += len(role_sec)
+
+        # 2. Tabs targeted to chat or both (Prioritize target='chat' before target='both')
+        eligible_tabs = [
+            t for t in pb.get("tabs", [])
+            if t.get("enabled") and t.get("target") in ["chat", "both"]
+        ]
+        eligible_tabs.sort(key=lambda x: (0 if x.get("target") == "chat" else 1, x.get("order", 0)))
+
+        for tab in eligible_tabs:
             content = tab.get("content", "").strip()
             if not content: continue
             
-            section = f"[PLAYBOOK: {meta.get('name')} / {tab.get('name')}]\n{content}\n"
-            
+            section = f"[PLAYBOOK KNOWLEDGE: {pb_name} / {tab.get('name')}]\n{content}\n"
             if total_chars + len(section) > max_chars:
-                diff = max_chars - total_chars
-                if diff > 100:
-                    sections.append(section[:diff] + "... (TRUNCATED)")
+                diff_chars = max_chars - total_chars
+                if diff_chars > 100:
+                    sections.append(section[:diff_chars] + "... (TRUNCATED)")
                 break
                 
             sections.append(section)
             total_chars += len(section)
             
-    return "\n".join(sections)
+    return "\n".join(sections).strip()
+
+
+def get_presenter_playbook_context(max_tokens: int = 3500) -> str:
+    """
+    Restituisce il contesto destinato al PRESENTER (target='presenter' o 'both').
+    Prioritizza i tab con target='presenter' (direttive coach) rispetto a target='both' (lore condiviso).
+    """
+    settings = get_playbooks_settings()
+    if not settings.get("master_enabled", True):
+        return ""
+        
+    single_mode = settings.get("single_mode", False)
+    playbooks = list_playbooks()
+    sections = []
+    total_chars = 0
+    max_chars = max_tokens * 4
+    active_count = 0
+    
+    for pb in playbooks:
+        meta = pb.get("meta", {})
+        if not meta.get("enabled"): continue
+        
+        if single_mode and active_count >= 1:
+            break
+        active_count += 1
+        
+        pb_name = meta.get("name", "Active Playbook")
+        
+        eligible_tabs = [
+            t for t in pb.get("tabs", [])
+            if t.get("enabled") and t.get("target", "presenter") in ["presenter", "both"]
+        ]
+        eligible_tabs.sort(key=lambda x: (0 if x.get("target") == "presenter" else 1, x.get("order", 0)))
+
+        for tab in eligible_tabs:
+            content = tab.get("content", "").strip()
+            if not content: continue
+            
+            section = f"[PLAYBOOK: {pb_name} / {tab.get('name')}]\n{content}\n"
+            if total_chars + len(section) > max_chars:
+                diff_chars = max_chars - total_chars
+                if diff_chars > 100:
+                    sections.append(section[:diff_chars] + "... (TRUNCATED)")
+                break
+                
+            sections.append(section)
+            total_chars += len(section)
+            
+    return "\n".join(sections).strip()
+
+
+# Backwards compatibility alias
+get_active_playbook_context = get_presenter_playbook_context
 
 
 def export_playbook(playbook_id: str) -> bytes:

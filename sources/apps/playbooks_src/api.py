@@ -87,7 +87,8 @@ def init_plugin_routes(app, cfg_mgr, hecos_root=None, logger=None, **kwargs):
             res = storage.create_playbook(
                 name=data.get("name", "New Playbook"),
                 description=data.get("description", ""),
-                icon=data.get("icon", "fa-book-open")
+                icon=data.get("icon", "fa-book-open"),
+                mode=data.get("mode", "training")
             )
             return jsonify({"ok": True, "playbook": res})
         except Exception as e:
@@ -135,7 +136,8 @@ def init_plugin_routes(app, cfg_mgr, hecos_root=None, logger=None, **kwargs):
             res = storage.add_tab(
                 playbook_id=playbook_id,
                 name=data.get("name", "New Tab"),
-                content=data.get("content", "")
+                content=data.get("content", ""),
+                target=data.get("target", "presenter")
             )
             return jsonify({"ok": True, "tab": res})
         except Exception as e:
@@ -180,8 +182,21 @@ def init_plugin_routes(app, cfg_mgr, hecos_root=None, logger=None, **kwargs):
         try:
             storage = _playbooks()
             tokens = int(request.args.get("max_tokens", 2000))
-            ctx = storage.get_active_playbook_context(max_tokens=tokens)
-            return jsonify({"ok": True, "context": ctx, "approx_tokens": len(ctx) // 4})
+            target = request.args.get("target", "presenter").lower()
+            if target == "chat":
+                ctx = storage.get_chat_playbook_context(max_tokens=tokens)
+            elif target == "all":
+                p_ctx = storage.get_presenter_playbook_context(max_tokens=tokens)
+                c_ctx = storage.get_chat_playbook_context(max_tokens=tokens)
+                parts = []
+                if p_ctx:
+                    parts.append(f"=== PRESENTER CONTEXT ===\n{p_ctx}")
+                if c_ctx:
+                    parts.append(f"=== CHAT CONTEXT ===\n{c_ctx}")
+                ctx = "\n\n".join(parts) if parts else ""
+            else:
+                ctx = storage.get_presenter_playbook_context(max_tokens=tokens)
+            return jsonify({"ok": True, "context": ctx, "approx_tokens": len(ctx) // 4, "target": target})
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
