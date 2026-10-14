@@ -4,6 +4,8 @@ import json
 import hashlib
 import zipfile
 import datetime
+import subprocess
+import re
 from colorama import Fore, Style
 try:
     import tomllib
@@ -16,42 +18,142 @@ except ImportError:
 
 from pathlib import Path
 
-def generate_store_catalog():
+
+def _detect_git_info(repo_dir: Path) -> tuple[str | None, str]:
+    """Auto-detect GitHub owner/repo and active branch using git CLI if available."""
+    github_repo = None
+    branch = "main"
+    try:
+        res = subprocess.run(
+            ["git", "-C", str(repo_dir), "remote", "get-url", "origin"],
+            capture_output=True, text=True, check=True
+        )
+        remote_url = res.stdout.strip()
+        m = re.search(r"github\.com[:/]([^/]+)/([^/\.]+?)(?:\.git)?$", remote_url)
+        if m:
+            github_repo = f"{m.group(1)}/{m.group(2)}"
+    except Exception:
+        pass
+
+    try:
+        res_br = subprocess.run(
+            ["git", "-C", str(repo_dir), "branch", "--show-current"],
+            capture_output=True, text=True, check=True
+        )
+        cur_br = res_br.stdout.strip()
+        if cur_br:
+            branch = cur_br
+    except Exception:
+        pass
+
+    return github_repo, branch
+
+
+def generate_store_catalog(
+    repo_dir: str | Path | None = None,
+    packages_dir: str | Path | None = None,
+    sources_dir: str | Path | None = None,
+    output_file: str | Path | None = None,
+    github_repo: str | None = None,
+    branch: str | None = None,
+    interactive: bool = False,
+):
     print(f"\n{Fore.CYAN}--- Store Catalog Generator ---{Style.RESET_ALL}")
     
     builder_dir = Path(__file__).resolve().parent.parent
-    packages_dir = (builder_dir.parent / "packages").resolve()
-    website_store_dir = (builder_dir.parent.parent / "Hecos-Website" / "store").resolve()
+    default_repo_dir = builder_dir.parent.resolve()
     
-    if not packages_dir.exists():
-        print(f"{Fore.RED}Packages folder not found: {packages_dir}{Style.RESET_ALL}")
-        return
-        
-    if not website_store_dir.exists():
-        print(f"{Fore.RED}Website store folder not found: {website_store_dir}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}The file will be saved in {packages_dir} instead.{Style.RESET_ALL}")
-        output_file = packages_dir / "index.json"
+    if interactive and not repo_dir and not packages_dir:
+        try:
+            user_in = input(f"Target repository root [{default_repo_dir}]: ").strip()
+            if user_in:
+                repo_dir = Path(user_in).resolve()
+        except Exception:
+            pass
+
+    if repo_dir:
+        repo_dir = Path(repo_dir).resolve()
+    elif packages_dir:
+        repo_dir = Path(packages_dir).resolve().parent
     else:
-        output_file = website_store_dir / "index.json"
+        repo_dir = default_repo_dir
+
+    if packages_dir:
+        packages_path = Path(packages_dir).resolve()
+    else:
+        packages_path = (repo_dir / "packages").resolve()
+
+    if sources_dir:
+        sources_path = Path(sources_dir).resolve()
+    else:
+        sources_path = (repo_dir / "sources").resolve()
+
+    if not packages_path.exists():
+        print(f"{Fore.RED}Packages folder not found: {packages_path}{Style.RESET_ALL}")
+        return
+
+    # Auto-detect git info
+    detected_gh, detected_branch = _detect_git_info(repo_dir)
+    if not github_repo:
+        github_repo = detected_gh
+    if not branch:
+        branch = detected_branch or "main"
+
+    if not github_repo:
+        if repo_dir.name.lower() == "hecos-packages":
+            github_repo = "Hecos-Project/Hecos-Packages"
+        else:
+            github_repo = f"Hecos-Project/{repo_dir.name}"
+
+    is_official_hecos = (github_repo.lower() == "hecos-project/hecos-packages")
+
+    # Determine output destinations
+    output_destinations: list[Path] = []
+    if output_file:
+        output_destinations.append(Path(output_file).resolve())
+    else:
+        # Standard store folder inside the repository
+        store_dir = repo_dir / "store"
+        store_dir.mkdir(parents=True, exist_ok=True)
+        output_destinations.append(store_dir / "index.json")
+
+        # Also write inside packages_path as a fallback
+        output_destinations.append(packages_path / "index.json")
+
+        # If official Hecos-Packages and Hecos-Website repo exists nearby, update it too
+        website_store_dir = (repo_dir.parent / "Hecos-Website" / "store").resolve()
+        if is_official_hecos and website_store_dir.exists():
+            output_destinations.append(website_store_dir / "index.json")
+
+    print(f"{Fore.WHITE}Repository Root : {repo_dir}{Style.RESET_ALL}")
+    print(f"{Fore.WHITE}Packages Dir    : {packages_path}{Style.RESET_ALL}")
+    print(f"{Fore.WHITE}GitHub Repo     : {github_repo} ({branch}){Style.RESET_ALL}")
+    print(f"{Fore.WHITE}Output Catalog  : {output_destinations[0]}{Style.RESET_ALL}")
+
+    catalog_url = (
+        "https://hecos-project.github.io/store/index.json"
+        if is_official_hecos
+        else f"https://raw.githubusercontent.com/{github_repo}/{branch}/store/index.json"
+    )
 
     catalog_map = {}
     catalog = {
         "version": "1",
-        "catalog_url": "https://hecos-project.github.io/store/index.json",
+        "catalog_url": catalog_url,
         "generated_at": datetime.datetime.utcnow().isoformat()[:19] + "Z",
         "packages": []
     }
     
-    hpkg_files = list(packages_dir.rglob("*.hpkg"))
+    hpkg_files = list(packages_path.rglob("*.hpkg"))
     if not hpkg_files:
-        print(f"{Fore.YELLOW}No .hpkg files found in {packages_dir}{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}No .hpkg files found in {packages_path}{Style.RESET_ALL}")
         return
 
     for filepath in hpkg_files:
         filename = filepath.name
         print(f"{Fore.LIGHTBLACK_EX}Analyzing {filename}...{Style.RESET_ALL}")
         
-        # Hash e Size
+        # Hash and Size
         size = filepath.stat().st_size
         sha256 = hashlib.sha256()
         with open(filepath, "rb") as f:
@@ -59,7 +161,7 @@ def generate_store_catalog():
                 sha256.update(chunk)
         file_hash = sha256.hexdigest()
         
-        # Leggi Manifest dal file zip
+        # Read Manifest from zip
         manifest_data = None
         try:
             with zipfile.ZipFile(filepath, "r") as zf:
@@ -78,30 +180,31 @@ def generate_store_catalog():
             
         pkg_id = manifest_data.get("id") or filename.split("-")[0]
 
-        # ── Preview image logic ───────────────────────────────────────────────
-        # Priority:
-        #   1. Explicit 'screenshots' list in the manifest TOML
-        #   2. Auto-discovered preview_1, preview_2, … (png, jpg, jpeg, gif, webp) inside the package
-        #   3. Legacy single preview.png fallback
-        #   4. Default Hecos placeholder image
+        # Preview image logic
         PREVIEW_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp")
-        # Determine the category from the package manifest
         manifest_category = manifest_data.get("category")
         if not manifest_category and manifest_data.get("type"):
             manifest_category = manifest_data.get("type") + "s"
         pkg_category = manifest_category or filepath.parent.name
-        BASE_RAW = f"https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/{pkg_category}/{pkg_id}_src"
+        
+        BASE_RAW = f"https://raw.githubusercontent.com/{github_repo}/{branch}/sources/{pkg_category}/{pkg_id}_src"
 
-        screenshots = manifest_data.get("screenshots", [])
-        if not screenshots:
+        raw_screenshots = manifest_data.get("screenshots", [])
+        screenshots = []
+        if raw_screenshots:
+            for s in raw_screenshots:
+                # Rewrite legacy Hecos-Packages screenshot URLs if targeting a different repo
+                if not is_official_hecos and "Hecos-Project/Hecos-Packages" in s:
+                    s = s.replace("Hecos-Project/Hecos-Packages", github_repo)
+                screenshots.append(s)
+        else:
             try:
                 with zipfile.ZipFile(filepath, "r") as zf:
                     names_lower = {n.lower(): n for n in zf.namelist()}
 
-                    # Collect all preview_N.* files sorted numerically
                     numbered = {}
                     for lower, orig in names_lower.items():
-                        basename = lower.split("/")[-1]  # strip any path prefix
+                        basename = lower.split("/")[-1]
                         if basename.startswith("preview_"):
                             stem, _, ext = basename.partition(".")
                             ext = "." + ext
@@ -113,21 +216,18 @@ def generate_store_catalog():
                                     pass
 
                     if numbered:
-                        # Build URLs for numbered previews, sorted by index
                         screenshots = [
                             f"{BASE_RAW}/{fname}"
                             for _, fname in sorted(numbered.items())
                         ]
                     elif "preview.png" in names_lower:
-                        # Legacy single preview.png
                         screenshots = [f"{BASE_RAW}/preview.png"]
                     else:
-                        # Final fallback
-                        screenshots = ["https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png"]
+                        screenshots = [f"https://raw.githubusercontent.com/{github_repo}/{branch}/Hecos_module_Image_preview.png"]
             except Exception:
-                screenshots = ["https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png"]
+                screenshots = [f"https://raw.githubusercontent.com/{github_repo}/{branch}/Hecos_module_Image_preview.png"]
 
-        # ── Capabilities block ────────────────────────────────────────────────
+        # Capabilities block
         cap = manifest_data.get("capabilities", {})
         capabilities = {
             "llm_tools":       cap.get("llm_tools", []),
@@ -139,6 +239,18 @@ def generate_store_catalog():
             "notes":           cap.get("notes", ""),
         }
 
+        # Exact relative path inside packages directory
+        try:
+            rel_hpkg = filepath.relative_to(packages_path).as_posix()
+        except ValueError:
+            rel_hpkg = f"{pkg_category}/{filename}"
+
+        download_url = f"https://raw.githubusercontent.com/{github_repo}/{branch}/packages/{rel_hpkg}"
+        homepage = manifest_data.get(
+            "homepage",
+            f"https://hecos-project.github.io/store/#{pkg_id}" if is_official_hecos else f"https://github.com/{github_repo}#{pkg_id}"
+        )
+
         pkg_entry = {
             "id": pkg_id,
             "name": manifest_data.get("name", "Unknown Package"),
@@ -148,12 +260,12 @@ def generate_store_catalog():
             "author": manifest_data.get("author", "Unknown"),
             "description": manifest_data.get("description", ""),
             "tags": manifest_data.get("tags", []),
-            "download_url": f"https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/packages/{pkg_category}/{filename}",
+            "download_url": download_url,
             "size_bytes": size,
             "sha256": file_hash,
             "screenshots": screenshots,
             "changelog": manifest_data.get("changelog", "Automatic update generated by the Store Catalog Builder."),
-            "homepage": manifest_data.get("homepage", f"https://hecos-project.github.io/store/#{pkg_id}"),
+            "homepage": homepage,
             "fa_icon": manifest_data.get("fa_icon", "fa-box"),
             "featured": manifest_data.get("featured", False),
             "capabilities": capabilities,
@@ -162,7 +274,6 @@ def generate_store_catalog():
         }
         
         existing_pkg = catalog_map.get(pkg_id)
-        
         if existing_pkg:
             def parse_ver(v_str):
                 return [int(x) if x.isdigit() else 0 for x in v_str.replace('-', '.').split('.')]
@@ -181,10 +292,12 @@ def generate_store_catalog():
         
     try:
         catalog["packages"] = list(catalog_map.values())
-        with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(catalog, f, indent=2, ensure_ascii=False)
+        for dest in output_destinations:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            with open(dest, "w", encoding="utf-8") as f:
+                json.dump(catalog, f, indent=2, ensure_ascii=False)
+            print(f"{Fore.GREEN}Catalog saved at: {dest}{Style.RESET_ALL}")
         
-        print(f"{Fore.GREEN}Catalog generated successfully at {output_file}{Style.RESET_ALL}")
-        print(f"{Fore.GREEN}Found {len(catalog['packages'])} valid packages.{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}Done! Total packages in catalog: {len(catalog['packages'])}{Style.RESET_ALL}")
     except Exception as e:
         print(f"{Fore.RED}Error saving the catalog: {e}{Style.RESET_ALL}")

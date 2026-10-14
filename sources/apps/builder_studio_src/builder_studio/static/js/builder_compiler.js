@@ -220,12 +220,46 @@ window.builderGenerateKeys = async function() {
 
 window.builderGenerateCatalog = async function() {
     window.builderLog('Starting Store Catalog Generation...', 'warn');
-    const cliDir = window.builderLoadSetup().cli;
+    const setup = (typeof window.builderLoadSetup === 'function') ? window.builderLoadSetup() : {};
+    const cliDir = setup.cli || 'C:\\Hecos-Packages\\Hecos_HPM_Builder';
+
+    let repoName = 'Default Repository';
+    let packagesDir = (document.getElementById('builder-dest-root') ? document.getElementById('builder-dest-root').value : '') || setup.dest || '';
+    let sourcesDir = (document.getElementById('builder-sources-root') ? document.getElementById('builder-sources-root').value : '') || setup.src || '';
+    let repoRoot = '';
+
+    const sel = document.getElementById('builder-repo-selector');
+    if (sel && window.builderRepos && window.builderRepos.length) {
+        const idx = parseInt(sel.value) || 0;
+        const curRepo = window.builderRepos[idx];
+        if (curRepo) {
+            repoName = curRepo.name || repoName;
+            if (curRepo.dest) packagesDir = curRepo.dest;
+            if (curRepo.src) sourcesDir = curRepo.src;
+        }
+    }
+
+    if (packagesDir) {
+        const parts = packagesDir.replace(/[\\/]+$/, '').split(/[\\/]/);
+        if (parts.length > 1) {
+            parts.pop();
+            repoRoot = parts.join('\\');
+        }
+    }
+
+    window.builderLog(`Generating catalog for [${repoName}] (${packagesDir})...`, 'info');
+
     try {
         const resp = await fetch('/api/hpm/builder/catalog', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ builder_cli_dir: cliDir })
+            body: JSON.stringify({
+                builder_cli_dir: cliDir,
+                repo_name: repoName,
+                packages_dir: packagesDir,
+                sources_dir: sourcesDir,
+                repo_root: repoRoot
+            })
         });
         const data = await resp.json();
         if (data.logs) {
@@ -234,8 +268,8 @@ window.builderGenerateCatalog = async function() {
             });
         }
         if (data.ok) {
-            window.builderLog('Store Catalog successfully generated.', 'success');
-            _builderModal("Catalog Generated Successfully!", false);
+            window.builderLog(`Store Catalog for [${repoName}] successfully generated.`, 'success');
+            _builderModal(`Catalog Generated Successfully for ${repoName}!`, false);
         } else {
             window.builderLog('Catalog Generation Failed: ' + data.error, 'error');
             _builderModal("Catalog Generation Failed: " + data.error, true);
@@ -247,7 +281,9 @@ window.builderGenerateCatalog = async function() {
 
 // ─── Helper: get the currently selected package .hpkg path ───────────────────
 function _getPackagesDir() {
-    return window.builderLoadSetup().dest || 'C:\\Hecos-Packages\\packages';
+    return (document.getElementById('builder-dest-root') ? document.getElementById('builder-dest-root').value : '') ||
+           (typeof window.builderLoadSetup === 'function' ? window.builderLoadSetup().dest : '') ||
+           'C:\\Hecos-Packages\\packages';
 }
 
 window.builderInstallLocal = async function(hpkgPath) {

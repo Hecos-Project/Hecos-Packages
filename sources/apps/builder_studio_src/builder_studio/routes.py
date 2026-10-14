@@ -378,11 +378,27 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
         import subprocess, sys
         data = request.get_json() or {}
         cli_dir = data.get('builder_cli_dir') or r"C:\Hecos-Packages\Hecos_HPM_Builder"
+        repo_dir = (data.get('repo_root') or data.get('repo_dir') or '').replace('\\', '/')
+        packages_dir = (data.get('packages_dir') or data.get('repo_dest') or '').replace('\\', '/')
+        sources_dir = (data.get('sources_dir') or data.get('repo_src') or '').replace('\\', '/')
+        github_repo = data.get('github_repo', '')
+
+        args = []
+        if repo_dir:
+            args.append(f'repo_dir=r"{repo_dir}"')
+        if packages_dir:
+            args.append(f'packages_dir=r"{packages_dir}"')
+        if sources_dir:
+            args.append(f'sources_dir=r"{sources_dir}"')
+        if github_repo:
+            args.append(f'github_repo=r"{github_repo}"')
+        args_str = ", ".join(args)
+
         code = (
             f'import sys\n'
             f'sys.path.insert(0, r"{cli_dir}")\n'
             f'from modules.store_generator import generate_store_catalog\n'
-            f'generate_store_catalog()\n'
+            f'generate_store_catalog({args_str})\n'
         )
         try:
             res = subprocess.run([sys.executable, "-c", code], cwd=cli_dir, check=True, capture_output=True, text=True)

@@ -119,7 +119,7 @@ def main_menu():
         elif choice == '9':
             print_header("Build Store Catalog")
             from modules.store_generator import generate_store_catalog
-            generate_store_catalog()
+            generate_store_catalog(interactive=True)
             input(f"\n{Fore.LIGHTBLACK_EX}Press Enter to return to the menu...{Style.RESET_ALL}")
         elif choice.upper() == 'D':
             print_header("Dev Sync (Sincronizza modifiche live)")
