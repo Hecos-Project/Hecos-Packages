@@ -1,38 +1,31 @@
-id = "flows"
-manifest_version = "1"
-name = "Flows"
-version = "1.5.1"
-hecos_min_version = "0.42.0"
-type = "system_app"
 author = "Antonio Meloni"
 description = "Visual automation engine for Hecos. Build, schedule and run multi-step flows from a node-based canvas."
-plugin_dir = "."
-lazy_load = false
-is_class_based = false
-on_load = true
-tag = "FLOWS"
+hecos_min_version = "0.42.0"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+id = "flows"
+is_class_based = false
+lazy_load = false
+manifest_version = "1"
+name = "Flows"
+on_load = true
+plugin_dir = "."
 readme = "README.md"
+tag = "FLOWS"
+type = "system_app"
+version = "1.5.1"
+license = "GPL-3.0"
+date = ""
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/apps/flows_src/preview_1.png",
+]
+creation_date = "2026-10-15T05:07:20Z"
+build_date = "2026-10-15T05:07:20Z"
 
 [backup]
-enabled = true
 backup_endpoint = "/api/flows/backup"
-restore_endpoint = "/api/flows/restore"
+enabled = true
 icon = "fas fa-project-diagram"
-
-[ui]
-pill_label = "Flows"
-pill_icon = "fas fa-project-diagram"
-pill_route = "/flows"
-pill_order = 40
-
-[config_panel]
-tab_id = "flows"
-tab_label = "Flows"
-tab_icon = "fas fa-project-diagram"
-template_file = "web_ui/templates/modules/config_flows.html"
-api_routes_file = "api.py"
-category = "SISTEMA"
+restore_endpoint = "/api/flows/restore"
 
 [capabilities]
 llm_tools = [
@@ -48,12 +41,20 @@ has_system_calls = false
 syscall_notes = ""
 notes = "Full visual automation system. Includes NLP-to-YAML compiler, scheduler, SSE live log streaming."
 
+[config_panel]
+api_routes_file = "api.py"
+category = "SISTEMA"
+tab_icon = "fas fa-project-diagram"
+tab_id = "flows"
+tab_label = "Flows"
+template_file = "web_ui/templates/modules/config_flows.html"
+
 [[tool_schema]]
 type = "function"
 
 [tool_schema.function]
-name = "FLOWS__list_flows"
 description = "Returns a list of all defined flows. Use when the user asks 'what flows do I have?', 'show my automations', 'lista flussi'."
+name = "FLOWS__list_flows"
 
 [tool_schema.function.parameters]
 type = "object"
@@ -64,30 +65,36 @@ type = "object"
 type = "function"
 
 [tool_schema.function]
-name = "FLOWS__run_flow"
 description = "Starts execution of a flow by its ID or name. Use when the user says 'run flow X', 'esegui il flusso X', 'avvia X'."
+name = "FLOWS__run_flow"
 
 [tool_schema.function.parameters]
 type = "object"
 
 [tool_schema.function.parameters.properties.flow_id]
-type = "string"
 description = "The ID or name of the flow to execute."
+type = "string"
 
 [[tool_schema]]
 type = "function"
 
 [tool_schema.function]
-name = "FLOWS__create_flow"
 description = "Creates a new flow from a natural language description. Use when the user says 'create a flow that...', 'crea un flusso che...'."
+name = "FLOWS__create_flow"
 
 [tool_schema.function.parameters]
 type = "object"
 
 [tool_schema.function.parameters.properties.description]
-type = "string"
 description = "Natural language description of what the flow should do."
+type = "string"
 
 [tool_schema.function.parameters.properties.flow_name]
-type = "string"
 description = "Optional name for the new flow."
+type = "string"
+
+[ui]
+pill_icon = "fas fa-project-diagram"
+pill_label = "Flows"
+pill_order = 40
+pill_route = "/flows"
