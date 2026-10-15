@@ -1,23 +1,16 @@
-id = "image_gen"
-manifest_version = "1"
-name = "Image Generation"
-version = "2.2.3"
 author = "Antonio Meloni"
-license = "GPL-3.0"
+category = "PLUGINS"
+dependencies = []
 description = "AI Image Generation - Generates images from text prompts with priority support for local backends (SwarmUI/ComfyUI on port 7801). Additionally supports cloud AI providers including Pollinations, Gemini, OpenAI DALL-E, Stability AI, and HuggingFace. Fully autonomous package with its own TOML configuration."
 icon = "ðŸŽ¨"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/.github/main/profile/Urania_9800_Logo.png"
-screenshots = []
-category = "PLUGINS"
-plugin_tag = "IMAGE_GEN"
+id = "image_gen"
 is_class_based = true
-type = "plugin"
-pip_isolation = "shared"
-plugin_dir = "."
 lazy_load = true
-readme = "README.md"
-readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/image_gen_src/README.md"
-dependencies = []
+license = "GPL-3.0"
+manifest_version = "1"
+name = "Image Generation"
+pip_isolation = "shared"
 pip_requirements = [
     "requests==2.34.2",
     "httpx==0.28.1",
@@ -26,94 +19,20 @@ pip_requirements = [
     "huggingface_hub>=0.23.0",
     "Pillow>=10.0.0",
 ]
+plugin_dir = "."
+plugin_tag = "IMAGE_GEN"
 python_requires = ">=3.11"
+readme = "README.md"
+readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/image_gen_src/README.md"
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/plugins/image_gen_src/preview_1.png",
+]
 signature = "XDLN9iKTcFjUrFIHew/gYd9eUtn/J4/tdhZejQU/d3MU1O7lGPozeI1a1/Jn6DZ3izdHwDsdStg4IsIomBCmDQ=="
-
-[routing]
-instructions = "[IMAGE_GEN: generate_image:description] - Generate an image from a textual prompt. Only use this if the user explicitly asks to create, draw, or generate an image. IMPORTANT: Do NOT pass provider or model overrides â€” always leave provider and model parameters empty so the user's configured defaults are used automatically."
-
-[[slash_commands]]
-id = "img"
-manifest_version = "1"
-aliases = [
-    "/img",
-    "/image",
-    "/photo",
-    "/foto",
-]
-description = "Generates an AI image from a text description"
-usage = "/img <descrizione>"
-example = "/img foto fotorealistica di un gatto su Marte"
-icon = "ðŸ–¼ï¸"
-method = "generate_image"
-requires_args = true
-
-[[tool_schema]]
-name = "IMAGE_GEN__generate_image"
-description = "Generates an image from a text description. Uses the configured provider."
-
-[tool_schema.parameters]
-type = "object"
-required = [
-    "prompt",
-]
-
-[tool_schema.parameters.properties.prompt]
-type = "string"
-description = "Detailed description of the image or photo to generate. Translate to English if needed."
-
-[tool_schema.parameters.properties.provider]
-type = "string"
-description = "Optional: override the configured provider for this call only. Values: 'swarmui' (local SwarmUI backend), 'huggingface', 'pollinations', 'gemini', 'openai', 'stability', 'airforce', 'horde'. Leave empty to use the provider configured by the user."
-
-[tool_schema.parameters.properties.model]
-type = "string"
-description = "Optional: override the model for this call only. For HuggingFace use full repo IDs like 'black-forest-labs/FLUX.1-schnell'."
-
-[tool_schema.parameters.properties.hf_server]
-type = "string"
-description = "Optional: HuggingFace target server. Values: 'hf-inference', 'fal-ai', 'together', 'replicate', 'nebius', 'black-forest-labs'. Only used when provider is 'huggingface'."
-
-[[tool_schema]]
-name = "IMAGE_GEN__probe_providers"
-description = "Tests all image generation providers and HuggingFace servers to see which ones are working. Returns a diagnostic report. Use when the user asks to check, test or diagnose providers, or when image generation keeps failing."
-
-[tool_schema.parameters]
-type = "object"
-required = []
-
-[tool_schema.parameters.properties.api_key]
-type = "string"
-description = "Optional HuggingFace API key to use for the probe. Leave empty to use the one from configuration."
-
-[[tool_schema]]
-name = "IMAGE_GEN__check_local_status"
-description = "Checks the status of the local image generation backend (SwarmUI). Returns a diagnostic report including connectivity, version, available models, and supported samplers/schedulers. Use when the user asks about local generation status, wants to list local models, or troubleshoot local issues."
-
-[tool_schema.parameters]
-type = "object"
-required = []
-
-[config_panel]
-tab_id = "igen"
-tab_label = "Image Gen"
-category = "MULTIMEDIA"
-tab_icon = "<i class=\"fas fa-image\"></i>"
-template_file = "web/templates/config_panel.html"
-js_files = [
-    "web/static/js/igen_core.js",
-    "web/static/js/igen_providers.js",
-    "web/static/js/igen_config.js",
-    "web/static/js/igen_presets.js",
-    "web/static/js/igen_hf.js",
-    "web/static/js/igen_probe.js",
-    "web/static/js/igen_horde.js",
-    "web/static/js/igen_loras.js",
-]
-css_file = "web/static/css/image_gen.css"
-api_routes_file = "web/routes.py"
-config_api_get = "/hecos/api/plugins/image_gen/config"
-config_api_post = "/hecos/api/plugins/image_gen/config"
+type = "plugin"
+version = "2.2.3"
+date = ""
+creation_date = "2026-10-15T04:58:25Z"
+build_date = "2026-10-15T04:58:25Z"
 
 [capabilities]
 llm_tools = [
@@ -134,30 +53,50 @@ has_system_calls = false
 syscall_notes = ""
 notes = "Supports multiple AI providers: Pollinations (free, default), Gemini, OpenAI DALL-E, Stability AI, HuggingFace, and Local Generation via SwarmUI (ComfyUI backend). Local generation connects to http://localhost:7801 and supports auto-discovery of models."
 
+[config_panel]
+api_routes_file = "web/routes.py"
+category = "MULTIMEDIA"
+config_api_get = "/hecos/api/plugins/image_gen/config"
+config_api_post = "/hecos/api/plugins/image_gen/config"
+css_file = "web/static/css/image_gen.css"
+js_files = [
+    "web/static/js/igen_core.js",
+    "web/static/js/igen_providers.js",
+    "web/static/js/igen_config.js",
+    "web/static/js/igen_presets.js",
+    "web/static/js/igen_hf.js",
+    "web/static/js/igen_probe.js",
+    "web/static/js/igen_horde.js",
+    "web/static/js/igen_loras.js",
+]
+tab_icon = "<i class=\"fas fa-image\"></i>"
+tab_id = "igen"
+tab_label = "Image Gen"
+template_file = "web/templates/config_panel.html"
+
 [file_hashes]
-"main.py" = "f7b5bec89f3e1e62eea6395cb98aee6e95dcaea33fa1e904e554acab024b5667"
-"manifest.json" = "c98d24ea04e3c0034135cc26dc439f8c4ef6ac94abfb5ac40a143a55b9f7be9f"
-"preview.png" = "f6a55570c8c0298b9b655cd248e95e49f018fcc6b193a8ff179e88fa02a844fd"
 "README.md" = "48c6d0c6cf2744787e5518ad0284aab913f03b82f32a009322cca87d7f10274c"
-"routing_override.yaml" = "fdfedfe48ddb55bacd074d2fcb5de1eddb7d5c21df3a97406609c3c76912e67e"
+"igen_config/__init__.py" = "e3300b082c5f4b2cce28d981fd8f91d40d225213e908eaca6e4275b2b256cb1a"
 "igen_config/config_manager.py" = "127b055e832c800f6c36253aa1fdb99348c7b2d6b815d4bd9033c6cbbdbe9d33"
 "igen_config/image_gen.toml" = "95aceaca593d5466ac2d7272d9dfdb8e23bd870f7d360e8e23b25f8326bc4f55"
-"igen_config/__init__.py" = "e3300b082c5f4b2cce28d981fd8f91d40d225213e908eaca6e4275b2b256cb1a"
 "locales/en.json" = "3f22394d227326362195e30d5dc19cea86c72cfd214b5580b3b8f010dd221d46"
 "locales/es.json" = "affc8c16b74fc10f29c07e64151123f1ab18af07434932ce2fd5e26d4541ac31"
 "locales/it.json" = "228f46a9b882de0a05409c5bada7640afb96eb2fd74bc5552aa1d05241857ee8"
+"main.py" = "f7b5bec89f3e1e62eea6395cb98aee6e95dcaea33fa1e904e554acab024b5667"
+"manifest.json" = "c98d24ea04e3c0034135cc26dc439f8c4ef6ac94abfb5ac40a143a55b9f7be9f"
+"plugin/__init__.py" = "e3300b082c5f4b2cce28d981fd8f91d40d225213e908eaca6e4275b2b256cb1a"
 "plugin/dimensions.py" = "ac68f98fddf2fbe9e35f3ada5b552f574ec5201e83420e2b0f427afc9f63b8f7"
 "plugin/generator.py" = "e565f67c2f61cb846647ee075640843bc772e7c23df7c79820a9ac08fb778d02"
-"plugin/main.py" = "9b55c0d05f46354ec1b6a3fe8acddab4e83ca3aed2780ec0bb239758089a382d"
-"plugin/presets.py" = "ac0d5dd7b6c2086b5dbccd9ea6925459a19c8b9e7a96331110485115eb0e8cae"
-"plugin/prompt_engine.py" = "1d5acda66304754eee74989ab0ff7a3f03e9759cc38ed67820d80f6d126615dc"
-"plugin/__init__.py" = "e3300b082c5f4b2cce28d981fd8f91d40d225213e908eaca6e4275b2b256cb1a"
+"plugin/local/__init__.py" = "dda28f8671175df55946de224d3cbdb3e2f411365b7feb5551f6bb38b6982ffb"
 "plugin/local/client.py" = "9f48a7918399627e9f2f1e59853550064e75ac22e5c8521a1112abb917ad572e"
 "plugin/local/health.py" = "fe7cf773917d1e7c023c24447c3cc0396c40430892385e801074681b2aed1979"
 "plugin/local/models.py" = "97fbd0e0012d92a12e448d3e099e794c831c6a6f08d3fe95c8531449998dd67f"
 "plugin/local/params.py" = "f5119a6bc0b9db10b5bbbda7418fe4c877fbdf627b31c8005a5723abd5bb6600"
 "plugin/local/presets.py" = "040d3e22e9f7f251e2e41c4066e2ab8d3ae9bf67514877e22aed48ca7c402782"
-"plugin/local/__init__.py" = "dda28f8671175df55946de224d3cbdb3e2f411365b7feb5551f6bb38b6982ffb"
+"plugin/main.py" = "9b55c0d05f46354ec1b6a3fe8acddab4e83ca3aed2780ec0bb239758089a382d"
+"plugin/presets.py" = "ac0d5dd7b6c2086b5dbccd9ea6925459a19c8b9e7a96331110485115eb0e8cae"
+"plugin/prompt_engine.py" = "1d5acda66304754eee74989ab0ff7a3f03e9759cc38ed67820d80f6d126615dc"
+"plugin/providers/__init__.py" = "6e74f4a46cc14cade8b2556df1421cac73d6b2181fd1ae381127e953b2c5f6e8"
 "plugin/providers/airforce.py" = "3031344a256e0e46d985c1ebab0c9499f9f4cec1573de7b71e94283c2b928627"
 "plugin/providers/gemini.py" = "f66b33118b93f141c7fc3eed836860b8dbae59de1b1a229cce38cfe58b015b3f"
 "plugin/providers/horde.py" = "97adeff8e95823d52874cd54c4e02f3b928a7f031b5672b2cbf02fb4240bda43"
@@ -168,7 +107,8 @@ notes = "Supports multiple AI providers: Pollinations (free, default), Gemini, O
 "plugin/providers/stability.py" = "bb20bb1e0fc5db4d40b5b3853f0402418713225c2a099ad4aebb5acc8007956b"
 "plugin/providers/swarmui.py" = "4e43b17b15eca115c9bc598acb972699bade4645243ec46a5948a79a0327b264"
 "plugin/providers/utils.py" = "4c33f52b6ea7a18a7fb81b5f7a27c720cf89b05339a6368d4f10e6c2f975d434"
-"plugin/providers/__init__.py" = "6e74f4a46cc14cade8b2556df1421cac73d6b2181fd1ae381127e953b2c5f6e8"
+"preview.png" = "f6a55570c8c0298b9b655cd248e95e49f018fcc6b193a8ff179e88fa02a844fd"
+"routing_override.yaml" = "fdfedfe48ddb55bacd074d2fcb5de1eddb7d5c21df3a97406609c3c76912e67e"
 "web/routes.py" = "20afa14929d0e12dc421a3c7073017a5ba5b24f41aca65547820927092ea3d43"
 "web/static/css/image_gen.css" = "8eaf111186007487314c18b299639d1884543db95790291731ecf732187ef806"
 "web/static/js/igen_config.js" = "716abe5019c831797ce197c8ad4d75e980f5d482ddc3ea6bed285ce301b82ded"
@@ -180,3 +120,68 @@ notes = "Supports multiple AI providers: Pollinations (free, default), Gemini, O
 "web/static/js/igen_probe.js" = "61a96af05f86a8baf6e9dd5b6c7430b8aa8060e6e6d3a958ae73e7b8a290f3b4"
 "web/static/js/igen_providers.js" = "e029d1bad3dd674fc9f9e5e14a8b68215d4a013ff9e65315da3fd4af03e11bbe"
 "web/templates/config_panel.html" = "68e4c9f5c2d1ed12f724b5c3194f08422ff98fd82f1dc0fa942393c10f88d7ad"
+
+[routing]
+instructions = "[IMAGE_GEN: generate_image:description] - Generate an image from a textual prompt. Only use this if the user explicitly asks to create, draw, or generate an image. IMPORTANT: Do NOT pass provider or model overrides â€” always leave provider and model parameters empty so the user's configured defaults are used automatically."
+
+[[slash_commands]]
+aliases = [
+    "/img",
+    "/image",
+    "/photo",
+    "/foto",
+]
+description = "Generates an AI image from a text description"
+example = "/img foto fotorealistica di un gatto su Marte"
+icon = "ðŸ–¼ï¸"
+id = "img"
+manifest_version = "1"
+method = "generate_image"
+requires_args = true
+usage = "/img <descrizione>"
+
+[[tool_schema]]
+description = "Generates an image from a text description. Uses the configured provider."
+name = "IMAGE_GEN__generate_image"
+
+[tool_schema.parameters]
+required = [
+    "prompt",
+]
+type = "object"
+
+[tool_schema.parameters.properties.hf_server]
+description = "Optional: HuggingFace target server. Values: 'hf-inference', 'fal-ai', 'together', 'replicate', 'nebius', 'black-forest-labs'. Only used when provider is 'huggingface'."
+type = "string"
+
+[tool_schema.parameters.properties.model]
+description = "Optional: override the model for this call only. For HuggingFace use full repo IDs like 'black-forest-labs/FLUX.1-schnell'."
+type = "string"
+
+[tool_schema.parameters.properties.prompt]
+description = "Detailed description of the image or photo to generate. Translate to English if needed."
+type = "string"
+
+[tool_schema.parameters.properties.provider]
+description = "Optional: override the configured provider for this call only. Values: 'swarmui' (local SwarmUI backend), 'huggingface', 'pollinations', 'gemini', 'openai', 'stability', 'airforce', 'horde'. Leave empty to use the provider configured by the user."
+type = "string"
+
+[[tool_schema]]
+description = "Tests all image generation providers and HuggingFace servers to see which ones are working. Returns a diagnostic report. Use when the user asks to check, test or diagnose providers, or when image generation keeps failing."
+name = "IMAGE_GEN__probe_providers"
+
+[tool_schema.parameters]
+required = []
+type = "object"
+
+[tool_schema.parameters.properties.api_key]
+description = "Optional HuggingFace API key to use for the probe. Leave empty to use the one from configuration."
+type = "string"
+
+[[tool_schema]]
+description = "Checks the status of the local image generation backend (SwarmUI). Returns a diagnostic report including connectivity, version, available models, and supported samplers/schedulers. Use when the user asks about local generation status, wants to list local models, or troubleshoot local issues."
+name = "IMAGE_GEN__check_local_status"
+
+[tool_schema.parameters]
+required = []
+type = "object"
