@@ -1,0 +1,144 @@
+id = "document_reader"
+manifest_version = "1"
+name = "Document Reader"
+version = "1.0.0"
+author = "Hecos Team / Antonio Meloni"
+license = "GPL-3.0"
+description = "Universal document reader with TTS. Fullscreen reading mode, visual PDF canvas rendering, text selection reading, word-by-word highlighting, audiobook-style controls."
+type = "plugin"
+pip_isolation = "shared"
+target_dir = "hpm"
+plugin_dir = "."
+hecos_min_version = "0.34.0"
+icon = "📖"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+readme = "README.md"
+category = "DOCUMENTS"
+plugin_tag = "DOCUMENT_READER"
+tag = "DOCUMENT_READER"
+lazy_load = true
+is_class_based = true
+api_routes_file = "web/routes.py"
+
+[config_panel]
+tab_id = "document_reader"
+tab_label = "Document Reader"
+tab_icon = "<i class=\"fas fa-book-reader\"></i>"
+template_file = "web/templates/config_document_reader.html"
+js_files = [
+    "web/static/js/document_reader.js",
+    "web/static/js/document_reader_panel.js"
+]
+css_file = "web/static/css/document_reader.css"
+category = "MULTIMEDIA"
+api_routes_file = "web/routes.py"
+config_api_get = "/hecos/api/plugins/document_reader/config"
+config_api_post = "/hecos/api/plugins/document_reader/config"
+
+[commands]
+read_document = "Open a document in the fullscreen reader with TTS capabilities. Accepts filename, partial name, or full path."
+stop_reading = "Stop the current TTS reading session."
+list_documents = "List all documents (PDF, TXT, MD, HTML, DOCX) available in the documents library."
+
+[[slash_commands]]
+id = "read"
+aliases = [
+    "/read",
+    "/leggi",
+    "/reader",
+    "/docreader",
+    "/leggi_documento"
+]
+description = "Apre e legge un documento con voce sintetizzata nel Document Reader"
+usage = "/read [percorso o nome file]"
+example = "/read fotoromanzo"
+icon = "📖"
+category = "DOCUMENTS"
+method = "read_document"
+requires_args = false
+
+[[slash_commands]]
+id = "stop_reading"
+aliases = [
+    "/stop_reading",
+    "/ferma_lettura",
+    "/stop_doc",
+    "/stop_reader"
+]
+description = "Interrompe la lettura vocale attiva nel Document Reader"
+usage = "/stop_reading"
+example = "/stop_reading"
+icon = "⏹️"
+category = "DOCUMENTS"
+method = "stop_reading"
+requires_args = false
+
+[[slash_commands]]
+id = "read_list"
+aliases = [
+    "/read_list",
+    "/doc_list",
+    "/lista_lettura"
+]
+description = "Elenca i documenti disponibili da leggere con il Document Reader"
+usage = "/read_list"
+example = "/read_list"
+icon = "📑"
+category = "DOCUMENTS"
+method = "list_documents"
+requires_args = false
+
+[[tool_schema]]
+name = "DOCUMENT_READER__read_document"
+description = "Open a PDF or text document in the fullscreen reader with text-to-speech capabilities. Resolves filenames and partial keywords (e.g. 'fotoromanzo', 'fotoromanzo numero 1') automatically from the documents folder."
+
+[tool_schema.parameters]
+type = "object"
+required = []
+
+[tool_schema.parameters.properties.path]
+type = "string"
+description = "File path, filename, or document search query (e.g. 'fotoromanzo', 'fotoromanzo numero 1'). If omitted, lists available documents."
+
+[[tool_schema]]
+name = "DOCUMENT_READER__stop_reading"
+description = "Stop the current text-to-speech reading session."
+
+[tool_schema.parameters]
+type = "object"
+required = []
+
+[[tool_schema]]
+name = "DOCUMENT_READER__list_documents"
+description = "List all readable documents (PDF, TXT, MD, HTML, DOCX) available in the documents library."
+
+[tool_schema.parameters]
+type = "object"
+required = []
+
+[tool_schema.parameters.properties.folder]
+type = "string"
+description = "Optional folder path to inspect. Defaults to standard documents library."
+
+[capabilities]
+llm_tools = [
+    "read_document",
+    "stop_reading",
+    "list_documents"
+]
+slash_commands = [
+    "/read",
+    "/leggi",
+    "/reader",
+    "/docreader",
+    "/stop_reading",
+    "/ferma_lettura",
+    "/read_list",
+    "/doc_list"
+]
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = true
+syscall_notes = "Autonomous document reader with TTS: provides read_document, stop_reading, and list_documents with smart path and partial name resolution."
+notes = "Visual PDF canvas rendering with illustrations, Dual TTS (Local Hecos Piper/ElevenLabs and Browser Web Speech), full keyboard shortcuts, and ESC voice-stop priority."

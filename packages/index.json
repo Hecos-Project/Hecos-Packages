@@ -1652,6 +1652,50 @@
       },
       "dependencies": [],
       "pip_requirements": []
+    },
+    {
+      "id": "document_reader",
+      "name": "Document Reader",
+      "type": "plugin",
+      "level": 5,
+      "version": "1.0.0",
+      "author": "Hecos Team / Antonio Meloni",
+      "description": "Universal document reader with TTS. Fullscreen reading mode, text selection reading, word-by-word highlighting, audiobook-style controls.",
+      "tags": [
+        "reader",
+        "audiobook",
+        "tts",
+        "pdf"
+      ],
+      "download_url": "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/packages/plugins/document_reader-1.0.0.hpkg",
+      "size_bytes": 72015,
+      "sha256": "ec5a0a4aaaebb4b040808d27063a891e701e8fcbedfa3535c76b63c866938f3e",
+      "screenshots": [
+        "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png"
+      ],
+      "changelog": "Initial release of Hecos Document Reader.",
+      "homepage": "https://hecos-project.github.io/store/#document_reader",
+      "fa_icon": "fa-book-reader",
+      "featured": true,
+      "category": "MULTIMEDIA",
+      "capabilities": {
+        "llm_tools": [
+          "read_document",
+          "stop_reading"
+        ],
+        "slash_commands": [
+          "/read",
+          "/leggi",
+          "/reader"
+        ],
+        "has_widget": false,
+        "has_config_panel": true,
+        "has_api_routes": true,
+        "has_system_calls": false,
+        "notes": "Uses Web Speech API for TTS and PDF.js for text extraction — entirely client-side."
+      },
+      "dependencies": [],
+      "pip_requirements": []
     }
   ]
 }

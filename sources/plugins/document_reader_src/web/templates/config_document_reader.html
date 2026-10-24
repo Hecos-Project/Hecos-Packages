@@ -1,0 +1,252 @@
+<!-- Hecos Document Reader Config Panel -->
+<div id="tab-document_reader" class="panel">
+
+  <!-- Header Card -->
+  <div class="card" style="margin-bottom:14px; padding:14px 18px; background:linear-gradient(135deg, rgba(167, 139, 250, 0.12), var(--bg2)); border-left:4px solid #8b5cf6;">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg, #8b5cf6, #6366f1); display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 12px rgba(139, 92, 246, 0.35);">
+          <i class="fas fa-book-reader" style="color:#fff; font-size:18px;"></i>
+        </div>
+        <div>
+          <div style="font-weight:700; color:var(--text); font-size:1.05em; display:flex; align-items:center; gap:8px;">
+            Document Reader &amp; Audiobook
+            <span style="font-size:0.65em; background:rgba(139, 92, 246, 0.2); color:#c4b5fd; padding:2px 7px; border-radius:10px; font-weight:600;">v1.0.0</span>
+          </div>
+          <div style="font-size:0.75em; color:var(--muted); margin-top:2px;">
+            Universal document reader with Web Speech TTS, word highlighting, and audiobook playback.
+          </div>
+        </div>
+      </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Direct Document Reader Library & Launcher Card -->
+  <div class="card" style="margin-bottom:14px; background:linear-gradient(135deg, rgba(139, 92, 246, 0.08), var(--bg2)); border:1px solid rgba(139, 92, 246, 0.25);">
+    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <i class="fas fa-book-open" style="color:#8b5cf6;"></i>
+        <span>Library &amp; Direct Reading</span>
+      </div>
+      <span style="font-size:0.75em; color:var(--muted); font-weight:500;">Standalone Quick Access</span>
+    </div>
+    <p style="color:var(--muted); font-size:12px; margin-bottom:14px; line-height:1.5;">
+      Open, view, and listen to any document on your computer or in the Hecos documents folder directly in Document Reader, without chatting or querying the AI.
+    </p>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+      <button type="button" class="btn btn-primary" onclick="if(window.docReaderOpenFilePicker) window.docReaderOpenFilePicker();" style="display:flex; align-items:center; gap:8px; padding:10px 18px; font-weight:600; background:linear-gradient(135deg, #8b5cf6, #6366f1); border:none; box-shadow:0 4px 12px rgba(139,92,246,0.3); border-radius:8px; cursor:pointer; color:#fff;">
+        <i class="fas fa-folder-open"></i> Browse &amp; Read Document...
+      </button>
+    </div>
+  </div>
+
+  <!-- Voice & Audio Settings Card -->
+  <div class="card" style="margin-bottom:14px;">
+    <div class="card-title" style="display:flex; align-items:center; gap:8px;">
+      <i class="fas fa-volume-up" style="color:#8b5cf6;"></i>
+      <span>Voice &amp; Audio TTS Settings</span>
+    </div>
+    <p style="color:var(--muted); font-size:12px; margin-bottom:14px; line-height:1.5;">
+      Customize speech synthesis voice for documents (PDF, TXT, MD, HTML), reading speed, pitch, and volume.
+    </p>
+
+    <!-- Voice Engine Mode -->
+    <div class="field" style="margin-bottom:14px;">
+      <label for="docreader-opt-voice-source" style="font-weight:600; font-size:0.85em; margin-bottom:6px; display:block;">
+        Voice Engine Mode
+      </label>
+      <select id="docreader-opt-voice-source" class="config-input" style="width:100%; appearance:auto; background:var(--bg3);" onchange="docreaderOnVoiceSourceChange()">
+        <option value="hecos" id="docreader-opt-voice-hecos-label" selected>✨ Hecos Local Neural TTS (Current Voice: Urania 9800 GP)</option>
+        <option value="browser">🌐 Browser Web Speech API (Client-side synthesis)</option>
+      </select>
+      <p style="color:var(--muted); font-size:11px; margin-top:4px;">
+        Choose whether to use Hecos's high-quality local neural voices or the lightweight browser voices.
+      </p>
+    </div>
+
+    <!-- Hecos Preset Selection (visible when Hecos engine is selected) -->
+    <div class="field" id="docreader-hecos-preset-field" style="margin-bottom:14px;">
+      <label for="docreader-opt-hecos-preset" style="font-weight:600; font-size:0.85em; margin-bottom:6px; display:block;">
+        Hecos Voice Preset
+      </label>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <select id="docreader-opt-hecos-preset" class="config-input" style="flex:1; appearance:auto; background:var(--bg3);" onchange="docreaderOnPresetChange()">
+          <option value="current">✨ Use Current Hecos Voice (Local) [Active Chat Preset]</option>
+          <option value="8bit_mamma_gp">8bit Mamma GP (XTTS2)</option>
+          <option value="atlas_1_gp">Atlas 1 GP (XTTS2 · Damien Black)</option>
+          <option value="dududu_1_nanade">Dududu 1 nanade (XTTS2 · Claribel Dervla)</option>
+          <option value="experimental_1">Experimental 1 (XTTS2 · Claribel Dervla)</option>
+          <option value="global_1">Global 1 (XTTS2 · Claribel Dervla)</option>
+          <option value="hecos_default">Hecos Default (XTTS2 · Dionisio Schuyler)</option>
+          <option value="hecos_teacher_01">Hecos teacher 01 (XTTS2 · Colette Olivier)</option>
+          <option value="jun_1">jun 1 (XTTS2 · Alison Dietlinde)</option>
+          <option value="motoko_1">motoko 1 (XTTS2 · Colette Olivier)</option>
+          <option value="motoko_2">motoko 2 (XTTS2 · Filippo Fabrizi)</option>
+          <option value="nanana1">nanana1 (XTTS2 · Gilberto Mathias)</option>
+          <option value="nazi_camp_1">Nazi camp 1 (XTTS2 · Camilla Holmström)</option>
+          <option value="nova_111">nova 111 (XTTS2 · Damien Black)</option>
+          <option value="nuovo_test_3">nuovo test 3 (XTTS2 · Gitta Nikolina)</option>
+          <option value="personalit__sperimentale_malvagia">Personalità sperimentale 001 (XTTS2)</option>
+          <option value="presenter_gb_02_local">presenter GB 02 local (XTTS2 · Brenda Stern)</option>
+          <option value="presenter_gp_1">Presenter GP 1 (XTTS2 · Daisy Studious)</option>
+          <option value="rowena_01_gp">Rowena 01 GP (XTTS2 · Claribel Dervla)</option>
+          <option value="suca1">suca1 (XTTS2 · Abrahan Mack)</option>
+          <option value="test_03">test 03 (XTTS2 · Filippo Fabrizi)</option>
+          <option value="tony_gp_1">Tony GP 1 (XTTS2)</option>
+          <option value="uomo_vecchio_1">uomo vecchio 1 (XTTS2 · Andrew Chipper)</option>
+          <option value="urania_9800_gp">Urania 9800 GP (Kokoro · if_sara)</option>
+          <option value="urania_teacher_01">Urania teacher 01 (XTTS2 · Colette Olivier)</option>
+          <option value="xtts_1_prova">XTTS 1 prova (XTTS2 · Brenda Stern)</option>
+          <option value="zobbia_1">zobbia 1 (LOCAL)</option>
+          <option value="zoccola">Zoccola (XTTS2)</option>
+        </select>
+        <button type="button" class="btn btn-secondary" id="docreader-test-btn" onclick="docreaderTestVoice()" style="display:flex; align-items:center; gap:6px; white-space:nowrap; padding:8px 14px; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); color:#c4b5fd; border-radius:6px; cursor:pointer;">
+          <i class="fas fa-play" id="docreader-test-icon"></i> Test Voice
+        </button>
+      </div>
+      <p style="color:var(--muted); font-size:11px; margin-top:4px;" id="docreader-hecos-preset-hint">
+        Uses whichever preset is active in Hecos chat (e.g. Urania 9800 GP) or select any specific Hecos persona.
+      </p>
+    </div>
+
+    <!-- Browser Voice Selection (visible when Browser engine is selected) -->
+    <div class="field" id="docreader-browser-voice-field" style="margin-bottom:14px; display:none;">
+      <label for="docreader-opt-voice" style="font-weight:600; font-size:0.85em; margin-bottom:6px; display:block;">
+        Browser Synthetic Voice
+      </label>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <select id="docreader-opt-voice" class="config-input" style="flex:1; appearance:auto; background:var(--bg3);" onchange="docreaderSaveConfig()">
+          <option value="">Loading system voices...</option>
+        </select>
+        <button type="button" class="btn btn-secondary" onclick="docreaderTestVoice()" style="display:flex; align-items:center; gap:6px; white-space:nowrap; padding:8px 14px; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); color:#c4b5fd; border-radius:6px; cursor:pointer;">
+          <i class="fas fa-play"></i> Test Voice
+        </button>
+      </div>
+      <p style="color:var(--muted); font-size:11px; margin-top:4px;">
+        Available voices depend on your browser and operating system (e.g. Microsoft Natural voices on Windows, Google voices on Chrome).
+      </p>
+    </div>
+
+    <!-- Sliders Grid -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-top:10px;">
+      
+      <!-- Speed / Rate -->
+      <div class="field">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <label for="docreader-opt-rate" style="font-weight:600; font-size:0.85em;">Reading Speed</label>
+          <span id="docreader-val-rate" style="font-size:0.85em; font-weight:700; color:#8b5cf6;">1.0×</span>
+        </div>
+        <input
+          type="range"
+          id="docreader-opt-rate"
+          class="config-input"
+          min="0.5"
+          max="2.5"
+          step="0.1"
+          value="1.0"
+          style="width:100%; cursor:pointer;"
+          oninput="document.getElementById('docreader-val-rate').textContent = parseFloat(this.value).toFixed(1) + '×'; docreaderDebounceSave();"
+        >
+      </div>
+
+      <!-- Pitch -->
+      <div class="field">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <label for="docreader-opt-pitch" style="font-weight:600; font-size:0.85em;">Voice Pitch</label>
+          <span id="docreader-val-pitch" style="font-size:0.85em; font-weight:700; color:#8b5cf6;">1.0</span>
+        </div>
+        <input
+          type="range"
+          id="docreader-opt-pitch"
+          class="config-input"
+          min="0.5"
+          max="1.5"
+          step="0.05"
+          value="1.0"
+          style="width:100%; cursor:pointer;"
+          oninput="document.getElementById('docreader-val-pitch').textContent = parseFloat(this.value).toFixed(2); docreaderDebounceSave();"
+        >
+      </div>
+
+      <!-- Volume -->
+      <div class="field">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <label for="docreader-opt-volume" style="font-weight:600; font-size:0.85em;">Default Volume</label>
+          <span id="docreader-val-volume" style="font-size:0.85em; font-weight:700; color:#8b5cf6;">100%</span>
+        </div>
+        <input
+          type="range"
+          id="docreader-opt-volume"
+          class="config-input"
+          min="0.1"
+          max="1.0"
+          step="0.05"
+          value="1.0"
+          style="width:100%; cursor:pointer;"
+          oninput="document.getElementById('docreader-val-volume').textContent = Math.round(parseFloat(this.value) * 100) + '%'; docreaderDebounceSave();"
+        >
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Reader Visual Preferences Card -->
+  <div class="card" style="margin-bottom:14px;">
+    <div class="card-title" style="display:flex; align-items:center; gap:8px;">
+      <i class="fas fa-eye" style="color:#8b5cf6;"></i>
+      <span>Reading Experience &amp; Highlighting</span>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
+      
+      <!-- Highlight Color -->
+      <div class="field">
+        <label for="docreader-opt-color" style="font-weight:600; font-size:0.85em; margin-bottom:6px; display:block;">
+          Sentence Highlight Color
+        </label>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="color" id="docreader-opt-color" value="#a78bfa" style="width:40px; height:34px; padding:0; border:none; border-radius:6px; cursor:pointer;" onchange="docreaderSaveConfig()">
+          <input type="text" id="docreader-opt-color-hex" class="config-input" value="#a78bfa" style="flex:1;" onchange="document.getElementById('docreader-opt-color').value = this.value; docreaderSaveConfig();">
+        </div>
+      </div>
+
+      <!-- Word Highlight Toggle -->
+      <div class="field" style="display:flex; flex-direction:column; justify-content:center;">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin-top:14px;">
+          <input type="checkbox" id="docreader-opt-word-highlight" checked onchange="docreaderSaveConfig()" style="cursor:pointer; width:16px; height:16px;">
+          <span style="font-size:0.88em; font-weight:600;">Word-by-word Highlighting (Realtime Karaoke)</span>
+        </label>
+        <span style="color:var(--muted); font-size:11px; margin-left:26px; margin-top:2px;">
+          Highlights each individual word in realtime as speech synthesis speaks it.
+        </span>
+      </div>
+
+    </div>
+
+    <!-- Supported formats note -->
+    <div style="margin-top:16px; padding:10px 14px; background:rgba(0,0,0,0.15); border-radius:8px; border:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; gap:10px;">
+      <i class="fas fa-info-circle" style="color:#8b5cf6; font-size:16px;"></i>
+      <div style="font-size:0.82em; color:var(--muted);">
+        <strong>Supported formats:</strong> PDF (.pdf with PDF.js), Plain Text (.txt), Markdown (.md), HTML (.html, .htm).
+        Supports mouse text selection reading and <kbd style="background:var(--bg3); padding:1px 5px; border-radius:3px;">ESC</kbd> to exit fullscreen.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Status / Save Feedback Indicator -->
+  <div id="docreader-save-status" style="display:none; align-items:center; gap:8px; font-size:13px; color:#10b981; padding:8px 12px; background:rgba(16, 185, 129, 0.1); border-radius:6px; margin-top:8px;">
+    <i class="fas fa-check-circle"></i>
+    <span>Configuration saved successfully.</span>
+  </div>
+
+</div>
+
+<script>
+  if (typeof docreaderInit === 'function') {
+    docreaderInit();
+  }
+</script>

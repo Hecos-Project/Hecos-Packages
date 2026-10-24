@@ -1,0 +1,177 @@
+{
+    "id": "document_reader",
+    "tag": "DOCUMENT_READER",
+    "name": "Document Reader",
+    "display_name": "Document Reader",
+    "version": "1.0.0",
+    "type": "plugin",
+    "description": "Universal document reader with TTS. Fullscreen reading mode, visual PDF canvas rendering, text selection reading, word-by-word highlighting, audiobook-style controls.",
+    "author": "Hecos Team / Antonio Meloni",
+    "is_shared": true,
+    "lazy_load": true,
+    "on_load": true,
+    "is_class_based": true,
+    "icon": "📖",
+    "commands": {
+        "read_document": "Open a document in the fullscreen reader with TTS capabilities. Accepts filename, partial name (e.g. 'fotoromanzo'), or full path.",
+        "stop_reading": "Stop the current TTS reading session.",
+        "list_documents": "List all readable documents (PDF, TXT, MD, HTML, DOCX) available in the documents library."
+    },
+    "slash_commands": [
+        {
+            "id": "read",
+            "aliases": ["/read", "/leggi", "/reader", "/docreader", "/leggi_documento"],
+            "description": "Apre e legge un documento con voce sintetizzata nel Document Reader",
+            "usage": "/read [percorso o nome file]",
+            "example": "/read fotoromanzo",
+            "icon": "📖",
+            "category": "DOCUMENTS",
+            "method": "read_document",
+            "requires_args": false
+        },
+        {
+            "id": "stop_reading",
+            "aliases": ["/stop_reading", "/ferma_lettura", "/stop_doc", "/stop_reader"],
+            "description": "Interrompe la lettura vocale attiva nel Document Reader",
+            "usage": "/stop_reading",
+            "example": "/stop_reading",
+            "icon": "⏹️",
+            "category": "DOCUMENTS",
+            "method": "stop_reading",
+            "requires_args": false
+        },
+        {
+            "id": "read_list",
+            "aliases": ["/read_list", "/doc_list", "/lista_lettura"],
+            "description": "Elenca i documenti disponibili da leggere con il Document Reader",
+            "usage": "/read_list",
+            "example": "/read_list",
+            "icon": "📑",
+            "category": "DOCUMENTS",
+            "method": "list_documents",
+            "requires_args": false
+        }
+    ],
+    "tool_schema": [
+        {
+            "type": "function",
+            "function": {
+                "name": "DOCUMENT_READER__read_document",
+                "description": "Open a PDF or text document in the fullscreen reader with text-to-speech capabilities. Resolves filenames and partial keywords (e.g. 'fotoromanzo', 'fotoromanzo numero 1') automatically from the documents folder.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "File path, filename, or document search query (e.g. 'fotoromanzo', 'fotoromanzo numero 1'). If omitted, lists available documents."
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "DOCUMENT_READER__stop_reading",
+                "description": "Stop the current text-to-speech reading session.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "DOCUMENT_READER__list_documents",
+                "description": "List all readable documents (PDF, TXT, MD, HTML, DOCX) available in the documents library.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "folder": {
+                            "type": "string",
+                            "description": "Optional directory path to inspect. Defaults to standard documents library (modules/media/documents)."
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    ],
+    "capabilities": {
+        "llm_tools": [
+            "read_document",
+            "stop_reading",
+            "list_documents"
+        ],
+        "slash_commands": [
+            "/read",
+            "/leggi",
+            "/reader",
+            "/docreader",
+            "/stop_reading",
+            "/ferma_lettura",
+            "/read_list",
+            "/doc_list"
+        ],
+        "has_widget": false,
+        "has_config_panel": true,
+        "has_api_routes": true,
+        "has_system_calls": true,
+        "syscall_notes": "Autonomous document reader with TTS: provides read_document, stop_reading, and list_documents with smart path and partial name resolution.",
+        "notes": "Visual PDF canvas rendering with images/illustrations, Dual TTS (Local Hecos Piper/ElevenLabs and Browser Web Speech), full keyboard shortcuts, and ESC voice-stop priority."
+    },
+    "config_panel": {
+        "tab_id": "document_reader",
+        "tab_label": "Document Reader",
+        "tab_icon": "<i class=\"fas fa-book-reader\"></i>",
+        "template_file": "web/templates/config_document_reader.html",
+        "js_files": [
+            "web/static/js/document_reader.js",
+            "web/static/js/document_reader_panel.js"
+        ],
+        "css_file": "web/static/css/document_reader.css",
+        "category": "MULTIMEDIA",
+        "api_routes_file": "web/routes.py",
+        "config_api_get": "/hecos/api/plugins/document_reader/config",
+        "config_api_post": "/hecos/api/plugins/document_reader/config"
+    },
+    "config_schema": {
+        "enabled": {
+            "type": "bool",
+            "default": true,
+            "description": "Enable the Document Reader plugin."
+        },
+        "tts_engine": {
+            "type": "str",
+            "default": "browser",
+            "description": "TTS Engine: 'browser' (Web Speech API) or 'local' (Hecos Local TTS)."
+        },
+        "default_voice": {
+            "type": "str",
+            "default": "",
+            "description": "Preferred Web Speech API voice name."
+        },
+        "default_rate": {
+            "type": "float",
+            "default": 1.0,
+            "min": 0.5,
+            "max": 3.0,
+            "description": "Default reading speed."
+        },
+        "default_pitch": {
+            "type": "float",
+            "default": 1.0,
+            "min": 0.5,
+            "max": 2.0,
+            "description": "Default voice pitch."
+        },
+        "highlight_color": {
+            "type": "str",
+            "default": "#a78bfa",
+            "description": "Highlight color for current sentence."
+        }
+    }
+}

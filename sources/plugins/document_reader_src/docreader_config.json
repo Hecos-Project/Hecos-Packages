@@ -1,0 +1,13 @@
+{
+    "enabled": true,
+    "voice_source": "hecos",
+    "hecos_preset": "current",
+    "default_voice": "",
+    "default_rate": 1,
+    "default_pitch": 1,
+    "default_volume": 1,
+    "highlight_color": "#a78bfa",
+    "word_highlight": true,
+    "auto_open": false,
+    "font_size": 1.1
+}
