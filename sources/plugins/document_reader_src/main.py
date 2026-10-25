@@ -108,14 +108,18 @@ class DocumentReaderTools:
         # 1. Configured path if present
         _add(self._cfg.get("documents_dir"))
 
-        # 2. Base Hecos workspace documents
+        # 2. Base Hecos workspace documents (standard path)
         base_hecos = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
-        _add(os.path.join(base_hecos, "hecos", "modules", "media", "documents"))
+        _add(os.path.join(base_hecos, "hecos", "media", "documents"))
 
-        # 3. Direct modules/media/documents or documents folder
+        # 3. Direct documents folder
         _add(os.path.join(base_hecos, "documents"))
 
         # 4. Fallback hardcoded standard paths
+        _add(r"C:\Hecos\hecos\media\documents")
+
+        # 5. Legacy modules fallback if present
+        _add(os.path.join(base_hecos, "hecos", "modules", "media", "documents"))
         _add(r"C:\Hecos\hecos\modules\media\documents")
 
         return candidates
@@ -135,12 +139,16 @@ class DocumentReaderTools:
         folders = self._get_candidate_folders()
 
         # Collect all available document files from candidate folders
+        seen_fnames = set()
         for folder in folders:
             if not os.path.isdir(folder):
                 continue
             for fname in os.listdir(folder):
                 f_lower = fname.lower()
+                if f_lower in seen_fnames:
+                    continue
                 if any(f_lower.endswith(ext) for ext in SUPPORTED_EXTS):
+                    seen_fnames.add(f_lower)
                     all_files.append((folder, fname))
 
         if not query:
@@ -197,12 +205,16 @@ class DocumentReaderTools:
         folders = [folder] if folder and os.path.isdir(folder) else self._get_candidate_folders()
         all_found = []
 
+        seen_fnames = set()
         for fld in folders:
             if not os.path.isdir(fld):
                 continue
             for fname in os.listdir(fld):
                 f_lower = fname.lower()
+                if f_lower in seen_fnames:
+                    continue
                 if any(f_lower.endswith(ext) for ext in SUPPORTED_EXTS):
+                    seen_fnames.add(f_lower)
                     full_p = os.path.join(fld, fname)
                     try:
                         sz = os.path.getsize(full_p)
@@ -213,7 +225,7 @@ class DocumentReaderTools:
                     all_found.append((fname, ext, sz_str, full_p))
 
         if not all_found:
-            return "📁 Nessun documento trovato nella cartella documenti (`modules/media/documents`)."
+            return "📁 Nessun documento trovato nella cartella documenti (`hecos/media/documents`)."
 
         lines = [
             "### 📁 Documenti Disponibili per la Lettura\n",

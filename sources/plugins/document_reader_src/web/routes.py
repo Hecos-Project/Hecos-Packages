@@ -16,6 +16,9 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
             "enabled": True,
             "voice_source": "hecos",        # 'hecos' | 'browser'
             "hecos_preset": "current",      # 'current' | specific soul_id
+            "audio_engine": "auto",         # 'auto' | 'kokoro' | 'piper' | 'xtts2' | 'fish_speech' | 'browser'
+            "audio_preset": "",             # Audio preset name
+            "audio_voice": "default",       # Voice identifier
             "default_voice": "",
             "default_rate": 1.0,
             "default_pitch": 1.0,
@@ -74,6 +77,9 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
     def get_docreader_presets_api():
         try:
             from hecos.core.global_presets import list_souls, get_active_soul_id, get_soul
+            from hecos.core.audio.device_manager import get_audio_config
+            from hecos.core.audio.tts_manager import TTSManager
+
             active_id = get_active_soul_id("global") or "urania_9800_gp"
             active_name = "Current Active Voice"
             if active_id:
@@ -94,11 +100,34 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
                 })
             items.sort(key=lambda x: x["name"].lower())
 
+            acfg = get_audio_config()
+            active_engine = acfg.get("active_engine", "kokoro")
+
+            # Collect audio configuration presets per engine
+            kokoro_presets = list(acfg.get("kokoro_presets", {}).keys())
+            xtts_presets = list(acfg.get("xtts_presets", {}).keys())
+            fish_presets = list(acfg.get("fish_speech_presets", {}).keys())
+
+            # Collect voices for each engine
+            voices = {}
+            for eng in ["kokoro", "piper", "xtts2", "fish_speech"]:
+                try:
+                    voices[eng] = TTSManager.get_available_voices(eng)
+                except Exception as _ve:
+                    voices[eng] = {}
+
             return jsonify({
                 "ok": True,
                 "active_preset_id": active_id,
                 "active_preset_name": active_name,
-                "presets": items
+                "active_engine": active_engine,
+                "presets": items,
+                "audio_presets": {
+                    "kokoro": kokoro_presets,
+                    "xtts2": xtts_presets,
+                    "fish_speech": fish_presets
+                },
+                "voices": voices
             })
         except Exception as exc:
             logger.error(f"[DocReader] GET presets error: {exc}")
@@ -115,6 +144,9 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
                 return jsonify({"ok": False, "error": "Empty text"}), 400
 
             preset_id = (data.get("preset_id") or "current").strip()
+            engine_req = (data.get("engine") or "").strip().lower()
+            voice_req = (data.get("voice") or "").strip()
+            audio_preset_req = (data.get("audio_preset") or "").strip()
             speed = float(data.get("speed") or data.get("rate") or 1.0)
 
             from hecos.core.audio.device_manager import get_audio_config
@@ -125,12 +157,13 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
             session_overrides = {}
 
             target_soul = None
-            if preset_id == "current":
-                active_id = get_active_soul_id("global")
-                if active_id:
-                    target_soul = get_soul(active_id)
-            else:
-                target_soul = get_soul(preset_id)
+            if preset_id and preset_id not in ("none", "custom"):
+                if preset_id == "current":
+                    active_id = get_active_soul_id("global")
+                    if active_id:
+                        target_soul = get_soul(active_id)
+                else:
+                    target_soul = get_soul(preset_id)
 
             if target_soul and target_soul.voice:
                 session_overrides = target_soul.voice.model_dump(exclude_unset=True)
@@ -143,13 +176,54 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
                 voice_overrides = ai_cfg.get("voice_overrides", {})
                 session_overrides.update(voice_overrides)
 
+            # Direct audio engine override
+            if engine_req and engine_req != "auto":
+                session_overrides["tts_engine"] = engine_req
+
+            active_eng = (session_overrides.get("tts_engine") or voice_cfg.get("active_engine", "kokoro")).lower()
+
+            # Direct audio preset override
+            if audio_preset_req:
+                if "kokoro" in active_eng:
+                    session_overrides["kokoro_preset"] = audio_preset_req
+                    k_presets = voice_cfg.get("kokoro_presets", {})
+                    if audio_preset_req in k_presets:
+                        p_data = k_presets[audio_preset_req]
+                        if p_data.get("voice"): session_overrides["kokoro_voice"] = p_data["voice"]
+                        if p_data.get("blend_voice") is not None: session_overrides["kokoro_blend_voice"] = p_data["blend_voice"]
+                        if p_data.get("speed"): session_overrides["kokoro_speed"] = p_data["speed"]
+                        if p_data.get("alpha") is not None: session_overrides["kokoro_alpha"] = p_data["alpha"]
+                        if p_data.get("beta") is not None: session_overrides["kokoro_beta"] = p_data["beta"]
+                        if p_data.get("sentence_silence") is not None: session_overrides["kokoro_silence"] = p_data["sentence_silence"]
+                elif "xtts" in active_eng:
+                    session_overrides["xtts_preset"] = audio_preset_req
+                elif "fish" in active_eng:
+                    session_overrides["fish_speech_preset"] = audio_preset_req
+
+            # Direct voice override
+            if voice_req and voice_req != "default":
+                session_overrides["tts_voice"] = voice_req
+                if "kokoro" in active_eng:
+                    session_overrides["kokoro_voice"] = voice_req
+                elif "xtts" in active_eng:
+                    session_overrides["speaker_wav"] = voice_req
+                    session_overrides["xtts_speaker_wav"] = voice_req
+                elif "fish" in active_eng:
+                    session_overrides["fish_reference_audio"] = voice_req
+                elif "piper" in active_eng:
+                    model_val = voice_req if voice_req.endswith(".onnx") else f"{voice_req}.onnx"
+                    session_overrides["onnx_model"] = model_val
+                    session_overrides["piper_model"] = model_val
+                    session_overrides["tts_voice"] = model_val
+
             # Speed override if non-default
             if speed and speed != 1.0:
-                engine = (session_overrides.get("tts_engine") or voice_cfg.get("active_engine", "")).lower()
-                if "kokoro" in engine:
+                if "kokoro" in active_eng:
                     session_overrides["kokoro_speed"] = speed
-                elif "xtts" in engine:
+                elif "xtts" in active_eng:
                     session_overrides["xtts_speed"] = speed
+                elif "piper" in active_eng:
+                    session_overrides["piper_speed"] = speed
 
             voice_cfg["session_overrides"] = session_overrides
 

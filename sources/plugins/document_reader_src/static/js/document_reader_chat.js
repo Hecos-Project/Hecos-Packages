@@ -266,7 +266,7 @@
             HecosFilePicker.open({
                 title: "Select Document to Read",
                 mode: 'file',
-                initialPath: 'C:\\Hecos\\hecos\\modules\\media\\documents',
+                initialPath: 'C:\\Hecos\\hecos\\media\\documents',
                 onSelect: async function(path) {
                     if (!path) return;
                     const ext = path.split('.').pop().toLowerCase();

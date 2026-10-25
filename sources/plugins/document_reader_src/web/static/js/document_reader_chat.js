@@ -91,10 +91,20 @@
             btn.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                let curRaw = '';
+                const curDl = actionDiv.querySelector('a[href]');
+                if (curDl && (curDl.getAttribute('href') || '').includes('?path=')) {
+                    curRaw = curDl.getAttribute('href');
+                } else if (nameEl.getAttribute('title')) {
+                    curRaw = nameEl.getAttribute('title');
+                } else {
+                    curRaw = (nameEl.textContent || '').trim();
+                }
+                const targetPath = _extractCleanPath(curRaw) || docPath;
                 if (window.DocReader && typeof window.DocReader.open === 'function') {
-                    window.DocReader.open(docPath);
+                    window.DocReader.open(targetPath);
                 } else if (typeof window.openDocReader === 'function') {
-                    window.openDocReader(docPath);
+                    window.openDocReader(targetPath);
                 } else {
                     console.error('[DocReader] Document reader not loaded');
                 }
@@ -112,8 +122,12 @@
         // Detect <docreader-open path="..."> tags from LLM tool responses
         document.querySelectorAll('docreader-open').forEach(el => {
             const path = el.getAttribute('path');
-            if (path && window.DocReader && typeof window.DocReader.open === 'function') {
-                window.DocReader.open(_extractCleanPath(path));
+            if (path) {
+                _ensureDocReaderLoaded().then(() => {
+                    if (window.DocReader && typeof window.DocReader.open === 'function') {
+                        window.DocReader.open(_extractCleanPath(path));
+                    }
+                });
             }
             el.remove();
         });
@@ -124,6 +138,39 @@
                 window.DocReader.stop();
             }
             el.remove();
+        });
+
+        // Detect <docreader-picker> tags
+        document.querySelectorAll('docreader-picker').forEach(el => {
+            if (typeof window.docReaderOpenFilePicker === 'function') {
+                window.docReaderOpenFilePicker();
+            }
+            el.remove();
+        });
+
+        // Detect text tag [DOCREADER:open:PATH] in chat messages (if HTML tags were sanitized)
+        document.querySelectorAll('.chat-bubble, .message-content, .chat-message').forEach(bubble => {
+            if (bubble._docReaderHandled) return;
+            const text = bubble.innerHTML || '';
+            const m = text.match(/\[DOCREADER:open:([^\]]+)\]/);
+            if (m) {
+                bubble._docReaderHandled = true;
+                bubble.innerHTML = text.replace(/\[DOCREADER:open:[^\]]+\]/g, '');
+                const cleanP = _extractCleanPath(m[1].trim());
+                if (cleanP) {
+                    _ensureDocReaderLoaded().then(() => {
+                        if (window.DocReader && typeof window.DocReader.open === 'function') {
+                            window.DocReader.open(cleanP);
+                        }
+                    });
+                }
+            } else if (text.includes('[DOCREADER:stop]')) {
+                bubble._docReaderHandled = true;
+                bubble.innerHTML = text.replace(/\[DOCREADER:stop\]/g, '');
+                if (window.DocReader && typeof window.DocReader.stop === 'function') {
+                    window.DocReader.stop();
+                }
+            }
         });
     }
 
@@ -219,7 +266,7 @@
             HecosFilePicker.open({
                 title: "Select Document to Read",
                 mode: 'file',
-                initialPath: 'C:\\Hecos\\hecos\\modules\\media\\documents',
+                initialPath: 'C:\\Hecos\\hecos\\media\\documents',
                 onSelect: async function(path) {
                     if (!path) return;
                     const ext = path.split('.').pop().toLowerCase();

@@ -27,7 +27,13 @@
         pitch: 1.0,
         volume: 1.0,
         voiceSource: 'hecos',   // 'hecos' | 'browser'
-        hecosPresetId: 'current', // 'current' | specific preset ID
+        hecosPresetId: 'current', // 'current' | specific GP preset ID
+        audioEngine: 'auto',    // 'auto' | 'kokoro' | 'piper' | 'xtts2' | 'fish_speech' | 'browser'
+        audioPreset: '',        // audio config preset name (e.g. 'Standard & Balanced')
+        audioVoice: 'default',  // voice id / model name (e.g. 'im_base_man')
+        audioPresetsMap: {},    // { kokoro: [...], xtts2: [...], fish_speech: [...] }
+        audioVoicesMap: {},     // { kokoro: {...}, piper: {...}, xtts2: {...}, fish_speech: {...} }
+        systemActiveEngine: 'kokoro',
         selectedVoice: null,    // Browser voice name (when voiceSource === 'browser')
         fontSize: 1.1,          // em (used in text mode)
         visualZoom: 1.0,        // zoom factor for canvas (used in visual mode)
@@ -37,7 +43,10 @@
         _currentAudio: null,    // HTML5 Audio instance for Hecos local TTS
         _audioCache: new Map(), // sentenceIndex -> audioUrl
         _prefetchSet: new Set(),// Indices currently being pre-fetched
-        availablePresets: [],   // Hecos presets list from backend
+        _synthesisInterval: null, // Timer interval for cold load TTS progress
+        _loadedEngines: new Set(),// Tracks engines/presets already loaded in memory
+        _pendingEngineSwitch: false, // Flag when switching to a different preset
+        availablePresets: [],   // Hecos GP presets list from backend
         activePresetName: '',   // Name of active preset in chat
         sidebarOpen: false,
         pages: [],              // Page-separated content
@@ -282,7 +291,8 @@
 
                 <!-- Progress -->
                 <div class="docreader-progress-wrap">
-                    <div class="docreader-progress-bar" id="docreader-progress-bar" onclick="window.DocReader.seekProgress(event)">
+                    <div class="docreader-progress-bar" id="docreader-progress-bar" onclick="window.DocReader.seekProgress(event)" title="Document Progress (Click to Seek)">
+                        <div class="docreader-audio-buffer-fill" id="docreader-audio-buffer-fill"></div>
                         <div class="docreader-progress-fill" id="docreader-progress-fill"></div>
                     </div>
                     <div class="docreader-progress-info">
@@ -294,31 +304,43 @@
                 <!-- Controls -->
                 <div class="docreader-controls">
                     <!-- Speed -->
-                    <div class="docreader-control-group">
-                        <span class="docreader-control-label">Speed</span>
-                        <button class="docreader-speed-btn" id="docreader-speed-btn" onclick="window.DocReader.cycleSpeed()" title="Cycle speed">
-                            1.0×
-                        </button>
+                    <div class="docreader-control-group docreader-speed-group" id="docreader-speed-group" title="Speed: Drag slider, scroll mouse wheel, or use keyboard arrows (0.5× – 3.0×)">
+                        <span class="docreader-control-label" title="Reading speed"><i class="fas fa-tachometer-alt"></i></span>
+                        <input type="range" class="docreader-speed-slider" id="docreader-speed-slider" 
+                               min="0.5" max="3.0" step="0.05" value="1.0"
+                               oninput="window.DocReader.changeSpeed(this.value)"
+                               title="Reading Speed: 0.5× to 3.0× (Step 0.05)">
+                        <button class="docreader-speed-badge" id="docreader-speed-badge" 
+                                onclick="window.DocReader.resetSpeed()" 
+                                title="Click to reset to 1.00× (or scroll wheel to adjust)">1.00×</button>
                     </div>
 
-                    <!-- Voice Source / Voice Selection -->
-                    <div class="docreader-control-group">
-                        <span class="docreader-control-label">Voice</span>
-                        <select class="docreader-voice-select" id="docreader-voice-select" onchange="window.DocReader.changeVoiceSource(this.value)" title="Choose Voice Engine or Browser Voice">
-                            <optgroup label="Hecos Neural Voice (Local)">
-                                <option value="hecos_current" selected>✨ Current Hecos Voice (Local)</option>
-                                <option value="hecos_preset">🎙️ Select Hecos Preset...</option>
-                            </optgroup>
-                            <optgroup label="Browser Voices (Web Speech)" id="docreader-browser-optgroup">
-                            </optgroup>
+                    <!-- Global Preset (GP) -->
+                    <div class="docreader-control-group docreader-gp-group" id="docreader-preset-group" title="Global Preset (AI Soul / Persona Profile)">
+                        <span class="docreader-control-label" title="Global Preset (AI Soul / Persona Profile)">GP</span>
+                        <select class="docreader-preset-select" id="docreader-preset-select" onchange="window.DocReader.changeHecosPreset(this.value)" title="Global Preset: Select AI Soul / Character Persona">
+                            <option value="current">Active Chat GP</option>
                         </select>
                     </div>
 
-                    <!-- Hecos Preset Selector (visible when Hecos is active) -->
-                    <div class="docreader-control-group" id="docreader-preset-group">
-                        <span class="docreader-control-label">Preset</span>
-                        <select class="docreader-preset-select" id="docreader-preset-select" onchange="window.DocReader.changeHecosPreset(this.value)" title="Choose a Hecos character preset">
-                            <option value="current">Active Chat Voice</option>
+                    <!-- TTS Audio Engine -->
+                    <div class="docreader-control-group docreader-engine-group" title="Text-to-Speech Engine">
+                        <span class="docreader-control-label" title="TTS Audio Engine">Engine</span>
+                        <select class="docreader-engine-select" id="docreader-engine-select" onchange="window.DocReader.changeAudioEngine(this.value)" title="Select Text-to-Speech Engine">
+                            <option value="auto">⚡ Auto (GP/Default)</option>
+                            <option value="kokoro">Kokoro TTS</option>
+                            <option value="piper">Piper ONNX</option>
+                            <option value="xtts2">XTTS v2</option>
+                            <option value="fish_speech">Fish Speech</option>
+                            <option value="browser">🌐 Browser Voices</option>
+                        </select>
+                    </div>
+
+                    <!-- Voice / Audio Preset Selection -->
+                    <div class="docreader-control-group docreader-voice-group" title="Voice or Audio Engine Preset">
+                        <span class="docreader-control-label" title="Voice or Audio Engine Preset">Voice</span>
+                        <select class="docreader-voice-select" id="docreader-voice-select" onchange="window.DocReader.changeVoice(this.value)" title="Select Voice or Audio Configuration Preset">
+                            <option value="default">✨ Default Voice</option>
                         </select>
                     </div>
 
@@ -352,9 +374,18 @@
         `;
         document.body.appendChild(overlay);
 
-        // ESC key handler fallback (if HKS is not active)
+        // Keyboard controls when Document Reader is open (Arrows for speed/navigation, Space, ESC)
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && STATE.isOpen) {
+            if (!STATE.isOpen) return;
+
+            // Do not intercept if user is typing in a text input or textarea
+            const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+            if (tag === 'textarea' || (tag === 'input' && e.target.type !== 'range')) {
+                return;
+            }
+
+            // ESC: Stop reading on 1st press, close reader on 2nd
+            if (e.key === 'Escape') {
                 e.preventDefault();
                 e.stopPropagation();
                 if (STATE.isReading) {
@@ -363,8 +394,98 @@
                 } else {
                     window.DocReader.close();
                 }
+                return;
+            }
+
+            // Keyboard Arrows: Speed Control (ArrowUp / ArrowDown)
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                e.stopPropagation();
+                window.DocReader.changeSpeedDelta(0.05, true);
+                return;
+            }
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                e.stopPropagation();
+                window.DocReader.changeSpeedDelta(-0.05, true);
+                return;
+            }
+
+            // Keyboard Arrows: Shift + ArrowRight / ArrowLeft for Speed
+            if (e.key === 'ArrowRight' && e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                window.DocReader.changeSpeedDelta(0.05, true);
+                return;
+            }
+
+            if (e.key === 'ArrowLeft' && e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                window.DocReader.changeSpeedDelta(-0.05, true);
+                return;
+            }
+
+            // Keyboard Arrows: Sentence Navigation (ArrowRight / ArrowLeft)
+            // (When the speed range slider is not focused)
+            if (e.target !== document.getElementById('docreader-speed-slider') && e.target !== document.getElementById('docreader-volume')) {
+                if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.DocReader.nextSentence();
+                    return;
+                }
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.DocReader.prevSentence();
+                    return;
+                }
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.DocReader.togglePlayPause();
+                    return;
+                }
+                if (e.key === 'PageDown') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.DocReader.nextPage();
+                    return;
+                }
+                if (e.key === 'PageUp') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.DocReader.prevPage();
+                    return;
+                }
             }
         });
+
+        // Mouse Wheel speed and volume adjustment on controls
+        const speedGroup = overlay.querySelector('#docreader-speed-group');
+        if (speedGroup) {
+            speedGroup.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const delta = e.deltaY < 0 ? 0.05 : -0.05;
+                window.DocReader.changeSpeedDelta(delta, false);
+            }, { passive: false });
+        }
+
+        const volGroup = overlay.querySelector('#docreader-volume')?.parentElement;
+        if (volGroup) {
+            volGroup.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const delta = e.deltaY < 0 ? 0.05 : -0.05;
+                const newVol = Math.max(0, Math.min(1, Math.round(((STATE.volume !== undefined ? STATE.volume : 1.0) + delta) * 100) / 100));
+                window.DocReader.changeVolume(newVol);
+                const slider = document.getElementById('docreader-volume');
+                if (slider) slider.value = newVol;
+            }, { passive: false });
+        }
 
         // Selection tooltip handler
         const docEl = overlay.querySelector('#docreader-document');
@@ -377,76 +498,57 @@
         // Initialize voices, presets, and config
         _loadConfig();
         _loadHecosPresets();
-        _populateVoices();
-        if (speechSynthesis.onvoiceschanged !== undefined) {
+        if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
             speechSynthesis.onvoiceschanged = _populateVoices;
         }
 
         return overlay;
     }
 
-    // ── Load Hecos Presets from Backend ──────────────────────────────────────
+    // ── Load Hecos Presets, Audio Presets, and Voices from Backend ───────────
     async function _loadHecosPresets() {
         try {
-            // Fetch from core /api/souls and /hecos/config which are always available
-            const [soulsRes, cfgRes] = await Promise.all([
-                fetch('/api/souls', { cache: 'no-store' }).catch(() => null),
-                fetch('/hecos/config', { cache: 'no-store' }).catch(() => null)
-            ]);
+            const res = await fetch('/hecos/api/plugins/document_reader/presets', { cache: 'no-store' });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.ok) {
+                    if (Array.isArray(data.presets)) {
+                        STATE.availablePresets = data.presets;
+                    }
+                    STATE.activePresetName = data.active_preset_name || 'Active GP';
+                    STATE.systemActiveEngine = data.active_engine || 'kokoro';
+                    STATE.audioPresetsMap = data.audio_presets || {};
+                    STATE.audioVoicesMap = data.voices || {};
 
-            let souls = [];
+                    _populatePresetSelect();
+                    _populateEngineSelect();
+                    _populateVoiceAndPresetSelect();
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('[DocReader] Presets API load failed, falling back:', e);
+        }
+
+        // Fallback to /api/souls if plugin route was unavailable
+        try {
+            const soulsRes = await fetch('/api/souls', { cache: 'no-store' });
             if (soulsRes && soulsRes.ok) {
                 const soulsData = await soulsRes.json();
                 if (soulsData.ok && Array.isArray(soulsData.souls)) {
-                    souls = soulsData.souls;
+                    STATE.availablePresets = soulsData.souls.map(s => ({
+                        id: s.meta.id,
+                        name: s.meta.name,
+                        engine: s.voice?.tts_engine ? s.voice.tts_engine.toUpperCase() : 'LOCAL',
+                        voice: s.voice?.tts_voice || ''
+                    }));
+                    _populatePresetSelect();
+                    _populateEngineSelect();
+                    _populateVoiceAndPresetSelect();
                 }
             }
-
-            let activeId = 'urania_9800_gp';
-            if (cfgRes && cfgRes.ok) {
-                const cfgData = await cfgRes.json();
-                if (cfgData.ai && cfgData.ai.active_global_preset) {
-                    activeId = cfgData.ai.active_global_preset;
-                }
-            }
-
-            if (souls.length === 0) {
-                try {
-                    const res = await fetch('/hecos/api/plugins/document_reader/presets');
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (data.ok && Array.isArray(data.presets)) {
-                            STATE.availablePresets = data.presets;
-                            STATE.activePresetName = data.active_preset_name || 'Urania 9800 GP';
-                            _populatePresetSelect();
-                            _syncVoiceUI();
-                            return;
-                        }
-                    }
-                } catch (e) {}
-            }
-
-            if (souls.length > 0) {
-                const matchedActive = souls.find(s => s.meta && s.meta.id === activeId);
-                if (matchedActive && matchedActive.meta && matchedActive.meta.name) {
-                    STATE.activePresetName = matchedActive.meta.name;
-                } else {
-                    STATE.activePresetName = 'Urania 9800 GP';
-                }
-
-                souls.sort((a, b) => (a.meta?.name || '').localeCompare(b.meta?.name || ''));
-                STATE.availablePresets = souls.map(s => ({
-                    id: s.meta.id,
-                    name: s.meta.name,
-                    engine: s.voice?.tts_engine ? s.voice.tts_engine.toUpperCase() : 'LOCAL',
-                    voice: s.voice?.tts_voice || ''
-                }));
-
-                _populatePresetSelect();
-                _syncVoiceUI();
-            }
-        } catch (e) {
-            console.warn('[DocReader] Failed to load Hecos presets:', e);
+        } catch (err) {
+            console.warn('[DocReader] Fallback presets load failed:', err);
         }
     }
 
@@ -455,14 +557,9 @@
         if (!pSelect) return;
         pSelect.innerHTML = '';
 
-        const currOptInVoice = document.querySelector('#docreader-voice-select option[value="hecos_current"]');
-        if (currOptInVoice) {
-            currOptInVoice.textContent = `✨ Current Hecos Voice (Local) [${STATE.activePresetName || 'Active Chat'}]`;
-        }
-
         const currOpt = document.createElement('option');
         currOpt.value = 'current';
-        currOpt.textContent = `✨ Active Chat (${STATE.activePresetName || 'Hecos'})`;
+        currOpt.textContent = `✨ Active GP (${STATE.activePresetName || 'Hecos'})`;
         pSelect.appendChild(currOpt);
 
         STATE.availablePresets.forEach(p => {
@@ -477,6 +574,152 @@
         }
     }
 
+    function _populateEngineSelect() {
+        const eSelect = document.getElementById('docreader-engine-select');
+        if (!eSelect) return;
+        if (STATE.audioEngine) {
+            eSelect.value = STATE.audioEngine;
+        }
+    }
+
+    function _populateVoiceAndPresetSelect() {
+        const vSelect = document.getElementById('docreader-voice-select');
+        if (!vSelect) return;
+        vSelect.innerHTML = '';
+
+        const engine = STATE.audioEngine || 'auto';
+
+        if (engine === 'browser') {
+            const group = document.createElement('optgroup');
+            group.label = "Browser Voices (Web Speech)";
+            const voices = (typeof speechSynthesis !== 'undefined') ? speechSynthesis.getVoices() : [];
+            if (voices && voices.length > 0) {
+                const priority = ['it', 'en', 'es', 'fr', 'de', 'pt'];
+                const sorted = [...voices].sort((a, b) => {
+                    const aLang = a.lang.split('-')[0].toLowerCase();
+                    const bLang = b.lang.split('-')[0].toLowerCase();
+                    const aIdx = priority.indexOf(aLang);
+                    const bIdx = priority.indexOf(bLang);
+                    if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+                    if (aIdx !== -1) return -1;
+                    if (bIdx !== -1) return 1;
+                    return a.name.localeCompare(b.name);
+                });
+                sorted.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = 'browser:' + v.name;
+                    opt.textContent = `${v.name} (${v.lang})`;
+                    group.appendChild(opt);
+                });
+            } else {
+                const opt = document.createElement('option');
+                opt.value = 'browser:default';
+                opt.textContent = "Browser Default Voice";
+                group.appendChild(opt);
+            }
+            vSelect.appendChild(group);
+
+            if (STATE.selectedVoice) {
+                vSelect.value = 'browser:' + STATE.selectedVoice;
+            }
+            return;
+        }
+
+        // For Neural / Local Engines:
+        // 1. Default Option
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = 'default';
+        if (engine === 'auto') {
+            defaultOpt.textContent = `✨ Default Voice (Auto: ${STATE.systemActiveEngine || 'Kokoro'})`;
+        } else {
+            defaultOpt.textContent = `✨ Default Voice (${engine.toUpperCase()})`;
+        }
+        vSelect.appendChild(defaultOpt);
+
+        // 2. Audio Configuration Presets (for kokoro, xtts2, fish_speech)
+        const presets = (STATE.audioPresetsMap && STATE.audioPresetsMap[engine]) || [];
+        if (presets.length > 0) {
+            const pGroup = document.createElement('optgroup');
+            pGroup.label = `${engine.toUpperCase()} Audio Presets`;
+            presets.forEach(pName => {
+                const opt = document.createElement('option');
+                opt.value = 'preset:' + pName;
+                opt.textContent = `🎙️ ${pName}`;
+                pGroup.appendChild(opt);
+            });
+            vSelect.appendChild(pGroup);
+        }
+
+        // 3. Voices / Cloned Models
+        const voicesObj = (STATE.audioVoicesMap && STATE.audioVoicesMap[engine]) || {};
+        const voiceKeys = Object.keys(voicesObj);
+        if (voiceKeys.length > 0) {
+            const vGroup = document.createElement('optgroup');
+            vGroup.label = `${engine.toUpperCase()} Voices & Clones`;
+            voiceKeys.forEach(vId => {
+                const opt = document.createElement('option');
+                opt.value = 'voice:' + vId;
+                const vLabel = voicesObj[vId] || vId;
+                opt.textContent = (vLabel.startsWith('🎭') || vLabel.startsWith('✨')) ? vLabel : `🗣️ ${vLabel}`;
+                vGroup.appendChild(opt);
+            });
+            vSelect.appendChild(vGroup);
+        }
+
+        // If engine is 'auto', also show Kokoro presets & Piper voices as quick optgroups
+        if (engine === 'auto') {
+            const kPresets = (STATE.audioPresetsMap && STATE.audioPresetsMap.kokoro) || [];
+            if (kPresets.length > 0) {
+                const kpGroup = document.createElement('optgroup');
+                kpGroup.label = "Kokoro Audio Presets";
+                kPresets.forEach(pName => {
+                    const opt = document.createElement('option');
+                    opt.value = 'preset:' + pName;
+                    opt.textContent = `🎙️ ${pName}`;
+                    kpGroup.appendChild(opt);
+                });
+                vSelect.appendChild(kpGroup);
+            }
+
+            const kVoices = (STATE.audioVoicesMap && STATE.audioVoicesMap.kokoro) || {};
+            const kKeys = Object.keys(kVoices);
+            if (kKeys.length > 0) {
+                const kvGroup = document.createElement('optgroup');
+                kvGroup.label = "Kokoro Voices";
+                kKeys.forEach(vId => {
+                    const opt = document.createElement('option');
+                    opt.value = 'voice:' + vId;
+                    opt.textContent = kVoices[vId] || vId;
+                    kvGroup.appendChild(opt);
+                });
+                vSelect.appendChild(kvGroup);
+            }
+
+            const piperVoices = (STATE.audioVoicesMap && STATE.audioVoicesMap.piper) || {};
+            const pKeys = Object.keys(piperVoices);
+            if (pKeys.length > 0) {
+                const ppGroup = document.createElement('optgroup');
+                ppGroup.label = "Piper Voices";
+                pKeys.forEach(vId => {
+                    const opt = document.createElement('option');
+                    opt.value = 'voice:' + vId;
+                    opt.textContent = piperVoices[vId] || vId;
+                    ppGroup.appendChild(opt);
+                });
+                vSelect.appendChild(ppGroup);
+            }
+        }
+
+        // Restore selection
+        if (STATE.audioPreset) {
+            vSelect.value = 'preset:' + STATE.audioPreset;
+        } else if (STATE.audioVoice && STATE.audioVoice !== 'default') {
+            vSelect.value = 'voice:' + STATE.audioVoice;
+        } else {
+            vSelect.value = 'default';
+        }
+    }
+
     // ── Load User Saved Config ───────────────────────────────────────────────
     async function _loadConfig() {
         try {
@@ -485,6 +728,9 @@
             const cfg = await res.json();
             if (cfg.voice_source) STATE.voiceSource = cfg.voice_source;
             if (cfg.hecos_preset) STATE.hecosPresetId = cfg.hecos_preset;
+            if (cfg.audio_engine) STATE.audioEngine = cfg.audio_engine;
+            if (cfg.audio_preset) STATE.audioPreset = cfg.audio_preset;
+            if (cfg.audio_voice) STATE.audioVoice = cfg.audio_voice;
             if (cfg.default_voice) STATE.selectedVoice = cfg.default_voice;
             if (cfg.default_rate) STATE.rate = parseFloat(cfg.default_rate);
             if (cfg.default_pitch) STATE.pitch = parseFloat(cfg.default_pitch);
@@ -495,8 +741,7 @@
             if (typeof cfg.word_highlight === 'boolean') STATE.wordHighlight = cfg.word_highlight;
 
             // Update UI elements to reflect config
-            const speedBtn = document.getElementById('docreader-speed-btn');
-            if (speedBtn) speedBtn.textContent = STATE.rate + '×';
+            _updateSpeedUI(STATE.rate);
             const volSlider = document.getElementById('docreader-volume');
             if (volSlider) volSlider.value = STATE.volume;
 
@@ -506,78 +751,57 @@
         }
     }
 
+    // ── Save User Config ─────────────────────────────────────────────────────
+    async function _saveConfig() {
+        try {
+            await fetch('/hecos/api/plugins/document_reader/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    voice_source: STATE.voiceSource,
+                    hecos_preset: STATE.hecosPresetId,
+                    audio_engine: STATE.audioEngine,
+                    audio_preset: STATE.audioPreset,
+                    audio_voice: STATE.audioVoice,
+                    default_voice: STATE.selectedVoice,
+                    default_rate: STATE.rate,
+                    default_pitch: STATE.pitch,
+                    default_volume: STATE.volume
+                })
+            });
+        } catch (e) {
+            console.warn('[DocReader] Failed to save config:', e);
+        }
+    }
+
+    // ── Speed Formatting and UI Helpers ──────────────────────────────────────
+    function _formatSpeed(val) {
+        const num = parseFloat(val);
+        if (isNaN(num)) return '1.00×';
+        return num.toFixed(2) + '×';
+    }
+
+    function _updateSpeedUI(val) {
+        const speedSlider = document.getElementById('docreader-speed-slider');
+        if (speedSlider) speedSlider.value = val;
+        const speedBadge = document.getElementById('docreader-speed-badge');
+        if (speedBadge) speedBadge.textContent = _formatSpeed(val);
+        const oldBtn = document.getElementById('docreader-speed-btn');
+        if (oldBtn) oldBtn.textContent = _formatSpeed(val);
+    }
+
     // ── Sync UI Selects with State ───────────────────────────────────────────
     function _syncVoiceUI() {
-        const vSelect = document.getElementById('docreader-voice-select');
-        const pGroup = document.getElementById('docreader-preset-group');
-        const pSelect = document.getElementById('docreader-preset-select');
-        if (!vSelect) return;
-
-        const currVoiceOpt = vSelect.querySelector('option[value="hecos_current"]');
-        if (currVoiceOpt && STATE.activePresetName) {
-            currVoiceOpt.textContent = `✨ Current Hecos Voice (${STATE.activePresetName})`;
-        }
-
-        if (STATE.voiceSource === 'hecos') {
-            if (STATE.hecosPresetId === 'current') {
-                vSelect.value = 'hecos_current';
-            } else {
-                vSelect.value = 'hecos_preset';
-            }
-            if (pGroup) pGroup.style.display = 'flex';
-            if (pSelect && STATE.hecosPresetId) {
-                pSelect.value = STATE.hecosPresetId;
-                const pOpt = pSelect.options[pSelect.selectedIndex];
-                const pPresetOpt = vSelect.querySelector('option[value="hecos_preset"]');
-                if (pPresetOpt && pOpt && STATE.hecosPresetId !== 'current') {
-                    pPresetOpt.textContent = `🎙️ Preset: ${pOpt.textContent.split('(')[0].trim()}`;
-                }
-            }
-        } else {
-            if (STATE.selectedVoice) {
-                vSelect.value = 'browser:' + STATE.selectedVoice;
-            }
-            if (pGroup) pGroup.style.display = 'none';
-        }
+        _populateEngineSelect();
+        _populatePresetSelect();
+        _populateVoiceAndPresetSelect();
     }
 
     // ── Populate TTS voices ──────────────────────────────────────────────────
     function _populateVoices() {
-        const select = document.getElementById('docreader-voice-select');
-        if (!select) return;
-
-        let browserGroup = document.getElementById('docreader-browser-optgroup');
-        if (!browserGroup) {
-            browserGroup = document.createElement('optgroup');
-            browserGroup.id = 'docreader-browser-optgroup';
-            browserGroup.label = "Browser Voices (Web Speech)";
-            select.appendChild(browserGroup);
+        if (STATE.audioEngine === 'browser') {
+            _populateVoiceAndPresetSelect();
         }
-        browserGroup.innerHTML = '';
-
-        const voices = speechSynthesis.getVoices();
-        if (voices && voices.length > 0) {
-            const priority = ['it', 'en', 'es', 'fr', 'de', 'pt'];
-            const sortedVoices = [...voices].sort((a, b) => {
-                const aLang = a.lang.split('-')[0].toLowerCase();
-                const bLang = b.lang.split('-')[0].toLowerCase();
-                const aIdx = priority.indexOf(aLang);
-                const bIdx = priority.indexOf(bLang);
-                if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
-                if (aIdx !== -1) return -1;
-                if (bIdx !== -1) return 1;
-                return a.name.localeCompare(b.name);
-            });
-
-            sortedVoices.forEach(v => {
-                const opt = document.createElement('option');
-                opt.value = 'browser:' + v.name;
-                opt.textContent = `${v.name} (${v.lang})`;
-                browserGroup.appendChild(opt);
-            });
-        }
-
-        _syncVoiceUI();
     }
 
     // ── Selection tooltip logic ──────────────────────────────────────────────
@@ -943,6 +1167,7 @@
             dot.className = 'docreader-status-dot';
             if (status === 'reading') dot.classList.add('reading');
             else if (status === 'paused') dot.classList.add('paused');
+            else if (status === 'synthesizing' || status === 'loading') dot.classList.add('synthesizing');
         }
         if (txt) txt.textContent = text || 'Ready';
     }
@@ -960,6 +1185,102 @@
             icon.className = 'fas fa-play';
             btn.classList.remove('active');
         }
+    }
+
+    // ── Cold Load / Preset Switch Progress Tracker ───────────────────────────
+    function _getCurrentEngineKey() {
+        if (STATE.voiceSource === 'browser') {
+            return 'browser:' + (STATE.selectedVoice || 'default');
+        }
+        const eng = STATE.audioEngine || 'auto';
+        const ap = STATE.audioPreset || '';
+        const v = STATE.audioVoice || 'default';
+        const gp = STATE.hecosPresetId || 'current';
+        return `hecos:${eng}:${ap}:${v}:${gp}`;
+    }
+
+    function _getActiveEngineName() {
+        if (STATE.voiceSource === 'browser') return 'Browser Voice (' + (STATE.selectedVoice || 'Default') + ')';
+        if (STATE.audioPreset) return `${(STATE.audioEngine || 'TTS').toUpperCase()} · ${STATE.audioPreset}`;
+        if (STATE.audioVoice && STATE.audioVoice !== 'default') return `${(STATE.audioEngine || 'TTS').toUpperCase()} · ${STATE.audioVoice}`;
+        if (STATE.audioEngine && STATE.audioEngine !== 'auto') return `${STATE.audioEngine.toUpperCase()} Voice`;
+        if (STATE.availablePresets && STATE.hecosPresetId && STATE.hecosPresetId !== 'current') {
+            const found = STATE.availablePresets.find(p => p.id === STATE.hecosPresetId);
+            if (found && found.name) return found.name;
+        }
+        return STATE.activePresetName || 'Hecos Neural';
+    }
+
+    function _clearColdLoadTracker() {
+        if (STATE._synthesisInterval) {
+            clearInterval(STATE._synthesisInterval);
+            STATE._synthesisInterval = null;
+        }
+    }
+
+    function _startColdLoadTracker() {
+        _clearColdLoadTracker();
+
+        const engineLabel = _getActiveEngineName();
+        const bufferEl = document.getElementById('docreader-audio-buffer-fill');
+        const barEl = document.getElementById('docreader-progress-bar');
+        if (bufferEl) {
+            bufferEl.classList.add('loading-engine');
+            bufferEl.style.width = '10%';
+        }
+        if (barEl) barEl.classList.add('synthesizing');
+
+        _updateStatus('loading', `Caricamento ${engineLabel}...`);
+
+        let currentPct = 10;
+        let elapsedMs = 0;
+        const intervalMs = 120;
+
+        STATE._synthesisInterval = setInterval(() => {
+            elapsedMs += intervalMs;
+            if (elapsedMs < 600) {
+                currentPct = Math.min(30, currentPct + 4);
+                _updateStatus('loading', `Caricamento ${engineLabel}... (${Math.round(currentPct)}%)`);
+            } else if (elapsedMs < 4000) {
+                currentPct = Math.min(75, currentPct + 2.5);
+                _updateStatus('loading', `Inizializzazione modello in RAM... (${Math.round(currentPct)}%)`);
+            } else {
+                currentPct = Math.min(94, currentPct + 0.8);
+                _updateStatus('loading', `Elaborazione ${engineLabel}... (${Math.round(currentPct)}%)`);
+            }
+            if (bufferEl) bufferEl.style.width = currentPct + '%';
+        }, intervalMs);
+    }
+
+    function _completeColdLoadTracker(onComplete) {
+        _clearColdLoadTracker();
+        const bufferEl = document.getElementById('docreader-audio-buffer-fill');
+        const barEl = document.getElementById('docreader-progress-bar');
+        if (bufferEl) {
+            bufferEl.style.width = '100%';
+        }
+        _updateStatus('reading', 'Reading...');
+
+        setTimeout(() => {
+            if (bufferEl) {
+                bufferEl.classList.remove('loading-engine');
+                bufferEl.style.width = '0%';
+            }
+            if (barEl) barEl.classList.remove('synthesizing');
+            if (onComplete) onComplete();
+        }, 350);
+    }
+
+    function _errorColdLoadTracker() {
+        _clearColdLoadTracker();
+        const bufferEl = document.getElementById('docreader-audio-buffer-fill');
+        const barEl = document.getElementById('docreader-progress-bar');
+        if (bufferEl) {
+            bufferEl.classList.remove('loading-engine');
+            bufferEl.style.width = '0%';
+        }
+        if (barEl) barEl.classList.remove('synthesizing');
+        _updateStatus('error', 'Errore caricamento TTS');
     }
 
     // ── Highlight current sentence & page ─────────────────────────────────────
@@ -1029,6 +1350,9 @@
 
     // ── Mode A: Web Speech API (Browser) ─────────────────────────────────────
     function _speakWithWebSpeech(sentenceData, onEnd) {
+        _clearSynthesisTracker();
+        _setTTSProgress(1, 'Inizializzazione voce browser...', 25);
+
         const utterance = new SpeechSynthesisUtterance(sentenceData.text);
         utterance.rate = STATE.rate;
         utterance.pitch = STATE.pitch;
@@ -1039,6 +1363,8 @@
             const v = voices.find(v => v.name === STATE.selectedVoice);
             if (v) utterance.voice = v;
         }
+
+        _setTTSProgress(2, 'Sintesi vocale sistema operativo...', 75);
 
         if (STATE.wordHighlight) {
             utterance.onboundary = (event) => {
@@ -1066,6 +1392,10 @@
             };
         }
 
+        utterance.onstart = () => {
+            _updateStatus('reading', 'Reading (Browser)...');
+        };
+
         utterance.onend = () => {
             STATE.utterance = null;
             if (onEnd) onEnd(false);
@@ -1087,19 +1417,31 @@
     function _getAudioCacheKey(index, sentenceData) {
         const text = sentenceData && sentenceData.text ? sentenceData.text.trim() : '';
         const path = STATE.currentPath || 'doc';
-        const preset = STATE.hecosPresetId || 'current';
+        const gp = STATE.hecosPresetId || 'current';
+        const eng = STATE.audioEngine || 'auto';
+        const ap = STATE.audioPreset || '';
+        const v = STATE.audioVoice || 'default';
         const rate = STATE.rate || 1.0;
-        return `${path}:::${preset}:::${rate}:::${index}:::${text}`;
+        return `${path}:::${gp}:::${eng}:::${ap}:::${v}:::${rate}:::${index}:::${text}`;
     }
 
-    // ── Mode B: Hecos Neural TTS (Local Kokoro / XTTS2 / Fish Speech) ─────────
+    // ── Mode B: Hecos Neural TTS (Local Kokoro / Piper / XTTS2 / Fish Speech) ─
     async function _speakWithHecosLocal(index, sentenceData, onEnd) {
         if (!STATE.isReading) return;
 
         const cacheKey = _getAudioCacheKey(index, sentenceData);
         let audioUrl = STATE._audioCache.get(cacheKey);
+        const engineKey = _getCurrentEngineKey();
+        const isCold = !STATE._loadedEngines.has(engineKey) || STATE._pendingEngineSwitch;
+
         if (!audioUrl) {
-            _updateStatus('loading', 'Synthesizing voice...');
+            // Only show progress bar when cold loading or switching engine/preset
+            if (isCold) {
+                _startColdLoadTracker();
+            } else {
+                _updateStatus('reading', 'Reading (Hecos Local)...');
+            }
+
             try {
                 const res = await fetch('/hecos/api/plugins/document_reader/tts', {
                     method: 'POST',
@@ -1107,6 +1449,9 @@
                     body: JSON.stringify({
                         text: sentenceData.text,
                         preset_id: STATE.hecosPresetId || 'current',
+                        engine: STATE.audioEngine || 'auto',
+                        audio_preset: STATE.audioPreset || '',
+                        voice: STATE.audioVoice || 'default',
                         rate: STATE.rate || 1.0
                     })
                 });
@@ -1115,14 +1460,24 @@
                 if (!data.ok || !data.audio_url) throw new Error(data.error || 'No audio returned');
                 audioUrl = data.audio_url;
                 STATE._audioCache.set(cacheKey, audioUrl);
+
+                if (isCold) {
+                    STATE._loadedEngines.add(engineKey);
+                    STATE._pendingEngineSwitch = false;
+                    _completeColdLoadTracker();
+                }
             } catch (err) {
                 console.warn('[DocReader] Hecos TTS error:', err);
+                if (isCold) _errorColdLoadTracker();
                 _updateStatus('error', 'Voice synthesis error, continuing...');
                 setTimeout(() => {
                     if (STATE.isReading && onEnd) onEnd(false);
                 }, 1000);
                 return;
             }
+        } else {
+            STATE._loadedEngines.add(engineKey);
+            STATE._pendingEngineSwitch = false;
         }
 
         if (!STATE.isReading) return;
@@ -1134,7 +1489,7 @@
 
         audio.onplay = () => {
             _updateStatus('reading', 'Reading (Hecos Local)...');
-            // Pre-fetch next sentence for gapless audio flow
+            // Pre-fetch next sentence in background without invasive UI
             _prefetchNextSentence(index + 1);
         };
 
@@ -1176,6 +1531,9 @@
                 body: JSON.stringify({
                     text: nextSentence.text,
                     preset_id: STATE.hecosPresetId || 'current',
+                    engine: STATE.audioEngine || 'auto',
+                    audio_preset: STATE.audioPreset || '',
+                    voice: STATE.audioVoice || 'default',
                     rate: STATE.rate || 1.0
                 })
             });
@@ -1222,6 +1580,9 @@
                 body: JSON.stringify({
                     text: word,
                     preset_id: STATE.hecosPresetId || 'current',
+                    engine: STATE.audioEngine || 'auto',
+                    audio_preset: STATE.audioPreset || '',
+                    voice: STATE.audioVoice || 'default',
                     rate: STATE.rate || 1.0
                 })
             })
@@ -1312,6 +1673,9 @@
             const filenameEl = document.getElementById('docreader-filename');
             if (filenameEl) filenameEl.textContent = displayFilename || filename;
 
+            // Ensure speed & volume controls reflect current state
+            _updateSpeedUI(STATE.rate || 1.0);
+
             // Immediately reset content & TOC DOM to prevent showing previous document
             const contentEl = document.getElementById('docreader-content');
             const tocEl = document.getElementById('docreader-toc');
@@ -1373,6 +1737,7 @@
 
         close: function() {
             this.stop();
+            _clearColdLoadTracker();
             STATE._sessionId = Date.now();
             STATE._audioCache.clear();
             STATE._prefetchSet.clear();
@@ -1427,6 +1792,7 @@
 
         // Stop reading
         stop: function() {
+            _clearColdLoadTracker();
             speechSynthesis.cancel();
             if (STATE._currentAudio) {
                 try {
@@ -1444,6 +1810,14 @@
             const hud = document.getElementById('docreader-readalong-hud');
             if (hud) hud.classList.remove('visible');
             document.querySelectorAll('.docreader-page-card.reading-page').forEach(c => c.classList.remove('reading-page'));
+
+            const bufferEl = document.getElementById('docreader-audio-buffer-fill');
+            if (bufferEl) {
+                bufferEl.classList.remove('loading-engine');
+                bufferEl.style.width = '0%';
+            }
+            const barEl = document.getElementById('docreader-progress-bar');
+            if (barEl) barEl.classList.remove('synthesizing');
         },
 
         // Read from a specific sentence index
@@ -1518,19 +1892,34 @@
                 utterance.onerror = () => { STATE.isReading = false; _updateStatus('ready', 'Ready'); };
                 speechSynthesis.speak(utterance);
             } else {
-                _updateStatus('loading', 'Synthesizing selection...');
+                const engineKey = _getCurrentEngineKey();
+                const isCold = !STATE._loadedEngines.has(engineKey) || STATE._pendingEngineSwitch;
+                if (isCold) {
+                    _startColdLoadTracker();
+                } else {
+                    _updateStatus('reading', 'Reading selection (Hecos Local)...');
+                }
+
                 fetch('/hecos/api/plugins/document_reader/tts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         text: text,
                         preset_id: STATE.hecosPresetId || 'current',
+                        engine: STATE.audioEngine || 'auto',
+                        audio_preset: STATE.audioPreset || '',
+                        voice: STATE.audioVoice || 'default',
                         rate: STATE.rate || 1.0
                     })
                 })
                 .then(r => r.json())
                 .then(data => {
                     if (data.ok && data.audio_url) {
+                        if (isCold) {
+                            STATE._loadedEngines.add(engineKey);
+                            STATE._pendingEngineSwitch = false;
+                            _completeColdLoadTracker();
+                        }
                         const audio = new Audio(data.audio_url);
                         audio.playbackRate = STATE.rate || 1.0;
                         audio.volume = STATE.volume !== undefined ? STATE.volume : 1.0;
@@ -1541,11 +1930,13 @@
                         audio.play().catch(e => { STATE.isReading = false; console.warn(e); });
                     } else {
                         STATE.isReading = false;
+                        if (isCold) _errorColdLoadTracker();
                         _updateStatus('error', 'Synthesis failed');
                     }
                 })
                 .catch(err => {
                     STATE.isReading = false;
+                    if (isCold) _errorColdLoadTracker();
                     console.error('[DocReader] Selection TTS error:', err);
                     _updateStatus('error', 'Synthesis error');
                 });
@@ -1600,43 +1991,80 @@
             }
         },
 
-        // Speed control
-        cycleSpeed: function() {
-            const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0];
-            const currentIdx = speeds.indexOf(STATE.rate);
-            STATE.rate = speeds[(currentIdx + 1) % speeds.length];
+        // Granular Speed Control (0.50× to 3.00× with 0.05 step)
+        changeSpeed: function(val, showToastFeedback = false) {
+            let rate = parseFloat(val);
+            if (isNaN(rate)) rate = 1.0;
+            rate = Math.max(0.5, Math.min(3.0, Math.round(rate * 100) / 100));
+            STATE.rate = rate;
             
-            const btn = document.getElementById('docreader-speed-btn');
-            if (btn) btn.textContent = STATE.rate + '×';
-            
+            _updateSpeedUI(rate);
+
+            // Apply in real-time to active audio
             if (STATE.voiceSource === 'hecos' && STATE._currentAudio) {
                 STATE._currentAudio.playbackRate = STATE.rate;
-            } else if (STATE.isReading && !STATE.isPaused) {
-                const idx = STATE.currentIndex;
-                this.stop();
-                this.readFromIndex(idx);
+            } else if (STATE.voiceSource === 'browser' && STATE.isReading && !STATE.isPaused) {
+                clearTimeout(this._speedRestartTimer);
+                this._speedRestartTimer = setTimeout(() => {
+                    if (STATE.isReading && !STATE.isPaused) {
+                        const idx = STATE.currentIndex;
+                        this.stop();
+                        this.readFromIndex(idx);
+                    }
+                }, 250);
+            }
+
+            if (showToastFeedback && window.showToast) {
+                window.showToast(`⚡ Speed: ${_formatSpeed(rate)}`, 'info');
             }
         },
 
-        // Voice Source change (Current Hecos Voice, Preset, or Browser voice)
-        changeVoiceSource: function(val) {
-            if (val === 'hecos_current') {
-                STATE.voiceSource = 'hecos';
-                STATE.hecosPresetId = 'current';
-            } else if (val === 'hecos_preset') {
-                STATE.voiceSource = 'hecos';
-                if (!STATE.hecosPresetId || STATE.hecosPresetId === 'current') {
-                    if (STATE.availablePresets.length > 0) {
-                        STATE.hecosPresetId = STATE.availablePresets[0].id;
-                    }
-                }
-            } else if (val.startsWith('browser:')) {
+        changeSpeedDelta: function(delta, showToastFeedback = true) {
+            const cur = STATE.rate || 1.0;
+            const next = Math.max(0.5, Math.min(3.0, Math.round((cur + delta) * 100) / 100));
+            this.changeSpeed(next, showToastFeedback);
+        },
+
+        resetSpeed: function() {
+            this.changeSpeed(1.0, true);
+        },
+
+        cycleSpeed: function() {
+            this.changeSpeedDelta(0.1, true);
+        },
+
+        nextPage: function() {
+            const curPage = (STATE.sentences[STATE.currentIndex] && STATE.sentences[STATE.currentIndex].pageIdx) || 0;
+            const maxPage = (STATE.pages && STATE.pages.length) ? STATE.pages.length - 1 : 0;
+            if (curPage < maxPage) _scrollToPage(curPage + 1);
+        },
+
+        prevPage: function() {
+            const curPage = (STATE.sentences[STATE.currentIndex] && STATE.sentences[STATE.currentIndex].pageIdx) || 0;
+            if (curPage > 0) _scrollToPage(curPage - 1);
+        },
+
+        // Change Audio Engine (Auto, Kokoro, Piper, XTTS, Fish Speech, Browser)
+        changeAudioEngine: function(engine) {
+            STATE.audioEngine = engine;
+            if (engine === 'browser') {
                 STATE.voiceSource = 'browser';
-                STATE.selectedVoice = val.replace('browser:', '');
+                if (!STATE.selectedVoice) {
+                    const voices = (typeof speechSynthesis !== 'undefined') ? speechSynthesis.getVoices() : [];
+                    if (voices && voices.length > 0) STATE.selectedVoice = voices[0].name;
+                }
+            } else {
+                STATE.voiceSource = 'hecos';
             }
+            STATE.audioPreset = '';
+            STATE.audioVoice = 'default';
+
+            _populateVoiceAndPresetSelect();
+            _saveConfig();
+
+            STATE._pendingEngineSwitch = true;
             STATE._audioCache.clear();
             STATE._prefetchSet.clear();
-            _syncVoiceUI();
 
             if (STATE.isReading && !STATE.isPaused) {
                 const idx = STATE.currentIndex;
@@ -1645,13 +2073,49 @@
             }
         },
 
-        // Specific Hecos Preset change
-        changeHecosPreset: function(presetId) {
-            STATE.voiceSource = 'hecos';
-            STATE.hecosPresetId = presetId;
+        // Change Voice or Audio Engine Configuration Preset
+        changeVoice: function(val) {
+            if (!val) return;
+            if (val.startsWith('browser:')) {
+                STATE.voiceSource = 'browser';
+                STATE.audioEngine = 'browser';
+                STATE.selectedVoice = val.replace('browser:', '');
+                STATE.audioPreset = '';
+                STATE.audioVoice = 'default';
+                const eSelect = document.getElementById('docreader-engine-select');
+                if (eSelect) eSelect.value = 'browser';
+            } else if (val.startsWith('preset:')) {
+                STATE.voiceSource = 'hecos';
+                STATE.audioPreset = val.replace('preset:', '');
+                STATE.audioVoice = 'default';
+            } else if (val.startsWith('voice:')) {
+                STATE.voiceSource = 'hecos';
+                STATE.audioVoice = val.replace('voice:', '');
+                STATE.audioPreset = '';
+            } else { // 'default'
+                STATE.audioPreset = '';
+                STATE.audioVoice = 'default';
+            }
+
+            STATE._pendingEngineSwitch = true;
             STATE._audioCache.clear();
             STATE._prefetchSet.clear();
-            _syncVoiceUI();
+            _saveConfig();
+
+            if (STATE.isReading && !STATE.isPaused) {
+                const idx = STATE.currentIndex;
+                this.stop();
+                this.readFromIndex(idx);
+            }
+        },
+
+        // Global Preset (GP / AI Soul Persona) change
+        changeHecosPreset: function(presetId) {
+            STATE.hecosPresetId = presetId;
+            STATE._pendingEngineSwitch = true;
+            STATE._audioCache.clear();
+            STATE._prefetchSet.clear();
+            _saveConfig();
 
             if (STATE.isReading && !STATE.isPaused) {
                 const idx = STATE.currentIndex;
@@ -1661,12 +2125,8 @@
         },
 
         // Backward compatibility
-        changeVoice: function(voiceName) {
-            if (voiceName.startsWith('browser:') || voiceName.startsWith('hecos_')) {
-                this.changeVoiceSource(voiceName);
-            } else {
-                this.changeVoiceSource('browser:' + voiceName);
-            }
+        changeVoiceSource: function(val) {
+            this.changeVoice(val);
         },
 
         // Volume change

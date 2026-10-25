@@ -314,32 +314,78 @@
 }
 
 .docreader-progress-bar {
+    position: relative;
     width: 100%;
-    height: 4px;
+    height: 6px;
     background: rgba(255, 255, 255, 0.08);
-    border-radius: 2px;
+    border-radius: 3px;
     overflow: hidden;
     cursor: pointer;
-    transition: height 0.2s;
+    transition: height 0.2s ease, box-shadow 0.25s ease;
 }
 
 .docreader-progress-bar:hover {
-    height: 6px;
+    height: 8px;
 }
 
+.docreader-progress-bar.synthesizing {
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+
+/* Layer 1: Audio Loading / Engine Init Bar (in background, active only during cold start / preset switch) */
+.docreader-audio-buffer-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #0284c7 0%, #38bdf8 50%, #60a5fa 100%);
+    background-size: 200% 100%;
+    border-radius: 3px;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+}
+
+.docreader-audio-buffer-fill.loading-engine {
+    opacity: 1;
+    animation: docreader-buffer-glow 1.5s ease-in-out infinite, docreader-buffer-slide 2s linear infinite;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
+}
+
+@keyframes docreader-buffer-glow {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.35) drop-shadow(0 0 6px #38bdf8); }
+}
+
+@keyframes docreader-buffer-slide {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+/* Layer 2: Document Reading Progress (foreground, purple / violet) */
 .docreader-progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
     height: 100%;
     background: linear-gradient(90deg, #818cf8, #a78bfa);
-    border-radius: 2px;
+    border-radius: 3px;
     width: 0%;
+    pointer-events: none;
+    z-index: 2;
     transition: width 0.3s ease;
+    box-shadow: 0 0 8px rgba(167, 139, 250, 0.35);
 }
 
 .docreader-progress-info {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 0.75em;
     color: rgba(255, 255, 255, 0.4);
+    min-height: 18px;
 }
 
 /* Transport Controls */
@@ -418,6 +464,94 @@
     white-space: nowrap;
 }
 
+.docreader-speed-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    user-select: none;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.docreader-speed-group:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(167, 139, 250, 0.35);
+}
+
+.docreader-speed-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 80px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.docreader-speed-slider:hover,
+.docreader-speed-slider:focus {
+    background: rgba(167, 139, 250, 0.35);
+}
+
+.docreader-speed-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a78bfa, #818cf8);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(167, 139, 250, 0.5);
+    transition: transform 0.1s ease;
+}
+
+.docreader-speed-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.docreader-speed-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a78bfa, #818cf8);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 8px rgba(167, 139, 250, 0.5);
+    transition: transform 0.1s ease;
+}
+
+.docreader-speed-slider::-moz-range-thumb:hover {
+    transform: scale(1.2);
+}
+
+.docreader-speed-badge {
+    background: rgba(167, 139, 250, 0.14);
+    border: 1px solid rgba(167, 139, 250, 0.28);
+    color: #c4b5fd;
+    padding: 2px 7px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.78em;
+    font-family: inherit;
+    font-weight: 700;
+    min-width: 44px;
+    text-align: center;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.docreader-speed-badge:hover {
+    background: rgba(167, 139, 250, 0.3);
+    border-color: rgba(167, 139, 250, 0.5);
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(167, 139, 250, 0.35);
+}
+
 .docreader-speed-btn {
     background: rgba(167, 139, 250, 0.12);
     border: 1px solid rgba(167, 139, 250, 0.2);
@@ -439,7 +573,8 @@
 }
 
 .docreader-voice-select,
-.docreader-preset-select {
+.docreader-preset-select,
+.docreader-engine-select {
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.12);
     color: #e2e8f0;
@@ -447,21 +582,34 @@
     border-radius: 6px;
     font-size: 0.8em;
     font-family: inherit;
-    max-width: 190px;
     cursor: pointer;
     outline: none;
     transition: border-color 0.15s, background 0.15s;
 }
 
+.docreader-preset-select {
+    max-width: 140px;
+}
+
+.docreader-engine-select {
+    max-width: 130px;
+}
+
+.docreader-voice-select {
+    max-width: 170px;
+}
+
 .docreader-voice-select:focus,
-.docreader-preset-select:focus {
+.docreader-preset-select:focus,
+.docreader-engine-select:focus {
     border-color: rgba(167, 139, 250, 0.6);
     background: rgba(255, 255, 255, 0.12);
 }
 
 .docreader-voice-select option,
 .docreader-voice-select optgroup,
-.docreader-preset-select option {
+.docreader-preset-select option,
+.docreader-engine-select option {
     background: #1a1a2e;
     color: #e2e8f0;
 }
@@ -641,6 +789,17 @@
 
 .docreader-status-dot.paused {
     background: #fbbf24;
+}
+
+.docreader-status-dot.synthesizing {
+    background: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.85);
+    animation: docreader-dot-pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes docreader-dot-pulse {
+    from { transform: scale(0.9); opacity: 0.7; }
+    to { transform: scale(1.35); opacity: 1; }
 }
 
 /* ── Read Document button in chat file cards ────────────────────────────── */

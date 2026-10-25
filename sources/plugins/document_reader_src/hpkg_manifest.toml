@@ -1,140 +1,52 @@
-id = "document_reader"
-manifest_version = "1"
-name = "Document Reader"
-version = "1.0.0"
-author = "Hecos Team / Antonio Meloni"
-license = "GPL-3.0"
+api_routes_file = "web/routes.py"
+author = "Antonio Meloni"
+build_date = "2026-10-25T08:41:53Z"
+category = "DOCUMENTS"
+creation_date = "2026-10-25T08:41:53Z"
+date = ""
 description = "Universal document reader with TTS. Fullscreen reading mode, visual PDF canvas rendering, text selection reading, word-by-word highlighting, audiobook-style controls."
-type = "plugin"
-pip_isolation = "shared"
-target_dir = "hpm"
-plugin_dir = "."
 hecos_min_version = "0.34.0"
 icon = "📖"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
-readme = "README.md"
-category = "DOCUMENTS"
-plugin_tag = "DOCUMENT_READER"
-tag = "DOCUMENT_READER"
-lazy_load = true
+id = "document_reader"
 is_class_based = true
-api_routes_file = "web/routes.py"
-
-[config_panel]
-tab_id = "document_reader"
-tab_label = "Document Reader"
-tab_icon = "<i class=\"fas fa-book-reader\"></i>"
-template_file = "web/templates/config_document_reader.html"
-js_files = [
-    "web/static/js/document_reader.js",
-    "web/static/js/document_reader_panel.js"
+lazy_load = true
+license = "GPL-3.0"
+manifest_version = "1"
+name = "Document Reader"
+pip_isolation = "shared"
+plugin_dir = "."
+plugin_tag = "DOCUMENT_READER"
+readme = "README.md"
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/plugins/document_reader_src/preview_1.png",
 ]
-css_file = "web/static/css/document_reader.css"
-category = "MULTIMEDIA"
-api_routes_file = "web/routes.py"
-config_api_get = "/hecos/api/plugins/document_reader/config"
-config_api_post = "/hecos/api/plugins/document_reader/config"
-
-[commands]
-read_document = "Open a document in the fullscreen reader with TTS capabilities. Accepts filename, partial name, or full path."
-stop_reading = "Stop the current TTS reading session."
-list_documents = "List all documents (PDF, TXT, MD, HTML, DOCX) available in the documents library."
-
-[[slash_commands]]
-id = "read"
-aliases = [
-    "/read",
-    "/leggi",
-    "/reader",
-    "/docreader",
-    "/leggi_documento"
-]
-description = "Apre e legge un documento con voce sintetizzata nel Document Reader"
-usage = "/read [percorso o nome file]"
-example = "/read fotoromanzo"
-icon = "📖"
-category = "DOCUMENTS"
-method = "read_document"
-requires_args = false
-
-[[slash_commands]]
-id = "stop_reading"
-aliases = [
-    "/stop_reading",
-    "/ferma_lettura",
-    "/stop_doc",
-    "/stop_reader"
-]
-description = "Interrompe la lettura vocale attiva nel Document Reader"
-usage = "/stop_reading"
-example = "/stop_reading"
-icon = "⏹️"
-category = "DOCUMENTS"
-method = "stop_reading"
-requires_args = false
-
-[[slash_commands]]
-id = "read_list"
-aliases = [
-    "/read_list",
-    "/doc_list",
-    "/lista_lettura"
-]
-description = "Elenca i documenti disponibili da leggere con il Document Reader"
-usage = "/read_list"
-example = "/read_list"
-icon = "📑"
-category = "DOCUMENTS"
-method = "list_documents"
-requires_args = false
-
-[[tool_schema]]
-name = "DOCUMENT_READER__read_document"
-description = "Open a PDF or text document in the fullscreen reader with text-to-speech capabilities. Resolves filenames and partial keywords (e.g. 'fotoromanzo', 'fotoromanzo numero 1') automatically from the documents folder."
-
-[tool_schema.parameters]
-type = "object"
-required = []
-
-[tool_schema.parameters.properties.path]
-type = "string"
-description = "File path, filename, or document search query (e.g. 'fotoromanzo', 'fotoromanzo numero 1'). If omitted, lists available documents."
-
-[[tool_schema]]
-name = "DOCUMENT_READER__stop_reading"
-description = "Stop the current text-to-speech reading session."
-
-[tool_schema.parameters]
-type = "object"
-required = []
-
-[[tool_schema]]
-name = "DOCUMENT_READER__list_documents"
-description = "List all readable documents (PDF, TXT, MD, HTML, DOCX) available in the documents library."
-
-[tool_schema.parameters]
-type = "object"
-required = []
-
-[tool_schema.parameters.properties.folder]
-type = "string"
-description = "Optional folder path to inspect. Defaults to standard documents library."
+tag = "DOCUMENT_READER"
+target_dir = "hpm"
+type = "plugin"
+version = "1.0.0"
+update_date = "2026-10-25T08:42:02Z"
+signature = "1k0A9uHOq6x+zbNaMHhL5C/MDnGlYUiauEbKaIkWixOqKUmxyH6gS41gup3Pwz8/HOjifxiP2azE1UsjRhmtCA=="
 
 [capabilities]
 llm_tools = [
     "read_document",
     "stop_reading",
-    "list_documents"
+    "list_documents",
 ]
 slash_commands = [
     "/read",
     "/leggi",
     "/reader",
     "/docreader",
+    "/leggi_documento",
     "/stop_reading",
     "/ferma_lettura",
+    "/stop_doc",
+    "/stop_reader",
     "/read_list",
-    "/doc_list"
+    "/doc_list",
+    "/lista_lettura",
 ]
 has_widget = false
 has_config_panel = true
@@ -142,3 +54,122 @@ has_api_routes = true
 has_system_calls = true
 syscall_notes = "Autonomous document reader with TTS: provides read_document, stop_reading, and list_documents with smart path and partial name resolution."
 notes = "Visual PDF canvas rendering with illustrations, Dual TTS (Local Hecos Piper/ElevenLabs and Browser Web Speech), full keyboard shortcuts, and ESC voice-stop priority."
+
+[commands]
+list_documents = "List all documents (PDF, TXT, MD, HTML, DOCX) available in the documents library."
+read_document = "Open a document in the fullscreen reader with TTS capabilities. Accepts filename, partial name, or full path."
+stop_reading = "Stop the current TTS reading session."
+
+[config_panel]
+api_routes_file = "web/routes.py"
+category = "MULTIMEDIA"
+config_api_get = "/hecos/api/plugins/document_reader/config"
+config_api_post = "/hecos/api/plugins/document_reader/config"
+css_file = "web/static/css/document_reader.css"
+js_files = [
+    "web/static/js/document_reader.js",
+    "web/static/js/document_reader_panel.js",
+]
+tab_icon = "<i class=\"fas fa-book-reader\"></i>"
+tab_id = "document_reader"
+tab_label = "Document Reader"
+template_file = "web/templates/config_document_reader.html"
+
+[[slash_commands]]
+aliases = [
+    "/read",
+    "/leggi",
+    "/reader",
+    "/docreader",
+    "/leggi_documento",
+]
+category = "DOCUMENTS"
+description = "Apre e legge un documento con voce sintetizzata nel Document Reader"
+example = "/read fotoromanzo"
+icon = "📖"
+id = "read"
+method = "read_document"
+requires_args = false
+usage = "/read [percorso o nome file]"
+
+[[slash_commands]]
+aliases = [
+    "/stop_reading",
+    "/ferma_lettura",
+    "/stop_doc",
+    "/stop_reader",
+]
+category = "DOCUMENTS"
+description = "Interrompe la lettura vocale attiva nel Document Reader"
+example = "/stop_reading"
+icon = "⏹️"
+id = "stop_reading"
+method = "stop_reading"
+requires_args = false
+usage = "/stop_reading"
+
+[[slash_commands]]
+aliases = [
+    "/read_list",
+    "/doc_list",
+    "/lista_lettura",
+]
+category = "DOCUMENTS"
+description = "Elenca i documenti disponibili da leggere con il Document Reader"
+example = "/read_list"
+icon = "📑"
+id = "read_list"
+method = "list_documents"
+requires_args = false
+usage = "/read_list"
+
+[[tool_schema]]
+description = "Open a PDF or text document in the fullscreen reader with text-to-speech capabilities. Resolves filenames and partial keywords (e.g. 'fotoromanzo', 'fotoromanzo numero 1') automatically from the documents folder."
+name = "DOCUMENT_READER__read_document"
+
+[tool_schema.parameters]
+required = []
+type = "object"
+
+[tool_schema.parameters.properties.path]
+description = "File path, filename, or document search query (e.g. 'fotoromanzo', 'fotoromanzo numero 1'). If omitted, lists available documents."
+type = "string"
+
+[[tool_schema]]
+description = "Stop the current text-to-speech reading session."
+name = "DOCUMENT_READER__stop_reading"
+
+[tool_schema.parameters]
+required = []
+type = "object"
+
+[[tool_schema]]
+description = "List all readable documents (PDF, TXT, MD, HTML, DOCX) available in the documents library."
+name = "DOCUMENT_READER__list_documents"
+
+[tool_schema.parameters]
+required = []
+type = "object"
+
+[tool_schema.parameters.properties.folder]
+description = "Optional folder path to inspect. Defaults to standard documents library."
+type = "string"
+
+[file_hashes]
+"build.py" = "544d35bad6f68f67fb47a1ce76dde7395052d93e4bb6f651b9f27597a4f0e572"
+"docreader_config.json" = "b45db882111a5de0b65cb4fa220c17853ed2930e5132a33430b4d5b3207f5e97"
+"main.py" = "3fab07ffa1d1e0a8dbf08b61669e67f1b4ba43aff6bff295bee9dd202bb2bf5d"
+"manifest.json" = "2a914f6075985d5ace2312aa760a8e349a58023e90ec34fc2d648b99da5afd39"
+"preview_1.png" = "1a386b5fa70d17f8f1ef5ba2eabb75e20b9627f6cc3830026185314a31045780"
+"README.md" = "759f1f5f878373e17f8e2bc9668d041945de4249b99e8fcfb07702346f2468f8"
+"routes.py" = "7b8c329e8e1668c425249b2c07beea06a36fb908afa67750085a9072aebe574c"
+"__init__.py" = "3359fa218b8b62f64bb9a5900cbaad1016b507ece83adcfc8d0d8bbe3ae805ae"
+"static/css/document_reader.css" = "3ced291382ea548998cbdc26cb24bdca37eb6deb0dee69c8743d8dfa27638c2b"
+"static/js/document_reader.js" = "b2ac02fd80da67102143ef623eb8dc7d129e67398ae8294ffe0c79c9a368b79a"
+"static/js/document_reader_chat.js" = "5bb82d688acdf5e7c2f9f0ef2e61ed15ddf78fee7b8756c3159f43beb917cf3f"
+"web/routes.py" = "7de3cd18b1afae2f4b9bff61b7cf97d8303929be62271b1c69298a0a2f32e1fe"
+"web/static/css/document_reader.css" = "3ced291382ea548998cbdc26cb24bdca37eb6deb0dee69c8743d8dfa27638c2b"
+"web/static/js/document_reader.js" = "b2ac02fd80da67102143ef623eb8dc7d129e67398ae8294ffe0c79c9a368b79a"
+"web/static/js/document_reader_chat.js" = "5bb82d688acdf5e7c2f9f0ef2e61ed15ddf78fee7b8756c3159f43beb917cf3f"
+"web/static/js/document_reader_panel.js" = "9141b038fc4ccd9c1e522c57f878150bf55d06228f3bc923ab48a6660c13e445"
+"web/templates/config_document_reader.html" = "29c48fa48f14a6190fab8186718eaf49757b49e2bec0e9ed100bf0a0babec47b"

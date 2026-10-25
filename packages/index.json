@@ -1668,8 +1668,8 @@
         "pdf"
       ],
       "download_url": "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/packages/plugins/document_reader-1.0.0.hpkg",
-      "size_bytes": 72015,
-      "sha256": "ec5a0a4aaaebb4b040808d27063a891e701e8fcbedfa3535c76b63c866938f3e",
+      "size_bytes": 78460,
+      "sha256": "f30fce6861d245de3f584cf4c4f2532115ed8471c7b92950fc432d464fb38546",
       "screenshots": [
         "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png"
       ],
