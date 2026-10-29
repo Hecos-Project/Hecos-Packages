@@ -41,6 +41,15 @@ def _bt(fn, timeout=None):
 class BrowserTools:
     """Hecos AI Browser — Playwright-powered web interaction tools."""
 
+    def __init__(self):
+        self.tag = "BROWSER"
+        self.desc = "Playwright Browser Automation: Navigate web pages, click elements, fill forms, extract reader DOM and capture screenshots."
+        self.icon = "globe"
+        self.status = "ONLINE"
+        self.category = "PLUGINS"
+        self.routing_instructions = "Use BROWSER to interact with a live browser session: open URLs, click buttons, fill forms, scroll pages, capture screenshots and automate UI interactions."
+        self.slash_commands = ["/browser_open", "/browser_close"]
+
     # ── Navigation ────────────────────────────────────────────────────────────
 
     def open_url(self, url: str) -> str:
@@ -437,8 +446,9 @@ class BrowserTools:
 
     def slash_b_switch(self, args: str) -> str:
         if not args or not args.strip().isdigit():
-            return "Devi specificare l'ID della scheda. Usa /b_tabs per vedere gli ID."
+            return "Please specify tab ID. Use /b_tabs to list tabs."
         return self.switch_tab(int(args.strip()))
+
 
 
 # Module-level export expected by Hecos hpm loader

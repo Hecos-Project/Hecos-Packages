@@ -1,0 +1,33 @@
+{
+    "tag": "NETSEARCH",
+    "display_name": "Net Search",
+    "name": "Net Search",
+    "description": "Hecos Net Search & Intelligence System App. Privacy-preserving ClearWeb multi-engine meta-search, Tor DarkWeb (.onion) hidden services, OSINT, Media discovery and deep file hunting.",
+    "version": "1.0.0",
+    "author": "Antonio Meloni / Hecos Team",
+    "lazy_load": false,
+    "is_class_based": true,
+    "type": "system_app",
+    "status": "ONLINE",
+    "icon": "fa-satellite-dish",
+    "icon_url": "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png",
+    "screenshots": [
+        "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png"
+    ],
+    "config_panel": {
+        "tab_id": "netsearch",
+        "tab_label": "Net Search & Tor",
+        "tab_icon": "fa-satellite-dish",
+        "template_file": "net_search/web/templates/config_netsearch.html",
+        "js_file": "net_search/web/static/js/netsearch_panel.js",
+        "js_files": [
+            "net_search/web/static/js/search/search_endpoints.js",
+            "net_search/web/static/js/netsearch_panel.js"
+        ],
+        "css_file": "net_search/web/static/css/search.css",
+        "category": "SISTEMA",
+        "api_routes_file": "net_search/web/routes.py",
+        "config_api_get": "/hecos/api/plugins/net_search/config",
+        "config_api_post": "/hecos/api/plugins/net_search/config"
+    }
+}

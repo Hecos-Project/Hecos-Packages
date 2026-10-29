@@ -3,6 +3,7 @@ import uuid
 import json
 import re
 import glob
+import random
 from hecos.core.logging import logger
 from hecos.app.config import ConfigManager
 
@@ -17,7 +18,7 @@ class DocsTools:
         default_path = "media/documents"
         if os.path.exists(self.config_file):
             try:
-                with open(self.config_file, "r", encoding="utf-8") as f:
+                with open(self.config_file, "r", encoding="utf-8-sig") as f:
                     data = json.load(f)
                     default_path = data.get("pdf_save_path", default_path)
             except Exception as e:
@@ -40,7 +41,7 @@ class DocsTools:
         }
         if os.path.exists(self.config_file):
             try:
-                with open(self.config_file, "r", encoding="utf-8") as f:
+                with open(self.config_file, "r", encoding="utf-8-sig") as f:
                     data = json.load(f)
                     default_config.update({k: data[k] for k in default_config.keys() if k in data})
             except Exception as e:
@@ -53,84 +54,119 @@ class DocsTools:
         media_images_dir = os.path.join(root_dir, "media", "images")
         generated_photos_dir = os.path.join(root_dir, "media", "generated_photos")
         
+        # 1. Collect all available generated image files sorted by mtime (oldest to newest)
+        gen_files = []
+        for fld in [media_images_dir, generated_photos_dir]:
+            if os.path.isdir(fld):
+                for f in os.listdir(fld):
+                    if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+                        gen_files.append(os.path.join(fld, f))
+        gen_files.sort(key=lambda p: os.path.getmtime(p))
+
+        # 2. Extract referenced alias indices strictly from image paths (e.g. image_1, img2.png, foto-3)
+        alias_indices = []
+        for match_num in re.findall(r'(?:img|image|foto|photo)[_-]?(\d+)(?:\.[a-zA-Z0-9]+)?', html_content, re.IGNORECASE):
+            if match_num and match_num.isdigit():
+                alias_indices.append(int(match_num))
+
+        # Safe batch sizing: count of aliases or max index (bounded by available files)
+        batch_count = max(alias_indices) if alias_indices else 6
+        batch_count = max(batch_count, len(alias_indices), 1)
+        batch = gen_files[-batch_count:] if gen_files else []
+
+        unresolved_counter = [0]
+
         def resolve_img_path(match):
-            path = match.group(2)
+            path = match.group(2).strip()
             logger.debug(f"[DOCS] Regex intercepted image path: '{path}'")
             
             # Ignore remote and data URIs
-            if path.startswith(("http://", "https://", "data:", "file://")):
-                logger.debug(f"[DOCS] Skipping remote/data/file URI: '{path}'")
+            if path.startswith(("http://", "https://", "data:")):
+                logger.debug(f"[DOCS] Skipping remote/data URI: '{path}'")
                 return match.group(0)
 
-            abs_path = None
-            
-            # Check if it's already an absolute Windows path
-            if os.path.isabs(path) and (path.startswith("C:\\") or path.startswith("C:/")):
-                logger.debug(f"[DOCS] Path is already absolute Windows path: '{path}'")
-                abs_path = path
-                # Even if it's absolute, verify it exists; if not, try finding by basename
-                if not os.path.exists(abs_path):
-                    fallback = os.path.join(media_images_dir, os.path.basename(path))
-                    if os.path.exists(fallback):
-                        logger.debug(f"[DOCS] Absolute path not found, found by basename in media/images: '{fallback}'")
-                        abs_path = fallback
-                    else:
-                        # Search all subdirs of media/
-                        media_dir = os.path.dirname(media_images_dir)
-                        basename = os.path.basename(path)
-                        for subdir in os.listdir(media_dir):
-                            candidate = os.path.join(media_dir, subdir, basename)
-                            if os.path.exists(candidate):
-                                logger.debug(f"[DOCS] Found image in media/{subdir}: '{candidate}'")
-                                abs_path = candidate
-                                break
-            
-            # Check for API paths
-            elif path.startswith("/api/images/"):
-                filename = path.replace("/api/images/", "")
-                # Try media/images first, then generated_photos
-                abs_path = os.path.join(media_images_dir, filename)
-                if not os.path.exists(abs_path):
-                    abs_path = os.path.join(generated_photos_dir, filename)
-                if not os.path.exists(abs_path):
-                    # Search all media subdirs
-                    media_dir = os.path.dirname(media_images_dir)
-                    for subdir in os.listdir(media_dir):
-                        candidate = os.path.join(media_dir, subdir, filename)
-                        if os.path.exists(candidate):
-                            abs_path = candidate
-                            break
-                logger.debug(f"[DOCS] Resolved API path to: '{abs_path}'")
-                    
-            else:
-                # Resolve relative to hecos root
-                clean_path = path.lstrip("/\\")
-                
-                if clean_path.startswith("media/images/"):
-                    abs_path = os.path.join(root_dir, clean_path)
-                    logger.debug(f"[DOCS] Resolved media/images path to: '{abs_path}'")
-                elif clean_path.startswith("../images/"):
-                    # If a relative path is passed like ../images/file.jpg, assume it's relative to media/documents
-                    abs_path = os.path.normpath(os.path.join(root_dir, "media/documents", clean_path))
-                    # If it doesn't exist there, fallback to media_images_dir
-                    if not os.path.exists(abs_path):
-                        fallback_path = os.path.join(media_images_dir, os.path.basename(clean_path))
-                        logger.debug(f"[DOCS] Relative path {abs_path} doesn't exist, falling back to: '{fallback_path}'")
-                        abs_path = fallback_path
-                    else:
-                        logger.debug(f"[DOCS] Resolved relative path to: '{abs_path}'")
-                else:
-                    basename = os.path.basename(clean_path)
-                    abs_path = os.path.join(media_images_dir, basename)
-                    logger.debug(f"[DOCS] Resolved plain filename to: '{abs_path}'")
+            # If already file:///, verify target exists
+            if path.startswith("file:///"):
+                local_f = path.replace("file:///", "").replace("/", os.sep)
+                if os.path.exists(local_f):
+                    return match.group(0)
+                # If file:/// points to a non-existent file, extract basename and re-resolve
+                path = os.path.basename(local_f)
 
-            if abs_path:
-                # Playwright requires file:/// for absolute paths on Windows
+            abs_path = None
+            clean_path = path.lstrip("/\\")
+
+            # 1. Absolute Windows path (C:\... or C:/...)
+            if os.path.isabs(clean_path) and (clean_path[1:3] in (":\\", ":/")):
+                if os.path.exists(clean_path):
+                    abs_path = clean_path
+                else:
+                    clean_path = os.path.basename(clean_path)
+
+            # 2. Direct path relative to hecos root
+            if not abs_path:
+                cand = os.path.join(root_dir, clean_path)
+                if os.path.exists(cand):
+                    abs_path = cand
+
+            # 3. Direct filename check in media/images, media/generated_photos, and any media subdir
+            if not abs_path:
+                filename = os.path.basename(clean_path)
+                cand = os.path.join(media_images_dir, filename)
+                if os.path.exists(cand):
+                    abs_path = cand
+                if not abs_path:
+                    cand = os.path.join(generated_photos_dir, filename)
+                    if os.path.exists(cand):
+                        abs_path = cand
+                if not abs_path:
+                    media_dir = os.path.dirname(media_images_dir)
+                    if os.path.isdir(media_dir):
+                        for subdir in os.listdir(media_dir):
+                            cand = os.path.join(media_dir, subdir, filename)
+                            if os.path.exists(cand):
+                                abs_path = cand
+                                break
+
+            # 4. Check with common extensions if filename lacks one
+            if not abs_path or not os.path.exists(abs_path):
+                filename = os.path.basename(clean_path)
+                for ext in [".png", ".jpg", ".jpeg", ".webp"]:
+                    cand = os.path.join(media_images_dir, filename + ext)
+                    if os.path.exists(cand):
+                        abs_path = cand
+                        break
+
+            # 5. Generic alias matching: image_1, image_1.png, img2, photo3.jpg, foto_4, etc.
+            if not abs_path or not os.path.exists(abs_path):
+                filename = os.path.basename(clean_path)
+                m_idx = re.search(r'(?:img|image|foto|photo)?[_-]?(\d+)(?:\.[a-zA-Z0-9]+)?$', filename, re.IGNORECASE)
+                if m_idx and batch:
+                    idx = int(m_idx.group(1))
+                    if 1 <= idx <= len(batch):
+                        abs_path = batch[idx - 1]
+                    else:
+                        abs_path = batch[(idx - 1) % len(batch)]
+                    logger.info(f"[DOCS] Generic image alias '{path}' mapped to '{abs_path}'")
+
+            # 6. Safety fallback: If still not resolved or does not exist on disk,
+            # map to the latest generated batch so there are never broken image links in the document.
+            if not abs_path or not os.path.exists(abs_path):
+                if batch:
+                    idx = unresolved_counter[0] % len(batch)
+                    unresolved_counter[0] += 1
+                    abs_path = batch[idx]
+                    logger.warning(f"[DOCS] Unresolved image '{path}' safely mapped to batch image '{abs_path}'")
+                elif gen_files:
+                    abs_path = gen_files[-1]
+                    logger.warning(f"[DOCS] Unresolved image '{path}' safely mapped to latest image '{abs_path}'")
+
+            if abs_path and os.path.exists(abs_path):
                 file_url = "file:///" + os.path.normpath(abs_path).replace("\\", "/")
                 logger.debug(f"[DOCS] Final mapped URL for Playwright: '{file_url}'")
                 return f'{match.group(1)}{file_url}{match.group(3)}'
             
-            logger.debug(f"[DOCS] Could not resolve path: '{path}'")
+            logger.warning(f"[DOCS] Could not resolve image path: '{path}'")
             return match.group(0)
 
         # Match <img src="filename.png"> or <img src='filename.png'>
@@ -256,30 +292,178 @@ class DocsTools:
             logger.error(f"[DOCS] Standalone Playwright PDF failed: {e}")
             return None
 
+    def _detect_background_color(self, html: str) -> str:
+        """
+        Detects the document background color (solid color) from CSS variables,
+        body rules, inline styles, or @media print rules.
+        Falls back to '#ffffff' if light or not found.
+        """
+        def _clean_color(val: str) -> str:
+            if not val:
+                return ""
+            val = val.strip().rstrip(";")
+            val = re.sub(r'\s*!important', '', val, flags=re.I).strip()
+            # If linear-gradient / radial-gradient, extract first or dominant hex/rgb color
+            if 'gradient' in val.lower():
+                color_matches = re.findall(r'#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})|rgba?\([^)]+\)|hsla?\([^)]+\)', val)
+                if color_matches:
+                    return color_matches[-1]
+                return ""
+            if val.lower() in ("transparent", "none", "inherit", "initial", "unset"):
+                return ""
+            return val
+
+        def _resolve_var(var_str: str) -> str:
+            m = re.search(r'var\(\s*(--[a-zA-Z0-9_-]+)(?:\s*,\s*([^)]+))?\)', var_str)
+            if not m:
+                return _clean_color(var_str)
+            var_name = m.group(1)
+            fallback = m.group(2)
+            def_match = re.search(rf'{re.escape(var_name)}\s*:\s*([^;!}}]+)', html)
+            if def_match:
+                resolved = _clean_color(def_match.group(1))
+                if resolved:
+                    return resolved
+            if fallback:
+                return _clean_color(fallback)
+            return ""
+
+        # 1. Search for @media print body background
+        m_print = re.search(r'@media\s+print\s*\{[^}]*body\s*\{[^}]*background(?:-color)?\s*:\s*([^;!]+)', html, re.I)
+        if m_print:
+            val = _resolve_var(m_print.group(1))
+            if val:
+                return val
+
+        # 2. Search for body { ... background(-color): ... }
+        m_body = re.search(r'(?:^|[\s{}])body\s*\{[^}]*background(?:-color)?\s*:\s*([^;!]+)', html, re.I)
+        if m_body:
+            val = _resolve_var(m_body.group(1))
+            if val:
+                return val
+
+        # 3. Check for :root --bg or --bg-primary or --background or --bg-color
+        root_match = re.search(r'(--bg(?:-primary|-color)?|--background)\s*:\s*([^;!}}]+)', html, re.I)
+        if root_match:
+            val = _clean_color(root_match.group(2))
+            if val:
+                return val
+
+        # 4. Check inline body style
+        inline_match = re.search(r'<body[^>]*style=["\'][^"\']*background(?:-color)?\s*:\s*([^;"\']+)', html, re.I)
+        if inline_match:
+            val = _clean_color(inline_match.group(1))
+            if val:
+                return val
+
+        return "#ffffff"
+
+    def _is_dark_color(self, color_str: str) -> bool:
+        """Determines whether a background color is dark (luminance < 128)."""
+        try:
+            color = color_str.strip().lower()
+            if color.startswith("#"):
+                hex_str = color.lstrip("#")
+                if len(hex_str) == 3:
+                    hex_str = "".join(c * 2 for c in hex_str)
+                if len(hex_str) == 6:
+                    r = int(hex_str[0:2], 16)
+                    g = int(hex_str[2:4], 16)
+                    b = int(hex_str[4:6], 16)
+                    lum = 0.299 * r + 0.587 * g + 0.114 * b
+                    return lum < 128
+            elif color.startswith("rgb"):
+                nums = re.findall(r'\d+', color)
+                if len(nums) >= 3:
+                    r, g, b = int(nums[0]), int(nums[1]), int(nums[2])
+                    lum = 0.299 * r + 0.587 * g + 0.114 * b
+                    return lum < 128
+            elif color in ("black", "navy", "darkblue", "midnightblue", "darkslategray"):
+                return True
+        except Exception:
+            pass
+        return False
+
     def _inject_pagination_css(self, html: str) -> str:
         """
-        Safety net: injects pagination rules to guarantee correct PDF layout.
-        Playwright margins handle the outer page margins (15mm), and this CSS
-        ensures content inside flows correctly with proper spacing.
+        Safety net: injects pagination rules and guarantees margins in both
+        HTML screen view and Playwright PDF rendering, matching the document's
+        background color so borders are never unprinted white.
         """
         layout = self._get_layout_config()
-        page_format = layout["page_format"]
-        
+        page_format = layout.get("page_format", "A4")
+        m_top = layout.get("margin_top", 20)
+        m_bottom = layout.get("margin_bottom", 20)
+        m_left = layout.get("margin_left", 20)
+        m_right = layout.get("margin_right", 20)
+
+        doc_bg = self._detect_background_color(html)
+        is_dark = self._is_dark_color(doc_bg)
+        screen_outer_bg = "#07070d" if is_dark else "#f1f5f9"
+        screen_shadow = "rgba(0, 0, 0, 0.65)" if is_dark else "rgba(0, 0, 0, 0.12)"
+
+        # 1. Clean existing @page rules to prevent conflicting margins or missing backgrounds
+        html = re.sub(
+            r'@page\s*\{[^}]*\}',
+            '',
+            html,
+            flags=re.IGNORECASE
+        )
+
         safety_css = f"""
-        /* --- Hecos Auto-Pagination Safety Net --- */
-        @page {{ size: {page_format}; margin: 0; }}
+        /* --- Hecos Auto-Pagination & Margin Layout --- */
+        @page {{
+            size: {page_format};
+            margin: {m_top}mm {m_right}mm {m_bottom}mm {m_left}mm;
+            background: {doc_bg};
+        }}
         * {{ box-sizing: border-box; }}
-        body {{ margin: 0; padding: 0; }}
+
+        html {{
+            background-color: {doc_bg} !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }}
+        
+        /* Clean screen viewing with configured margins and matching background */
+        @media screen {{
+            html {{
+                background-color: {screen_outer_bg} !important;
+                padding: 24px 0;
+            }}
+            body {{
+                margin: 0 auto;
+                padding: {m_top}mm {m_right}mm {m_bottom}mm {m_left}mm;
+                max-width: 210mm;
+                min-height: 297mm;
+                box-sizing: border-box;
+                background-color: {doc_bg} !important;
+                box-shadow: 0 8px 32px {screen_shadow};
+                border-radius: 4px;
+            }}
+        }}
+
+        /* Print / PDF rendering uses Playwright & @page margins cleanly with full bleed background */
+        @media print {{
+            html, body {{
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: {doc_bg} !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }}
+        }}
+
         .page {{
             page-break-after: always;
             width: 100%;
             overflow: hidden;
-            padding: 5mm 0;
             position: relative;
+            box-sizing: border-box;
         }}
         .page:last-child {{ page-break-after: auto; }}
         img {{ max-width: 100%; height: auto; display: block; margin: 8px auto; }}
-        img, figure, .photo-card, .gallery, .photo-grid, .card {{
+        img, figure, .photo-card, .gallery, .photo-grid, .card, table {{
             page-break-inside: avoid;
         }}
         h1, h2, h3, h4 {{
@@ -311,39 +495,211 @@ class DocsTools:
                 return html.replace("</head>", f"<style>\n{safety_css}\n</style>\n</head>")
             return f"<style>\n{safety_css}\n</style>\n" + html
 
-    def DOCS__list_images(self, folder: str = "") -> str:
+    def _adapt_gallery_photos(self, html: str, v_dict: dict, default_photo_count: int = 0) -> str:
         """
-        Lists available images in the media/images and media/generated_photos directories.
-        Use this before generating a document to discover existing images that can be referenced
-        with <img src="/api/images/FILENAME"> without regenerating them.
-        :param folder: Optional subfolder to filter (e.g. 'generated_photos'). Leave empty to list all.
+        Dynamically adapts the photo gallery in the rendered HTML to match
+        the exact number of requested photos (from 2 up to 20+).
+        Expands or contracts the gallery cards while maintaining layout integrity.
+        """
+        if not html:
+            return html
+
+        # Discover all image entries in v_dict
+        img_items = []
+        for k in sorted(v_dict.keys()):
+            if re.search(r'^(?:img|image|foto|photo)\d+$', k, re.IGNORECASE):
+                num_match = re.search(r'\d+', k)
+                if num_match:
+                    num = int(num_match.group())
+                    img_items.append((num, k, str(v_dict[k])))
+        img_items.sort(key=lambda x: x[0])
+
+        # Also support explicit num_photos request or config default
+        req_count = v_dict.get("num_photos") or v_dict.get("photo_count") or default_photo_count
+        try:
+            req_count = int(req_count)
+        except Exception:
+            req_count = 0
+
+        target_count = len(img_items)
+        if req_count > 0 and (target_count == 0 or req_count != target_count):
+            target_count = req_count
+
+        if target_count <= 0:
+            return html
+
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html, "html.parser")
+
+            gallery = soup.find(class_=re.compile(r'\b(?:gallery|photo-grid|grid|photos)\b', re.IGNORECASE))
+            if not gallery:
+                return html
+
+            cards = gallery.find_all(class_=re.compile(r'\b(?:photo-card|grid-item|card|photo-item)\b', re.IGNORECASE))
+            if not cards:
+                cards = [child for child in gallery.find_all(recursive=False) if child.find('img')]
+
+            if not cards:
+                return html
+
+            blueprint = cards[0]
+            current_count = len(cards)
+
+            # Roman numeral conversion helper
+            def _to_roman(n):
+                val = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
+                syb = ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
+                res = ""
+                i = 0
+                while n > 0:
+                    for _ in range(n // val[i]):
+                        res += syb[i]
+                        n -= val[i]
+                    i += 1
+                return res or str(n)
+
+            if target_count < current_count:
+                for card in cards[target_count:]:
+                    card.decompose()
+                remaining_cards = cards[:target_count]
+            else:
+                remaining_cards = list(cards)
+                for i in range(current_count, target_count):
+                    new_card = BeautifulSoup(str(blueprint), "html.parser").find()
+                    gallery.append(new_card)
+                    remaining_cards.append(new_card)
+
+            # Populate images and captions
+            for i, card in enumerate(remaining_cards):
+                slot_idx = i + 1
+                img_key = f"img{slot_idx}"
+                cap_key = f"caption{slot_idx}"
+
+                # Image source resolution
+                img_val = v_dict.get(img_key)
+                if not img_val and img_items:
+                    img_val = img_items[i % len(img_items)][2]
+
+                img_tag = card.find("img")
+                if img_tag and img_val:
+                    img_tag["src"] = str(img_val)
+                    img_tag["alt"] = f"Scena {slot_idx}"
+
+                # Caption resolution
+                cap_val = v_dict.get(cap_key)
+                if not cap_val:
+                    cap_val = v_dict.get("subtitle") or f"Scena {_to_roman(slot_idx)}"
+
+                cap_div = card.find(class_=re.compile(r'\b(?:caption|item-caption|text)\b', re.IGNORECASE))
+                if cap_div:
+                    scene_span = cap_div.find(class_=re.compile(r'\b(?:scene-num|badge|tag|strong)\b', re.IGNORECASE))
+                    if scene_span:
+                        if scene_span.name == "strong":
+                            scene_span.string = _to_roman(slot_idx)
+                        else:
+                            scene_span.string = f"Scena {_to_roman(slot_idx)}"
+                        span_html = str(scene_span)
+                        cap_div.clear()
+                        cap_div.append(BeautifulSoup(span_html, "html.parser"))
+                        cap_div.append(f" {cap_val}")
+                    else:
+                        cap_div.string = cap_val
+
+            return str(soup)
+        except Exception as e:
+            logger.warning(f"[DOCS] Gallery photo adaptation failed: {e}")
+            return html
+
+    def list_images(self, folder: str = "", limit: int = 10, sort: str = "recent", random_pick: bool = False) -> str:
+        """
+        Lists available images in media/images, media/generated_photos, or any specified folder.
+        Use this before generating a document when the user asks to reuse existing photos without generating new ones.
+
+        :param folder: Optional folder or subfolder name to scan (e.g. 'images', 'generated_photos', or relative/absolute path).
+        :param limit: Maximum number of images to return (default: 10, max: 50).
+        :param sort: Sorting order: 'recent' (newest first, default), 'oldest', 'name' (alphabetical), or 'random'.
+        :param random_pick: If True, randomly picks 'limit' images from the available images.
         """
         root_dir = os.path.dirname(os.path.dirname(self.plugin_dir))
-        search_dirs = {
-            "images": os.path.join(root_dir, "media", "images"),
-            "generated_photos": os.path.join(root_dir, "media", "generated_photos"),
-        }
-        IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"}
+        IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
-        results = []
-        for subfolder, dirpath in search_dirs.items():
-            if folder and folder.lower() not in subfolder.lower():
-                continue
-            if not os.path.isdir(dirpath):
-                continue
-            for fname in sorted(os.listdir(dirpath)):
-                ext = os.path.splitext(fname)[1].lower()
-                if ext not in IMAGE_EXTS:
-                    continue
-                size_bytes = os.path.getsize(os.path.join(dirpath, fname))
-                size_str = f"{size_bytes / 1024:.1f} KB"
-                results.append(f"  /api/images/{fname}  ({subfolder}, {size_str})")
+        folders_to_scan = []
+        if folder:
+            cand1 = os.path.join(root_dir, "media", folder)
+            cand2 = os.path.join(root_dir, folder)
+            if os.path.isdir(cand1):
+                folders_to_scan.append(cand1)
+            elif os.path.isdir(cand2):
+                folders_to_scan.append(cand2)
+            elif os.path.isdir(folder):
+                folders_to_scan.append(folder)
 
-        if not results:
+        if not folders_to_scan:
+            for fld_name in ["images", "generated_photos"]:
+                p = os.path.join(root_dir, "media", fld_name)
+                if os.path.isdir(p):
+                    folders_to_scan.append(p)
+
+        candidates = []
+        for fld in folders_to_scan:
+            subname = os.path.basename(fld)
+            try:
+                for fname in os.listdir(fld):
+                    ext = os.path.splitext(fname)[1].lower()
+                    if ext in IMAGE_EXTS:
+                        fp = os.path.join(fld, fname)
+                        st = os.stat(fp)
+                        txt_prompt = ""
+                        txt_cand = os.path.splitext(fp)[0] + ".txt"
+                        if os.path.exists(txt_cand):
+                            try:
+                                with open(txt_cand, "r", encoding="utf-8") as tf:
+                                    for line in tf:
+                                        if line.lower().startswith("prompt:"):
+                                            txt_prompt = line.split(":", 1)[1].strip()[:80]
+                                            break
+                            except Exception:
+                                pass
+                        candidates.append({
+                            "filename": fname,
+                            "path": fp,
+                            "subfolder": subname,
+                            "mtime": st.st_mtime,
+                            "size": st.st_size,
+                            "prompt": txt_prompt
+                        })
+            except Exception as e:
+                logger.warning(f"[DOCS] Failed reading folder '{fld}': {e}")
+
+        if not candidates:
             return "No images found in media/images or media/generated_photos."
 
-        header = f"Found {len(results)} image(s). Use <img src=\"/api/images/FILENAME\"> to reference them:\n"
-        return header + "\n".join(results)
+        total_count = len(candidates)
+        safe_limit = max(1, min(limit or 10, 50))
+
+        if random_pick or str(sort).lower() == "random":
+            selected = random.sample(candidates, min(safe_limit, len(candidates)))
+        elif str(sort).lower() == "oldest":
+            candidates.sort(key=lambda x: x["mtime"])
+            selected = candidates[:safe_limit]
+        elif str(sort).lower() == "name":
+            candidates.sort(key=lambda x: x["filename"].lower())
+            selected = candidates[:safe_limit]
+        else:  # recent
+            candidates.sort(key=lambda x: x["mtime"], reverse=True)
+            selected = candidates[:safe_limit]
+
+        lines = [f"Found {total_count} existing image(s). Showing {len(selected)} (sort={sort}):"]
+        for i, item in enumerate(selected, 1):
+            size_kb = f"{item['size'] / 1024:.1f} KB"
+            prompt_str = f' — Prompt: "{item["prompt"]}..."' if item["prompt"] else ""
+            lines.append(f"  {i}. /api/images/{item['filename']} ({size_kb}){prompt_str}")
+
+        lines.append("\nTo use these in a document, pass /api/images/FILENAME in template_vars (img1, img2...) or in <img> tags.")
+        return "\n".join(lines)
+
+    DOCS__list_images = list_images
 
     def generate_pdf(self, html_content: str = None, template_id: str = None, template_vars: str = None, filename: str = None) -> str:
         """
@@ -361,43 +717,169 @@ class DocsTools:
         :param template_vars: JSON string of variables to inject into the template.
         :param filename: Desired name for the output file (e.g. 'magazine.pdf'). A random name is used if omitted.
         """
+        # Check config for defaults
+        config_data = {}
+        if os.path.exists(self.config_file):
+            try:
+                with open(self.config_file, "r", encoding="utf-8-sig") as f:
+                    config_data = json.load(f)
+            except Exception as e:
+                logger.error(f"[DOCS] Failed to read config: {e}")
+
+        default_tpl = config_data.get("default_template_id", "").strip()
+        force_default_tpl = config_data.get("force_default_template", False)
+
+        # Resolve template_id aliases ('default', 'predefinito')
+        if template_id and template_id.lower() in ("default", "predefinito"):
+            template_id = default_tpl
+
+        # Fallback to default_template_id if template_id is missing and default is configured
+        if not template_id and default_tpl:
+            if force_default_tpl or template_vars or not html_content:
+                template_id = default_tpl
+
         if not html_content and not template_id:
             return "Error: You must provide either html_content or template_id."
 
         try:
             # 1. Resolve HTML content
             final_html = html_content
-            if template_id and not html_content:
-                from hecos.hpm.libraries.templates.store import list_templates, render_template
+
+            # Template resolution: template takes priority if template_id is given
+            # or if force_default_template is enabled.
+            if template_id:
+                from hecos.hpm.libraries.templates.store import list_templates, render_template, get_template
                 all_tpls = list_templates()
                 target = None
 
-                # Fuzzy match template_id
+                # 1. Exact match by ID or Name
                 for t in all_tpls:
                     if t["id"] == template_id or t["name"].lower() == template_id.lower():
                         target = t
                         break
+
+                # 2. Fuzzy match by keywords
                 if not target:
-                    query_words = template_id.lower().split()
+                    clean_query = template_id.lower().replace("_", " ").replace("-", " ")
+                    query_words = clean_query.split()
                     for t in all_tpls:
-                        if all(w in t["name"].lower() for w in query_words):
+                        t_name_lower = t["name"].lower()
+                        t_id_lower = t["id"].lower()
+                        if all(w in t_name_lower or w in t_id_lower for w in query_words):
                             target = t
                             break
+
+                # 3. Partial keyword match
+                if not target:
+                    kw_list = [w for w in clean_query.split() if len(w) >= 4 and w not in ("foto", "documento", "template", "modello")]
+                    if kw_list:
+                        for t in all_tpls:
+                            t_name_lower = t["name"].lower()
+                            t_id_lower = t["id"].lower()
+                            if any(w in t_name_lower or w in t_id_lower for w in kw_list):
+                                target = t
+                                break
 
                 if not target:
                     return f"Error: Template '{template_id}' not found."
 
-                # Parse template_vars from JSON
-                v_dict = json.loads(template_vars) if template_vars else {}
+                # Parse template_vars safely (accepts dict or JSON string)
+                if isinstance(template_vars, dict):
+                    v_dict = dict(template_vars)
+                elif isinstance(template_vars, str) and template_vars.strip():
+                    try:
+                        v_dict = json.loads(template_vars)
+                    except Exception as _je:
+                        logger.warning(f"[DOCS] Failed to parse template_vars JSON: {_je}")
+                        v_dict = {}
+                else:
+                    v_dict = {}
 
-                # GUARD: If the template defines variables but the LLM didn't provide them,
-                # return an error listing the required variables so the LLM re-calls correctly.
-                from hecos.hpm.libraries.templates.store import get_template
                 tpl_meta = get_template(target["id"])
                 required_vars = tpl_meta.get("variables", []) if tpl_meta else []
+
+                # Guard: If model passed template_id AND html_content, but forgot template_vars:
+                # Inform the model that template content must be supplied in template_vars, not html_content.
+                if not v_dict and html_content and not force_default_tpl:
+                    vars_list = ", ".join(required_vars)
+                    return (
+                        f"Error: You specified template_id='{target['name']}' ({target['id']}) but passed content in "
+                        f"'html_content' instead of 'template_vars'.\n"
+                        f"To render this template, call DOCS__generate_pdf with:\n"
+                        f"- template_id: '{target['id']}'\n"
+                        f"- template_vars: JSON string with populated variables: {vars_list}\n"
+                        f"- Leave 'html_content' empty when using a template.\n"
+                        f"(If you intended to use custom raw HTML without any template, omit template_id entirely)."
+                    )
+
+                # Clean and sanitize image variables: if value is <img src="...">, extract just the URL
+                for k, v in list(v_dict.items()):
+                    if isinstance(v, str):
+                        if re.search(r'^(?:img|image|foto|photo)\d*$', k, re.IGNORECASE) or k.lower().startswith('img'):
+                            m_src = re.search(r'src=["\']([^"\']+)["\']', v)
+                            if m_src:
+                                v_dict[k] = m_src.group(1)
+
+                # Collect available existing images in media folder for automatic fallback or keyword resolution
+                root_dir = os.path.dirname(os.path.dirname(self.plugin_dir))
+                root_media_dirs = [
+                    os.path.join(root_dir, "media", "images"),
+                    os.path.join(root_dir, "media", "generated_photos")
+                ]
+                existing_imgs_pool = []
+                for fld in root_media_dirs:
+                    if os.path.isdir(fld):
+                        for f in os.listdir(fld):
+                            if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+                                existing_imgs_pool.append(os.path.join(fld, f))
+                existing_imgs_pool.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+
+                # Resolve special image keywords in v_dict ('random', 'casual', 'latest', 'recent')
+                for k in list(v_dict.keys()):
+                    val = str(v_dict[k]).strip().lower()
+                    if val in ("random", "casual", "a caso", "/api/images/random", "random.png"):
+                        if existing_imgs_pool:
+                            pick = random.choice(existing_imgs_pool)
+                            v_dict[k] = f"/api/images/{os.path.basename(pick)}"
+                    elif val in ("latest", "recent", "/api/images/latest", "latest.png"):
+                        if existing_imgs_pool:
+                            v_dict[k] = f"/api/images/{os.path.basename(existing_imgs_pool[0])}"
+
+                # Graceful handling for templates with multiple image slots (e.g. img1..img6):
+                tpl_img_keys = [v for v in required_vars if re.search(r'^(?:img|image|foto|photo)\d*$', v, re.IGNORECASE) or v.startswith('img')]
+                provided_imgs = [v_dict[k] for k in tpl_img_keys if k in v_dict and str(v_dict[k]).strip()]
+                if not provided_imgs:
+                    provided_imgs = [str(v) for v in v_dict.values() if isinstance(v, str) and '/api/images/' in v]
+
+                # AUTO-LOAD EXISTING PHOTOS IF NONE SUPPLIED:
+                # When user requests a document reusing existing photos without binding them manually,
+                # auto-populate empty image slots with the latest photos from media/images.
+                if not provided_imgs and tpl_img_keys and existing_imgs_pool:
+                    logger.info(f"[DOCS] Caller provided no image bindings; auto-loading {len(tpl_img_keys)} existing photos from media/images.")
+                    for i, img_k in enumerate(tpl_img_keys):
+                        sel_f = existing_imgs_pool[i % len(existing_imgs_pool)]
+                        v_dict[img_k] = f"/api/images/{os.path.basename(sel_f)}"
+                        provided_imgs.append(v_dict[img_k])
+                        cap_k = img_k.replace('img', 'caption').replace('foto', 'caption').replace('photo', 'caption')
+                        if cap_k in required_vars and (cap_k not in v_dict or not str(v_dict[cap_k]).strip()):
+                            ref_cap = v_dict.get('caption1') or v_dict.get('subtitle') or 'Scena'
+                            v_dict[cap_k] = f"{ref_cap} #{i + 1}"
+
+                if provided_imgs and tpl_img_keys:
+                    for i, img_key in enumerate(tpl_img_keys):
+                        if img_key not in v_dict or not str(v_dict[img_key]).strip():
+                            v_dict[img_key] = provided_imgs[i % len(provided_imgs)]
+                            cap_key = img_key.replace('img', 'caption').replace('foto', 'caption').replace('photo', 'caption')
+                            if cap_key in required_vars and (cap_key not in v_dict or not str(v_dict[cap_key]).strip()):
+                                ref_cap = v_dict.get('caption1') or v_dict.get('subtitle') or 'Illustrazione'
+                                v_dict[cap_key] = f"{ref_cap} #{i + 1}"
+
+                # Validate missing critical text variables
                 if required_vars:
-                    missing = [v for v in required_vars if v not in v_dict or not str(v_dict[v]).strip()]
-                    if missing and (len(missing) > len(required_vars) * 0.2 or len(missing) >= 3 or not v_dict):
+                    # Ignore image keys from fatal missing list if at least one image was provided
+                    critical_vars = [v for v in required_vars if not (provided_imgs and (v in tpl_img_keys or 'caption' in v))]
+                    missing = [v for v in critical_vars if v not in v_dict or not str(v_dict[v]).strip()]
+                    if missing and (len(missing) > len(critical_vars) * 0.3 or len(missing) >= 3 or not v_dict):
                         vars_list = ", ".join(required_vars)
                         missing_list = ", ".join(missing)
                         return (
@@ -406,7 +888,7 @@ class DocsTools:
                             f"You MUST call this tool again with template_vars set to a JSON string containing "
                             f"ALL required keys populated with real, extensive content. DO NOT leave them empty.\n"
                             f"All required variables: {vars_list}\n"
-                            f"If you have generated images, embed them inside the content variables using HTML like <img src=\"/api/images/FILENAME\">."
+                            f"For image variables (img1, img2...), pass the path string like '/api/images/FILENAME.png'."
                         )
                     elif missing:
                         logger.warning(f"[DOCS] Template '{target['name']}' has unfilled variables: {missing}")
@@ -417,6 +899,10 @@ class DocsTools:
             if not final_html:
                 return "Error: Generated HTML is empty."
                 
+            # 1.a Adapt gallery photos dynamically based on provided images / requested photo count
+            if 'v_dict' in locals() and v_dict:
+                final_html = self._adapt_gallery_photos(final_html, v_dict, config_data.get("default_photo_count", 0))
+
             # 1.b Resolve local image links for Playwright
             final_html = self._resolve_image_paths(final_html)
 
@@ -428,7 +914,7 @@ class DocsTools:
             gen_pdf = True
             if os.path.exists(self.config_file):
                 try:
-                    with open(self.config_file, "r", encoding="utf-8") as f:
+                    with open(self.config_file, "r", encoding="utf-8-sig") as f:
                         data = json.load(f)
                         gen_html = data.get("generate_html", True)
                         gen_pdf = data.get("generate_pdf", True)
@@ -820,6 +1306,11 @@ class DocsTools:
             report += f"- {issue}\n"
         report += "\nUsa `DOCS__modify_document` per inserire `<div style=\"page-break-before: always;\"></div>` prima degli elementi tagliati."
         return report
+
+    # Bidirectional aliases for native and prefixed dispatcher invocation
+    DOCS__generate_pdf = generate_pdf
+    DOCS__list_documents = list_documents
+    DOCS__modify_document = modify_document
 
 
 # ── Module-level singleton (required by the Hecos plugin dispatcher) ──────────

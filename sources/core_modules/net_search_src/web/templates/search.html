@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hecos Net Search • Deep Intelligence</title>
+  <link rel="icon" type="image/png" href="/assets/Hecos_Logo_SQR_NBG_LogoOnly.png?v={{ version }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  
+  <!-- Hecos Core Modular Design System -->
+  <link rel="stylesheet" href="/assets/css/core/variables.css?v={{ version }}">
+  <link rel="stylesheet" href="/assets/css/core/base.css?v={{ version }}">
+  <link rel="stylesheet" href="/assets/css/core/layout.css?v={{ version }}">
+  <link rel="stylesheet" href="/assets/css/core/components.css?v={{ version }}">
+  <link rel="stylesheet" href="/netsearch_static/css/search.css?v={{ version }}">
+</head>
+<body>
+
+  <!-- ── Standard Hecos Header ────────────────────────────────────────────── -->
+  <header style="justify-content: space-between; padding: 12px 24px; height: 56px;">
+    <div class="logo">
+      <img src="/assets/Hecos_Logo_SQR_NBG_LogoOnly.png?v={{ version }}" alt="Logo" style="height: 30px;">
+      <div class="logo-text">Hecos</div>
+      <span class="badge-pill" style="opacity:0.85; font-size:10px;"><i class="fas fa-satellite-dish" style="margin-right:4px;"></i> Net Search</span>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <!-- Tor Daemon Status Pill (Pure Data Badge — NO modal trigger) -->
+      <div class="badge-pill {{ 'badge-ok' if tor_online else 'badge-neutral' }}" id="tor-status-pill" title="Tor connection status">
+        <div class="dot {{ 'val-ok' if tor_online else '' }}" id="tor-dot" style="width:8px; height:8px; border-radius:50%; background:{{ 'var(--green)' if tor_online else 'var(--muted)' }};"></div>
+        <span id="tor-label">{{ 'Tor Online' if tor_online else 'Tor Offline' }}</span>
+      </div>
+
+      <!-- Action Buttons: Standard Hecos .btn .btn-sm .btn-secondary -->
+      <button type="button" class="btn btn-sm btn-secondary" onclick="torNewCircuit()" title="Request new Tor identity (New Circuit)">
+        <i class="fas fa-random"></i> Tor Identity
+      </button>
+
+      <button type="button" class="btn btn-sm btn-secondary" onclick="openComponentsModal()" title="Components and Engines Manager">
+        <i class="fas fa-cubes"></i> Engines
+      </button>
+
+      <button type="button" class="btn btn-sm btn-secondary" onclick="window.BookmarksManager.open()" title="View Saved Links & Bookmarks">
+        <i class="fas fa-star" style="color:#f59e0b;"></i> Saved Links
+        <span class="badge-pill badge-bookmarks-count" style="display:none; background:#f59e0b; color:#000; font-weight:700; padding:1px 6px; font-size:10px; margin-left:2px;">0</span>
+      </button>
+
+      <a href="/chat" target="_blank" class="btn btn-sm btn-secondary" style="text-decoration:none;" title="Open Hecos Chat">
+        <i class="fas fa-comment-dots"></i> Chat
+      </a>
+
+      <a href="/home" target="_blank" class="btn btn-sm btn-secondary desktop-only" style="text-decoration:none;" title="Control Room">
+        <i class="fas fa-th-large"></i> Room
+      </a>
+
+      <a href="/hecos/config/ui#browser" target="_blank" class="btn btn-sm btn-secondary" style="text-decoration:none;" title="Browser & Deep Search Settings">
+        <i class="fas fa-cog"></i> Settings
+      </a>
+    </div>
+  </header>
+
+  <!-- ── Main Workspace ────────────────────────────────────────────────────── -->
+  <div class="search-workspace">
+
+    <!-- ── Left: Search History Sidebar ──────────────────────────────────── -->
+    <aside class="search-sidebar">
+      <div class="sidebar-header">
+        <span>Search History</span>
+        <button class="btn-icon" style="width:24px; height:24px;" onclick="window.SearchAPI.clearSessions().then(() => location.reload())" title="Clear history">
+          <i class="fas fa-trash-alt" style="font-size:10px;"></i>
+        </button>
+      </div>
+      <div class="history-list" id="history-list">
+        <!-- Injected via search_main.js -->
+        <div style="text-align:center; padding:20px; color:var(--text-dim); font-size:12px;">
+          Loading sessions...
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── Center: Search Console & Feed ─────────────────────────────────── -->
+    <main class="search-stage">
+
+      <!-- Floating Search Bar -->
+      <div class="search-bar-card">
+        <div class="search-input-row">
+          <div class="search-icon-anim">
+            <i class="fas fa-satellite-dish"></i>
+          </div>
+          <input 
+            type="text" 
+            id="search-input" 
+            class="search-input-field" 
+            placeholder="Search anything across Clear Web, Dark Web (.onion), documents or media..." 
+            value="{{ initial_q }}"
+            autofocus
+            autocomplete="off"
+            spellcheck="false"
+            onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('search-submit').click();}"
+          >
+          <button id="search-submit" class="search-submit-btn">
+            <i class="fas fa-search"></i> Search
+          </button>
+          <button id="search-stop" class="search-stop-btn" onclick="window.stopSearch()" style="display:none;" title="Stop ongoing search stream and keep results">
+            <i class="fas fa-stop"></i> Stop
+          </button>
+        </div>
+
+        <!-- Mode Pills -->
+        <div class="search-modes-row">
+          <div class="mode-pills">
+            <button class="mode-pill {{ 'active' if (not initial_mode or initial_mode == 'clear') else '' }}" data-mode="clear">
+              <i class="fas fa-globe"></i> ClearWeb
+            </button>
+            <button class="mode-pill tor-mode {{ 'active' if initial_mode == 'dark' else '' }}" data-mode="dark">
+              <i class="fas fa-user-secret"></i> DarkWeb (Tor)
+            </button>
+            <button class="mode-pill {{ 'active' if initial_mode == 'deep' else '' }}" data-mode="deep">
+              <i class="fas fa-bolt"></i> Deep Search
+            </button>
+            <button class="mode-pill {{ 'active' if initial_mode == 'media' else '' }}" data-mode="media">
+              <i class="fas fa-photo-film"></i> Media &amp; Streams
+            </button>
+            <button class="mode-pill {{ 'active' if initial_mode == 'files' else '' }}" data-mode="files">
+              <i class="fas fa-file-shield"></i> File Hunter
+            </button>
+            <button class="mode-pill {{ 'active' if initial_mode == 'osint' else '' }}" data-mode="osint">
+              <i class="fas fa-id-badge"></i> OSINT Hunt
+            </button>
+          </div>
+
+          <div class="search-options-row">
+            <!-- 1. Content Moderation / SafeSearch Toggle (Explicit ON / OFF) -->
+            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn" id="btn-content-filter" onclick="window.toggleContentFilter()" title="Toggle SafeSearch content moderation">
+              <i class="fas fa-shield-alt"></i>
+              <span>Content Filter:</span>
+              <span class="badge-pill badge-neutral" id="badge-content-filter" style="font-weight:700; padding:2px 8px;">OFF</span>
+            </button>
+
+            <!-- 2. DarkWeb Censorship & Blacklist Bypass Toggle -->
+            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn" id="btn-dark-filter" onclick="window.toggleDarkFilter()" title="Bypass Tor/Ahmia blacklists and censorship for 100% uncensored discovery">
+              <i class="fas fa-unlock"></i>
+              <span>DarkWeb Filters:</span>
+              <span class="badge-pill badge-ok" id="badge-dark-filter" style="font-weight:700; padding:2px 8px;">BYPASSED</span>
+            </button>
+
+            <!-- 3. Depth / Target per Engine: Presets + Manual Custom Input (0 = Unlimited) -->
+            <div class="search-depth-control" style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);">
+              <span><i class="fas fa-layer-group"></i> Depth:</span>
+              <input 
+                type="number" 
+                id="search-depth-input" 
+                class="search-depth-input" 
+                min="0" 
+                max="100000" 
+                step="25" 
+                value="50" 
+                oninput="window.setSearchDepth(this.value)" 
+                title="Enter custom result target per engine (0 = Unlimited ∞)"
+                placeholder="0 = ∞"
+              >
+              <select id="search-depth-presets" class="btn btn-sm btn-secondary depth-preset-select" onchange="window.setSearchDepthPreset(this.value)" title="Quick depth presets">
+                <option value="50" selected>50</option>
+                <option value="100">100 (Deep)</option>
+                <option value="250">250 (Deep+)</option>
+                <option value="500">500 (Extensive)</option>
+                <option value="1000">1,000 (Archive)</option>
+                <option value="0">∞ Unlimited</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Persistent Category & Media Filter Bar ────────────────────────────── -->
+      <div class="search-filter-bar" id="search-filter-bar">
+        <div class="filter-categories" id="filter-categories">
+          <button class="filter-tab {{ 'active' if (not initial_mode or initial_mode in ('clear', 'deep')) else '' }}" data-filter="all" id="filter-tab-all" onclick="window.setFilter('all')">
+            <i class="fas fa-layer-group"></i> <span>All</span> <span class="filter-count" id="count-all">0</span>
+          </button>
+          <button class="filter-tab {{ 'active' if initial_mode == 'media' else '' }}" data-filter="images" id="filter-tab-images" onclick="window.setFilter('images')">
+            <i class="fas fa-image"></i> <span>Images</span> <span class="filter-count" id="count-images">0</span>
+          </button>
+          <button class="filter-tab" data-filter="videos" id="filter-tab-videos" onclick="window.setFilter('videos')">
+            <i class="fas fa-video"></i> <span>Videos</span> <span class="filter-count" id="count-videos">0</span>
+          </button>
+          <button class="filter-tab" data-filter="audio" id="filter-tab-audio" onclick="window.setFilter('audio')">
+            <i class="fas fa-music"></i> <span>Audio</span> <span class="filter-count" id="count-audio">0</span>
+          </button>
+          <button class="filter-tab {{ 'active' if initial_mode == 'files' else '' }}" data-filter="files" id="filter-tab-files" onclick="window.setFilter('files')">
+            <i class="fas fa-file-shield"></i> <span>Files &amp; Dorks</span> <span class="filter-count" id="count-files">0</span>
+          </button>
+          <button class="filter-tab {{ 'active' if initial_mode == 'dark' else '' }}" data-filter="dark" id="filter-tab-dark" onclick="window.setFilter('dark')">
+            <i class="fas fa-user-secret"></i> <span>DarkWeb (.onion)</span> <span class="filter-count" id="count-dark">0</span>
+          </button>
+          <button class="filter-tab {{ 'active' if initial_mode == 'osint' else '' }}" data-filter="osint" id="filter-tab-osint" onclick="window.setFilter('osint')">
+            <i class="fas fa-id-badge"></i> <span>OSINT</span> <span class="filter-count" id="count-osint">0</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Engine Stream & Interactive Filter Chips Bar (Persistent) ────────── -->
+      <div class="stream-live-bar" id="stream-live-bar">
+        <div class="stream-live-header">
+          <div class="stream-live-title" id="stream-status-title">
+            <i class="fas fa-satellite fa-spin" id="stream-status-icon" style="color:var(--accent-cyan);"></i>
+            <span id="stream-status-text">Active search engines:</span>
+          </div>
+          <button class="btn-clear-engine-filter" id="btn-clear-engine-filter" style="display:none;" onclick="window.clearEngineFilter()" title="Reset engine filter">
+            <i class="fas fa-times"></i> Show all engines
+          </button>
+        </div>
+        <div class="stream-badges" id="stream-badges">
+          <!-- Engine filter buttons injected here -->
+        </div>
+      </div>
+
+      <!-- Results Meta Info & View Mode Toggle (Infinite Scroll vs Pagination) -->
+      <div class="results-header-info">
+        <div class="results-meta-left">
+          <span id="results-count">Ready to search</span>
+          <span id="results-duration"></span>
+        </div>
+        <div class="results-view-switcher" id="results-view-switcher">
+          <span class="view-mode-title"><i class="fas fa-eye"></i> View:</span>
+          <div class="view-mode-buttons">
+            <button type="button" class="btn btn-sm btn-secondary view-mode-btn" id="btn-view-scroll" onclick="window.setViewMode('scroll')" title="Continuous Infinite Scroll (lazy-loaded)">
+              <i class="fas fa-stream"></i> <span>Infinite Scroll</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary view-mode-btn" id="btn-view-paging" onclick="window.setViewMode('paging')" title="Classic Page-by-Page Navigation">
+              <i class="fas fa-pager"></i> <span>Pagination</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Feed or Grid -->
+      <div id="results-list" class="results-list">
+        <!-- Rendered results -->
+        <div style="text-align:center; padding: 60px 20px; color: var(--text-dim);">
+          <div style="font-size: 48px; margin-bottom: 16px; opacity:0.3;"><i class="fas fa-satellite-dish"></i></div>
+          <div style="font-size: 16px; font-weight:600; color:var(--text-main); margin-bottom:6px;">Hecos Deep Search &amp; Intelligence</div>
+          <div style="font-size: 13px; max-width: 480px; margin: 0 auto; line-height: 1.6;">
+            Enter keywords to run simultaneous unfiltered multi-engine searches across the Clear Web and Tor hidden services.
+          </div>
+        </div>
+      </div>
+
+      <!-- Infinite Scroll Trigger / Sentinel -->
+      <div id="infinite-scroll-footer" class="infinite-scroll-footer" style="display:none;">
+        <div id="infinite-scroll-sentinel" style="height:20px;"></div>
+        <div id="infinite-scroll-status" class="infinite-scroll-status">
+          <i class="fas fa-circle-notch fa-spin"></i> <span>Loading more results...</span>
+        </div>
+      </div>
+
+      <!-- Classic Pagination Controls Bar -->
+      <div id="pagination-footer" class="pagination-footer" style="display:none;">
+        <div class="pagination-nav">
+          <button type="button" class="btn btn-sm btn-secondary page-btn" id="btn-page-first" onclick="window.gotoPage(1)" title="First Page">
+            <i class="fas fa-angle-double-left"></i> First
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary page-btn" id="btn-page-prev" onclick="window.prevPage()" title="Previous Page">
+            <i class="fas fa-chevron-left"></i> Prev
+          </button>
+          <div class="page-pills" id="page-pills">
+            <!-- Numerical page buttons generated here -->
+          </div>
+          <button type="button" class="btn btn-sm btn-secondary page-btn" id="btn-page-next" onclick="window.nextPage()" title="Next Page">
+            Next <i class="fas fa-chevron-right"></i>
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary page-btn" id="btn-page-last" onclick="window.gotoLastPage()" title="Last Page">
+            Last <i class="fas fa-angle-double-right"></i>
+          </button>
+        </div>
+        <div class="pagination-info">
+          <span class="badge-pill badge-neutral" id="badge-page-info">Page 1 of 1</span>
+          <div class="pagination-size-wrap">
+            <span>Per page:</span>
+            <select id="pagination-size-select" class="btn btn-sm btn-secondary page-size-select" onchange="window.setPageSize(this.value)">
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ── Right: AI Copilot Panel ───────────────────────────────────────── -->
+    <aside class="search-copilot">
+      <div class="copilot-header">
+        <div class="copilot-title">
+          <i class="fas fa-brain"></i> AI COPILOT
+        </div>
+        <span style="font-size:10px; color:var(--text-dim);">INTELLIGENCE</span>
+      </div>
+
+      <div class="copilot-body">
+        <div class="copilot-card">
+          <div class="copilot-card-title">Automated Synthesis</div>
+          <div id="copilot-summary-content">
+            <span style="color:var(--text-dim); font-size:12px;">Waiting for results...</span>
+          </div>
+        </div>
+
+        <div class="copilot-card">
+          <div class="copilot-card-title">Quick Actions</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <button class="copilot-btn" onclick="SearchCopilot.exportReport()">
+              <i class="fas fa-file-export"></i> Export Report (.md)
+            </button>
+            <a href="/chat" target="_blank" class="copilot-btn" style="text-decoration:none;">
+              <i class="fas fa-arrow-up-right-from-square"></i> Open Hecos Chat
+            </a>
+          </div>
+        </div>
+
+        <div class="copilot-card" style="background:rgba(6, 182, 212, 0.03); border-color:rgba(6, 182, 212, 0.15);">
+          <div class="copilot-card-title" style="color:var(--accent-cyan);">Privacy &amp; Security</div>
+          <div style="font-size:11px; color:var(--text-muted); line-height:1.6;">
+            All .onion requests are strictly routed through Tor's SOCKS5h proxy to prevent local DNS leaks.
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- ── Components & Engines Modal ────────────────────────────────────────── -->
+  <div class="search-modal-backdrop" id="components-modal">
+    <div class="search-modal" style="max-width: 860px;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <i class="fas fa-network-wired" style="color:var(--accent-cyan); font-size:18px;"></i>
+          <h3 style="font-size:16px;">Search Engines &amp; Dynamic Endpoints</h3>
+        </div>
+        <button class="btn-icon" onclick="closeAllModals()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-tabs-header">
+        <button type="button" class="modal-tab-btn active" id="modal-tab-components" onclick="window.switchComponentsModalTab('components')">
+          <i class="fas fa-microchip"></i> System Components
+        </button>
+        <button type="button" class="modal-tab-btn" id="modal-tab-endpoints" onclick="window.switchComponentsModalTab('endpoints')">
+          <i class="fas fa-sliders-h"></i> Resilient Endpoints &amp; Nodes
+        </button>
+      </div>
+      <div class="modal-body" id="components-list">
+        <!-- Injected via search_main.js -->
+      </div>
+      <div class="modal-body" id="endpoints-list" style="display:none;">
+        <!-- Injected via search_main.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Page Text Reader Modal ────────────────────────────────────────────── -->
+  <div class="search-modal-backdrop" id="page-reader-modal">
+    <div class="search-modal" style="max-width: 840px;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+          <i class="fas fa-file-alt" style="color:var(--accent-cyan); font-size:18px;"></i>
+          <h3 id="reader-modal-title" style="font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Page Reader</h3>
+        </div>
+        <button class="btn-icon" onclick="closeAllModals()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="reader-modal-body" style="max-height: 70vh;">
+        <!-- Injected via SearchResults.readPage -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Saved Links & Bookmarks Modal ────────────────────────────────────── -->
+  <div class="search-modal-backdrop" id="bookmarks-modal">
+    <div class="search-modal" style="max-width: 760px;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <i class="fas fa-star" style="color:#f59e0b; font-size:18px;"></i>
+          <h3 style="font-size:16px;">Saved Links &amp; Bookmarks</h3>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" class="btn btn-sm btn-secondary" style="border-radius:6px; font-size:11px; padding:4px 10px;" onclick="window.BookmarksManager.exportBookmarks()" title="Export bookmarks as JSON">
+            <i class="fas fa-download"></i> Export
+          </button>
+          <button class="btn-icon" onclick="window.BookmarksManager.close()"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+      <!-- Search & Filter Bar -->
+      <div style="display:flex; gap:10px; padding:10px 20px; border-bottom:1px solid var(--border); background:var(--bg1); align-items:center; flex-wrap:wrap;">
+        <div style="flex:1; min-width:200px; display:flex; align-items:center; background:var(--bg0); border:1px solid var(--border); border-radius:6px; padding:4px 10px;">
+          <i class="fas fa-search" style="color:var(--muted); font-size:11px; margin-right:8px;"></i>
+          <input type="text" id="bookmarks-search-input" placeholder="Search saved links..." oninput="window.BookmarksManager.loadList(window.BookmarksManager.currentFilter)" style="background:transparent; border:none; color:var(--text); font-size:12px; width:100%; outline:none;">
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button type="button" class="btn btn-sm bookmark-filter-btn active" data-filter="all" style="border-radius:6px; font-size:11px; padding:4px 10px;" onclick="window.BookmarksManager.loadList('all')">
+            All Links
+          </button>
+          <button type="button" class="btn btn-sm bookmark-filter-btn" data-filter="clear" style="border-radius:6px; font-size:11px; padding:4px 10px;" onclick="window.BookmarksManager.loadList('clear')">
+            <i class="fas fa-globe"></i> ClearWeb
+          </button>
+          <button type="button" class="btn btn-sm bookmark-filter-btn" data-filter="tor" style="border-radius:6px; font-size:11px; padding:4px 10px;" onclick="window.BookmarksManager.loadList('tor')">
+            <i class="fas fa-user-secret"></i> Onion
+          </button>
+        </div>
+      </div>
+      <div class="modal-body" id="bookmarks-list-container" style="max-height: 65vh; overflow-y:auto; gap:10px;">
+        <!-- Injected via search_bookmarks.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/netsearch_static/js/search/search_api.js?v={{ version }}"></script>
+  <script src="/netsearch_static/js/search/search_state.js?v={{ version }}"></script>
+  <script src="/netsearch_static/js/search/search_bookmarks.js?v={{ version }}"></script>
+  <script src="/netsearch_static/js/search/search_results.js?v={{ version }}"></script>
+  <script src="/netsearch_static/js/search/search_copilot.js?v={{ version }}"></script>
+  <script src="/netsearch_static/js/search/search_endpoints.js?v={{ version }}"></script>
+  <script src="/netsearch_static/js/search/search_main.js?v={{ version }}"></script>
+</body>
+</html>

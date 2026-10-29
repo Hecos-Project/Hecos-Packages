@@ -147,3 +147,19 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
         except Exception as e:
             logger.error(f"[DOCS] Editor PDF generation error: {e}")
             return jsonify({"ok": False, "error": str(e)}), 500
+
+    @app.route("/hecos/api/plugins/document_maker/templates", methods=["GET"])
+    def get_document_templates_api():
+        """Return available document templates from the templates library."""
+        try:
+            from hecos.hpm.libraries.templates.store import list_templates
+            # Retrieve document templates
+            doc_tpls = list_templates(channel="document")
+            # If no document channel templates found, fallback to all templates
+            if not doc_tpls:
+                doc_tpls = list_templates()
+            return jsonify({"ok": True, "templates": doc_tpls, "count": len(doc_tpls)})
+        except Exception as e:
+            logger.error(f"[DOCS] Error fetching templates: {e}")
+            return jsonify({"ok": False, "error": str(e), "templates": []}), 500
+

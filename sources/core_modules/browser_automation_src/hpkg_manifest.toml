@@ -1,10 +1,10 @@
 id = "browser_automation"
 manifest_version = "1"
 name = "Browser Automation"
-version = "1.0.2"
+version = "2.0.0"
 author = "Hecos Team / Antonio Meloni"
 license = "GPL-3.0"
-description = "Hecos AI-controlled Playwright browser. Navigate, read DOM, click elements and fill forms without vision or coordinate guessing. Funziona sia in modo autonomo con l'IA che tramite comandi diretti (slash commands come /b, /b_close, /b_tabs)."
+description = "Hecos AI Playwright browser automation engine. Navigate web pages, click elements, fill forms, extract reader DOM and capture screenshots."
 icon = "🌐"
 icon_url = ""
 screenshots = []
@@ -16,6 +16,7 @@ target_dir = "modules"
 pip_isolation = "shared"
 plugin_dir = "."
 lazy_load = true
+on_load = true
 readme = "README.md"
 readme_url = ""
 platform = []
@@ -28,7 +29,7 @@ signature = ""
 
 [config_panel]
 tab_id = "browser"
-tab_label = "AI Browser"
+tab_label = "AI Browser (Playwright)"
 tab_icon = "fa-globe"
 template_file = "web/templates/config_browser.html"
 js_file = "web/static/js/browser_panel.js"
@@ -39,7 +40,7 @@ config_api_get = "/hecos/api/plugins/browser_automation/config"
 config_api_post = "/hecos/api/plugins/browser_automation/config"
 
 [routing]
-instructions = "BROWSER AUTOMATION — STRICT MULTI-STEP EXECUTION RULES:\n\nYou MUST continue making tool calls until the user's full task is done. NEVER stop after just one step and produce a text response instead of a tool call.\n\nSTEP-BY-STEP RULES:\n1. USER SAYS \"open X\" → call BROWSER__open_url. Then IMMEDIATELY continue with the NEXT step — do NOT produce a text response and wait.\n2. USER SAYS \"search for X\" on a page → call BROWSER__type_in_field(label_or_selector=\"search\", text=\"X\", press_enter=True). No text response in between.\n3. USER SAYS \"click play\" → call BROWSER__click_element(text_or_selector=\"play\") or run_js to trigger play.\n4. USER SAYS \"open X, search Y, click play\" → you MUST execute ALL THREE steps in sequence, each as a separate tool call, WITHOUT producing any text response between them.\n5. After BROWSER__open_url succeeds, if the user asked you to do more (search, click, etc.), immediately issue the NEXT tool call. Do NOT say \"OK YouTube is open, now I'll search...\". JUST SEARCH.\n\nDECISION TREE FOR BROWSER MODE:\n- If browser already running: use list_tabs first to find the correct tab, then switch_tab if needed.\n- YouTube search bar selector: 'input#search' or use label_or_selector=\"search\".\n- YouTube play button: click_element('play') or run_js(\"document.querySelector('video').play()\").\n- NEVER stop mid-task. The task is only complete when ALL requested actions are done."
+instructions = "BROWSER AUTOMATION EXECUTION RULES:\n\nIf the user asks to open and interact with a live browser (click, type, navigate, watch video, take screenshots), call BROWSER__open_url and follow standard browser automation steps."
 
 [[tool_schema]]
 
@@ -291,189 +292,3 @@ description = "Closes the ENTIRE Hecos AI browser window."
 type = "object"
 
 [tool_schema.function.parameters.properties]
-
-[capabilities]
-llm_tools = [
-    "open_url",
-    "get_current_url",
-    "go_back",
-    "get_page_text",
-    "get_links",
-    "get_inputs",
-    "get_title",
-    "click_element",
-    "type_in_field",
-    "scroll",
-    "press_key",
-    "run_js",
-    "screenshot",
-    "list_tabs",
-    "switch_tab",
-    "new_tab",
-    "close_tab",
-    "close",
-]
-slash_commands = [
-    "/b",
-    "/browser",
-    "/b_close",
-    "/b_tabs",
-    "/b_back",
-    "/b_click",
-    "/b_type",
-    "/b_scroll",
-    "/b_shot",
-    "/b_new",
-    "/b_close_tab",
-    "/b_switch",
-]
-has_widget = false
-has_config_panel = true
-has_api_routes = true
-has_system_calls = false
-syscall_notes = ""
-notes = ""
-
-[[slash_commands]]
-id = "b"
-manifest_version = "1"
-aliases = [
-    "/b",
-    "/browser",
-]
-description = "Opens the AI browser on a URL or performs a search."
-usage = "/b <url_o_ricerca>"
-example = "/b youtube.com"
-icon = "🌐"
-method = "slash_b"
-requires_args = true
-
-[[slash_commands]]
-id = "b_close"
-manifest_version = "1"
-aliases = [
-    "/b_close",
-]
-description = "Closes the AI browser."
-usage = "/b_close"
-example = "/b_close"
-icon = "🌐"
-method = "slash_b_close"
-requires_args = false
-
-[[slash_commands]]
-id = "b_tabs"
-manifest_version = "1"
-aliases = [
-    "/b_tabs",
-]
-description = "Shows the list of open tabs in the AI browser."
-usage = "/b_tabs"
-example = "/b_tabs"
-icon = "🌐"
-method = "slash_b_tabs"
-requires_args = false
-
-[[slash_commands]]
-id = "b_back"
-manifest_version = "1"
-aliases = [
-    "/b_back",
-]
-description = "Naviga indietro nel browser."
-usage = "/b_back"
-example = "/b_back"
-icon = "⬅️"
-method = "slash_b_back"
-requires_args = false
-
-[[slash_commands]]
-id = "b_click"
-manifest_version = "1"
-aliases = [
-    "/b_click",
-]
-description = "Clicca un elemento per testo o selettore."
-usage = "/b_click <testo_o_selettore>"
-example = "/b_click Accedi"
-icon = "🖱️"
-method = "slash_b_click"
-requires_args = true
-
-[[slash_commands]]
-id = "b_type"
-manifest_version = "1"
-aliases = [
-    "/b_type",
-]
-description = "Scrive del testo in un campo."
-usage = "/b_type <selettore> | <testo>"
-example = "/b_type Cerca | gatti divertenti"
-icon = "⌨️"
-method = "slash_b_type"
-requires_args = true
-
-[[slash_commands]]
-id = "b_scroll"
-manifest_version = "1"
-aliases = [
-    "/b_scroll",
-]
-description = "Scorre la pagina su o giù."
-usage = "/b_scroll [up|down]"
-example = "/b_scroll down"
-icon = "↕️"
-method = "slash_b_scroll"
-requires_args = false
-
-[[slash_commands]]
-id = "b_shot"
-manifest_version = "1"
-aliases = [
-    "/b_shot",
-]
-description = "Scatta uno screenshot della pagina attuale."
-usage = "/b_shot"
-example = "/b_shot"
-icon = "📸"
-method = "slash_b_shot"
-requires_args = false
-
-[[slash_commands]]
-id = "b_new"
-manifest_version = "1"
-aliases = [
-    "/b_new",
-]
-description = "Apre una nuova scheda."
-usage = "/b_new [url]"
-example = "/b_new google.com"
-icon = "➕"
-method = "slash_b_new"
-requires_args = false
-
-[[slash_commands]]
-id = "b_close_tab"
-manifest_version = "1"
-aliases = [
-    "/b_close_tab",
-]
-description = "Chiude la scheda corrente."
-usage = "/b_close_tab"
-example = "/b_close_tab"
-icon = "❌"
-method = "slash_b_close_tab"
-requires_args = false
-
-[[slash_commands]]
-id = "b_switch"
-manifest_version = "1"
-aliases = [
-    "/b_switch",
-]
-description = "Cambia scheda attiva specificando l'ID."
-usage = "/b_switch <id>"
-example = "/b_switch 1"
-icon = "🔄"
-method = "slash_b_switch"
-requires_args = true

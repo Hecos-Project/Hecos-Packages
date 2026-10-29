@@ -1,21 +1,23 @@
 {
     "tag": "DOCS",
     "name": "Document Maker",
-    "version": "1.1.0",
+    "version": "1.5.4",
     "description": "Generates and modifies PDF/HTML documents from templates or raw HTML using Playwright.",
     "lazy_load": true,
     "is_class_based": true,
     "commands": {
         "generate_pdf": "Converts HTML content to a PDF file and returns the file path.",
         "list_documents": "Lists all documents in the documents folder.",
-        "modify_document": "Modifies an existing HTML document (add images, replace sections, change layout)."
+        "list_images": "Lists available images in media/images and media/generated_photos that can be reused in documents.",
+        "modify_document": "Modifies an existing HTML document (add images, replace sections, change layout).",
+        "optimize_layout": "Calculates page breaks for a document and returns a report of elements split across pages."
     },
     "tool_schema": [
         {
             "type": "function",
             "function": {
                 "name": "DOCS__generate_pdf",
-                "description": "Generates a PDF and HTML document from a template ID or raw HTML. Use this when the user asks to create a magazine, report, booklet, fotoromanzo, or any PDF/HTML document. Returns the absolute path of the generated files.\n\nIMPORTANT WORKFLOW: When creating a document with AI-generated images:\n1. FIRST generate all images using IMAGE_GEN__generate_image\n2. Collect the filenames from the [[IMG:filename]] tags in the results\n3. THEN call DOCS__generate_pdf with html_content containing <img src=\"/api/images/FILENAME\"> for each generated image\n4. ALWAYS complete the full workflow — NEVER stop after generating images without producing the document.\n\nIf Playwright/Chromium is not available, the HTML version will still be saved successfully.",
+                "description": "Generates a PDF and HTML document from a template ID or raw HTML. Returns the absolute path of the generated files.\n\nIMPORTANT GUIDELINES:\n- Formatting: When writing raw HTML, you MUST include complete inline CSS (e.g. `body { margin: 0; padding: 20px; font-family: sans-serif; } * { box-sizing: border-box; }`) to ensure the PDF layout is correct and borders work.\n- Images: Use `<img src=\"/api/images/FILENAME\">` to include images. Images are stored in `media/images`.\n- Workflow: You can reuse previously generated images without calling the image generator again. ONLY generate new images if the user explicitly asks for them or if they don't exist. NEVER stop after image generation; always proceed to call this tool to finish the document.\n\nIf Playwright/Chromium is unavailable, the HTML version will still be saved successfully.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -25,11 +27,11 @@
                         },
                         "template_id": {
                             "type": "string",
-                            "description": "Optional: The ID of an existing template to render and convert."
+                            "description": "Optional: The ID or name of an existing template from the Templates library (e.g. 'rivista_glamour_6_foto_editoriale', 'fotoromanzo_classico_4_foto_con_didascalia', 'doc-report-editorial-001', 'doc-report-executive-001', 'doc-letter-formal-001', 'doc-invoice-premium-001'). If omitted, freeform html_content or the default configured template is used."
                         },
                         "template_vars": {
                             "type": "string",
-                            "description": "Optional: JSON string of variables to inject into the template if template_id is used."
+                            "description": "REQUIRED when using template_id. A JSON string with ALL template variables populated with REAL content you write. Example: '{\"company\": \"Acme Corp\", \"report_title\": \"Q3 Report\", \"executive_summary\": \"This quarter we achieved...\"}'. You MUST fill in every variable with actual text — do NOT leave placeholders or empty strings. The template will reject the call if variables are missing. IF YOU GENERATED IMAGES, YOU MUST EMBED THEM INSIDE CONTENT VARIABLES (e.g. section1_content) using `<img src=\"/api/images/FILENAME\">`."
                         },
                         "filename": {
                             "type": "string",
@@ -87,6 +89,53 @@
                     }
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "DOCS__optimize_layout",
+                "description": "Calculates page breaks for a document and returns a report of elements split across pages. Used to analyze pagination and determine where manual page breaks are needed.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "document_id"
+                    ],
+                    "properties": {
+                        "document_id": {
+                            "type": "string",
+                            "description": "The ID or filename of the document to optimize (e.g. 'magazine.html')."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "DOCS__list_images",
+                "description": "Lists available images in media/images, media/generated_photos, or any specified folder. Call this before generating a document when the user asks to use existing photos, check the last generated photos, or pick random photos without regenerating them.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "folder": {
+                            "type": "string",
+                            "description": "Optional: subfolder name or path (e.g. 'images', 'generated_photos'). Defaults to scanning media images."
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Optional: number of images to return (default 10, max 50)."
+                        },
+                        "sort": {
+                            "type": "string",
+                            "description": "Optional: 'recent' (default, newest first), 'random' (pick random images), 'oldest', or 'name'."
+                        },
+                        "random_pick": {
+                            "type": "boolean",
+                            "description": "Optional: set true to pick random images instead of recent ones."
+                        }
+                    }
+                }
+            }
         }
     ],
     "slash_commands": [
@@ -98,6 +147,46 @@
                 "/documento"
             ],
             "description": "Genera un documento PDF da un testo HTML o da un template Hecos"
+        },
+        {
+            "id": "generate_pdf",
+            "aliases": [
+                "/DOCS__generate_pdf",
+                "/pdf",
+                "/generate_pdf"
+            ],
+            "description": "Generate a PDF document from a template ID or raw HTML.",
+            "requires_args": true
+        },
+        {
+            "id": "modify_document",
+            "aliases": [
+                "/DOCS__modify_document",
+                "/doc_edit",
+                "/modify_document"
+            ],
+            "description": "Modify an existing document and regenerate its PDF.",
+            "requires_args": true
+        },
+        {
+            "id": "list_documents",
+            "aliases": [
+                "/DOCS__list_documents",
+                "/docs_list",
+                "/list_documents"
+            ],
+            "description": "List all saved HTML and PDF documents.",
+            "requires_args": true
+        },
+        {
+            "id": "optimize_layout",
+            "aliases": [
+                "/DOCS__optimize_layout",
+                "/doc_layout",
+                "/optimize_layout"
+            ],
+            "description": "Analyze an HTML document to find pagination errors (cut-off elements) and get suggestions for page breaks.",
+            "requires_args": true
         }
     ],
     "icon": "<i class=\"fas fa-file-pdf\"></i>",

@@ -1,0 +1,228 @@
+id = "net_search"
+manifest_version = "1"
+name = "Net Search"
+version = "1.0.0"
+author = "Antonio Meloni / Hecos Team"
+license = "GPL-3.0"
+description = "Hecos Net Search & Intelligence System App. Privacy-preserving ClearWeb multi-engine meta-search, Tor DarkWeb (.onion) hidden services, OSINT identity lookup, media discovery, and deep file hunting."
+icon = "fa-satellite-dish"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png",
+]
+category = "CORE MODULES"
+tag = "NETSEARCH"
+is_class_based = true
+type = "system_app"
+target_dir = "modules"
+pip_isolation = "shared"
+plugin_dir = "."
+lazy_load = false
+on_load = true
+readme = "README.md"
+readme_url = ""
+platform = []
+dependencies = []
+pip_requirements = [
+    "requests>=2.31.0",
+    "requests[socks]>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "readability-lxml>=0.8.1",
+]
+python_requires = ">=3.11"
+signature = ""
+
+[ui]
+pill_label = "Net Search"
+pill_icon = "fa-satellite-dish"
+pill_route = "/search"
+pill_order = 42
+
+[config_panel]
+tab_id = "netsearch"
+tab_label = "Net Search & Tor"
+tab_icon = "fa-satellite-dish"
+template_file = "web/templates/config_netsearch.html"
+js_file = "web/static/js/netsearch_panel.js"
+js_files = [
+    "web/static/js/search/search_endpoints.js",
+    "web/static/js/netsearch_panel.js",
+]
+css_file = "web/static/css/search.css"
+category = "SISTEMA"
+api_routes_file = "web/routes.py"
+config_api_get = "/hecos/api/plugins/net_search/config"
+config_api_post = "/hecos/api/plugins/net_search/config"
+
+[routing]
+instructions = "NET SEARCH & INTELLIGENCE EXECUTION RULES:\n\n1. WEB SEARCH: If the user asks to search the web, find news, or search anything online, call NETSEARCH__web_search(query=...).\n2. DARK WEB: If the user asks for Tor, .onion, dark web, or unrestricted search, call NETSEARCH__dark_search(query=...).\n3. MEDIA: If the user asks for images, videos or music/audio, call NETSEARCH__media_search(query=..., media_type=...).\n4. DEEP SEARCH: If the user asks for extensive / deep search across all clear and dark web sources, call NETSEARCH__deep_search(query=...).\n5. FILE SEARCH: If the user asks for PDFs, ebooks, documents, zip archives, or downloadable files, call NETSEARCH__file_search(query=..., file_types=...).\n6. OSINT: If the user asks to find a person's accounts, usernames, or online profiles, call NETSEARCH__osint_search(username=...).\n7. READ WEBPAGE: If the user asks to read a specific URL, call NETSEARCH__fetch_page(url=...)."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__web_search"
+description = "Searches the Clear Web using multi-engine aggregation (SearXNG, DuckDuckGo, Brave, Mojeek, Qwant). Returns dense summarized results with title, link, and snippet."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "query",
+]
+
+[tool_schema.function.parameters.properties.max_results]
+default = 10
+description = "Maximum number of search results to return (5 to 30)."
+type = "integer"
+
+[tool_schema.function.parameters.properties.query]
+description = "The search query string."
+type = "string"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__dark_search"
+description = "Searches the Dark Web (.onion hidden services) through Ahmia, TorDex, Phobos, and onion crawlers routed through the local SOCKS5h Tor proxy."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "query",
+]
+
+[tool_schema.function.parameters.properties.max_results]
+default = 10
+description = "Maximum number of dark web results to return (5 to 25)."
+type = "integer"
+
+[tool_schema.function.parameters.properties.query]
+description = "The search query string."
+type = "string"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__deep_search"
+description = "Aggregates Clear Web, Tor Dark Web, and file dorks simultaneously. Returns comprehensive multi-network intelligence."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "query",
+]
+
+[tool_schema.function.parameters.properties.max_results]
+default = 15
+description = "Maximum total combined results (10 to 40)."
+type = "integer"
+
+[tool_schema.function.parameters.properties.query]
+description = "The search query string."
+type = "string"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__media_search"
+description = "Searches for images, videos, audio/soundtracks, and podcasts matching the query."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "query",
+]
+
+[tool_schema.function.parameters.properties.max_results]
+default = 10
+description = "Maximum media items to return."
+type = "integer"
+
+[tool_schema.function.parameters.properties.media_type]
+default = "all"
+description = "Filter by media type: 'all', 'images', 'videos', or 'audio'."
+type = "string"
+
+[tool_schema.function.parameters.properties.query]
+description = "The media search query."
+type = "string"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__fetch_page"
+description = "Reads, extracts and cleans the textual content of any webpage (Clearnet or Tor .onion) using fast HTTP and readability extraction."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "url",
+]
+
+[tool_schema.function.parameters.properties.max_chars]
+default = 4000
+description = "Maximum characters of cleaned text to return."
+type = "integer"
+
+[tool_schema.function.parameters.properties.url]
+description = "The target webpage URL (http:// or https://, including .onion addresses)."
+type = "string"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__file_search"
+description = "Hunts for downloadable files and documents (PDF, DOCX, XLSX, ZIP, EPUB, etc.) using multi-extension file dork queries across the Clear Web and Archive.org open library."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "query",
+]
+
+[tool_schema.function.parameters.properties.query]
+description = "The file search query string."
+type = "string"
+
+[tool_schema.function.parameters.properties.file_types]
+default = "pdf,docx,xlsx,zip,epub"
+description = "Comma-separated list of file extensions to hunt (e.g. 'pdf,docx,xlsx')."
+type = "string"
+
+[tool_schema.function.parameters.properties.max_results]
+default = 20
+description = "Maximum number of file results to return."
+type = "integer"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__osint_search"
+description = "OSINT identity hunt: concurrently probes 15+ major platforms (GitHub, Reddit, Telegram, Steam, Twitch, Medium, SoundCloud, Flickr, etc.) to discover active user profiles matching the given username."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "username",
+]
+
+[tool_schema.function.parameters.properties.username]
+description = "The username or handle to investigate (single word, no spaces)."
+type = "string"
+
+[capabilities]
+llm_tools = [
+    "web_search",
+    "dark_search",
+    "deep_search",
+    "media_search",
+    "fetch_page",
+    "file_search",
+    "osint_search",
+]
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = ""

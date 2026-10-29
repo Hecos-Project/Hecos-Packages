@@ -1,7 +1,7 @@
 id = "document_maker"
 manifest_version = "1"
 name = "Document Maker"
-version = "1.4.1"
+version = "1.5.4"
 author = "Hecos Team / Antonio Meloni"
 license = "GPL-3.0"
 description = "Generates and modifies PDF/HTML documents from templates or raw HTML using Playwright."
@@ -23,7 +23,7 @@ tag = "DOCS"
 lazy_load = true
 is_class_based = true
 api_routes_file = "web/routes.py"
-signature = "j53YPmKgCrtWVquddCWqW0WnQCHUSHdum0t0woaf7rjcEpeqoF9OkD3/RHlmhqviMoopfW+mimfT8ylDvfIYAQ=="
+signature = "JIuXS+xFagApn6dRItGo5m9OgWw9zgHnUBbs3KaSnNYwkhYNMseCbi3zQBU7ykEhY6mQ6H3rKxkZO2sVArPnAg=="
 
 [[slash_commands]]
 id = "pdf"
@@ -139,7 +139,7 @@ description = "Optional: Raw HTML content to convert to a document. Use <img src
 
 [tool_schema.function.parameters.properties.template_id]
 type = "string"
-description = "Optional: The ID of an existing template to render and convert."
+description = "Optional: The ID or name of an existing template from the Templates library (e.g. 'rivista_glamour_6_foto_editoriale', 'fotoromanzo_classico_4_foto_con_didascalia', 'doc-report-editorial-001', 'doc-report-executive-001', 'doc-letter-formal-001', 'doc-invoice-premium-001'). If omitted, freeform html_content or the default configured template is used."
 
 [tool_schema.function.parameters.properties.template_vars]
 type = "string"
@@ -216,23 +216,35 @@ type = "function"
 
 [tool_schema.function]
 name = "DOCS__list_images"
-description = "Lists available images in media/images and media/generated_photos. Call this before generating a document when the user says to use existing images instead of generating new ones. Returns a list of image filenames with their /api/images/FILENAME reference paths."
+description = "Lists available images in media/images, media/generated_photos, or any specified folder. Call this before generating a document when the user asks to use existing photos, check the last generated photos, or pick random photos without regenerating them."
 
 [tool_schema.function.parameters]
 type = "object"
 
 [tool_schema.function.parameters.properties.folder]
 type = "string"
-description = "Optional: filter by subfolder name ('images' or 'generated_photos'). Leave empty to list all."
+description = "Optional: subfolder name or path (e.g. 'images', 'generated_photos'). Defaults to scanning media images."
+
+[tool_schema.function.parameters.properties.limit]
+type = "integer"
+description = "Optional: number of images to return (default 10, max 50)."
+
+[tool_schema.function.parameters.properties.sort]
+type = "string"
+description = "Optional: 'recent' (default, newest first), 'random' (pick random images), 'oldest', or 'name'."
+
+[tool_schema.function.parameters.properties.random_pick]
+type = "boolean"
+description = "Optional: set true to pick random images instead of recent ones."
 
 [file_hashes]
-"docs_config.json" = "f8a4f660bf782d91259b46d5d56a48addc7f980dc352d0a82e086c21c6b3487e"
-"main.py" = "0dde7442fa6ea89fafd89956f8c96db348c2204b2423661892fd1bba58701e4d"
-"manifest.json" = "d41a795d88d0752c90c54b74beec2d395e3894870f78eddcedf203ae1b74b0bd"
+"docs_config.json" = "1a3970f94bd5bc2b1c75b9a526c6b6f181f0078a3a3a6ddb24ba61e810f0d5d0"
+"main.py" = "d82f0e13431ece2778e8bc9f7321315b7972bb255bfa7391ab621585ef501547"
+"manifest.json" = "3557625731aba6129782e38383668961a639499a8259107e0ade26422a9a5528"
 "README.md" = "fd962b26def13eaa1c923cfa543be642195740de33c8f951a207c9e691f064b7"
-"web/routes.py" = "ee3d5430e6c2aec8b0201ebbd2dad9c6c1738ac141dcb457abc3fa6dadbc3840"
+"web/routes.py" = "68350dad567020b0d2acd3c88b7431525da8c1b14b4349d446636bbcc9d91e99"
 "web/static/css/doc_preview.css" = "4fc4a898f3fd1631042e4b35db42129a6a36f00e796e28466f2dfea984761b6a"
-"web/static/js/document_maker_panel.js" = "651616d436799bcec3670e01c1e24f5225560cc04e877a843e94f66478af0ca9"
-"web/static/js/doc_preview.js" = "3fa8b8a4309dd6c39b04202c1b8db0d44181fff9e223fea6bbae45d6a9d5cb71"
-"web/templates/config_document_maker.html" = "e745ffc7839665b2d21ac06f0b071ff30b0340e4883529ab8ec58ef91ad57b5f"
+"web/static/js/document_maker_panel.js" = "fb730dcc397a4ca2ef467c93d85fc9a42b7108a8dd652bed8e76f8e2db778a20"
+"web/static/js/doc_preview.js" = "8a5fbb1f44d7bf6b8eefc127c188e96c34d84dca70ba7062f7adf5f455f5ab9b"
+"web/templates/config_document_maker.html" = "e82d67c423987796b2396c5f747caf86c63935d4b381459b5412f1dff85868f7"
 "web/templates/docs_editor.html" = "122f86557f1cfd0de778c80782a8bceeee1c23bf9da7a9d38a1ba55a1c096aff"

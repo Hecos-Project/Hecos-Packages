@@ -1,0 +1,33 @@
+{
+  "id": "doc-newspaper-vintage-001",
+  "name": "Quotidiano Storico — Vintage Broadsheet",
+  "channel": "document",
+  "description": "Autentico quotidiano vintage stile broadsheet con testata classica, colonne di giornale d'epoca, riquadri fotografici e trafiletto. Variabili: newspaper_name, issue_date, headline, subheadline, article_lead, article_body, img1, img2, caption1, caption2, editorial_opinion, footer_text.",
+  "subject": "{{ headline }} — {{ newspaper_name }}",
+  "body_html": "<!DOCTYPE html>\n<html lang=\"it\">\n<head>\n<meta charset=\"UTF-8\">\n<title>{{ headline }}</title>\n<style>\n  :root {\n    --paper-bg: #f5f0e6;\n    --paper-border: #222222;\n    --ink: #111111;\n    --ink-muted: #444444;\n    --font-masthead: 'Playfair Display', 'Georgia', serif;\n    --font-headline: 'Cinzel', 'Times New Roman', serif;\n    --font-text: 'Georgia', serif;\n  }\n  * { margin:0; padding:0; box-sizing:border-box; }\n  body {\n    background: var(--paper-bg);\n    color: var(--ink);\n    font-family: var(--font-text);\n    line-height: 1.5;\n  }\n  .broadsheet {\n    max-width: 900px;\n    margin: 0 auto;\n    padding: 30px;\n  }\n  .masthead {\n    text-align: center;\n    border-top: 4px double var(--paper-border);\n    border-bottom: 4px double var(--paper-border);\n    padding: 16px 0;\n    margin-bottom: 20px;\n  }\n  .masthead .paper-meta {\n    display: flex;\n    justify-content: space-between;\n    font-size: 0.85em;\n    font-weight: 700;\n    text-transform: uppercase;\n    letter-spacing: 2px;\n    border-bottom: 1px solid var(--paper-border);\n    padding-bottom: 6px;\n    margin-bottom: 10px;\n  }\n  .masthead h1 {\n    font-family: var(--font-masthead);\n    font-size: 3.8em;\n    letter-spacing: 3px;\n    text-transform: uppercase;\n    line-height: 1.1;\n  }\n  .headline-bar {\n    text-align: center;\n    margin-bottom: 24px;\n  }\n  .headline-bar h2 {\n    font-family: var(--font-headline);\n    font-size: 2.6em;\n    line-height: 1.15;\n    margin-bottom: 8px;\n  }\n  .headline-bar .subheadline {\n    font-size: 1.25em;\n    font-style: italic;\n    color: var(--ink-muted);\n  }\n  .content-grid {\n    display: grid;\n    grid-template-columns: 2fr 1fr;\n    gap: 24px;\n    border-top: 1px solid var(--paper-border);\n    padding-top: 20px;\n  }\n  .lead-article {\n    font-size: 1.05em;\n    line-height: 1.8;\n    text-align: justify;\n  }\n  .lead-article::first-letter {\n    font-size: 3.5em;\n    float: left;\n    line-height: 0.8;\n    margin-right: 8px;\n    font-family: var(--font-masthead);\n  }\n  .gallery {\n    margin-top: 24px;\n  }\n  .photo-card {\n    background: #eae3d2;\n    border: 1px solid #333;\n    padding: 8px;\n    margin-bottom: 20px;\n  }\n  .photo-card img {\n    width: 100%;\n    height: 260px;\n    object-fit: cover;\n    filter: sepia(0.2) contrast(1.1);\n  }\n  .caption {\n    font-size: 0.85em;\n    font-style: italic;\n    margin-top: 6px;\n    text-align: center;\n    color: #333;\n  }\n  .side-column {\n    border-left: 1px solid var(--paper-border);\n    padding-left: 20px;\n  }\n  .editorial-box {\n    background: rgba(0,0,0,0.04);\n    border: 1px solid #777;\n    padding: 16px;\n    font-size: 0.95em;\n    line-height: 1.7;\n    margin-bottom: 20px;\n  }\n  .editorial-box h3 {\n    font-family: var(--font-headline);\n    font-size: 1.1em;\n    border-bottom: 1px solid #333;\n    padding-bottom: 4px;\n    margin-bottom: 8px;\n    text-transform: uppercase;\n  }\n  .doc-footer {\n    border-top: 2px solid var(--paper-border);\n    margin-top: 30px;\n    padding-top: 12px;\n    text-align: center;\n    font-size: 0.8em;\n    text-transform: uppercase;\n    letter-spacing: 1px;\n  }\n  @media print {\n    @page { background: #f5f0e6; }\n    body { background: #f5f0e6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }\n  }\n</style>\n</head>\n<body>\n<div class=\"broadsheet\">\n  <div class=\"masthead\">\n    <div class=\"paper-meta\">\n      <span>Anno I · N. 1</span>\n      <span>{{ issue_date }}</span>\n      <span>Edizione Straordinaria</span>\n    </div>\n    <h1>{{ newspaper_name }}</h1>\n  </div>\n  <div class=\"headline-bar\">\n    <h2>{{ headline }}</h2>\n    <div class=\"subheadline\">{{ subheadline }}</div>\n  </div>\n  <div class=\"content-grid\">\n    <div class=\"main-column\">\n      <div class=\"lead-article\">\n        <p>{{ article_lead }}</p>\n        <p style=\"margin-top:16px;\">{{ article_body }}</p>\n      </div>\n      <div class=\"gallery\">\n        <div class=\"photo-card\">\n          <img src=\"{{ img1 }}\" alt=\"Illustrazione 1\">\n          <div class=\"caption\">{{ caption1 }}</div>\n        </div>\n      </div>\n    </div>\n    <div class=\"side-column\">\n      <div class=\"editorial-box\">\n        <h3>L'Opinione</h3>\n        <p>{{ editorial_opinion }}</p>\n      </div>\n      <div class=\"photo-card\">\n        <img src=\"{{ img2 }}\" alt=\"Illustrazione 2\">\n        <div class=\"caption\">{{ caption2 }}</div>\n      </div>\n    </div>\n  </div>\n  <div class=\"doc-footer\">\n    <p>{{ newspaper_name }} &nbsp;·&nbsp; {{ footer_text }}</p>\n  </div>\n</div>\n</body>\n</html>",
+  "variables": [
+    "newspaper_name",
+    "issue_date",
+    "headline",
+    "subheadline",
+    "article_lead",
+    "article_body",
+    "img1",
+    "img2",
+    "caption1",
+    "caption2",
+    "editorial_opinion",
+    "footer_text"
+  ],
+  "tags": [
+    "newspaper",
+    "vintage",
+    "broadsheet",
+    "article",
+    "press",
+    "document"
+  ],
+  "created_at": "2026-10-28T12:00:00.000000+00:00",
+  "updated_at": "2026-10-28T12:00:00.000000+00:00",
+  "versions": []
+}

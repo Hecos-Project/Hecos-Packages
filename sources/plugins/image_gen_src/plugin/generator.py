@@ -229,8 +229,7 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
                 if len(clean_prompt) > 250:
                     clean_prompt = clean_prompt[:247] + "..."
                 prefix = f"🎨 Ecco l'immagine generata per: {clean_prompt}"
-                html_src = f"/api/images/{filename}"
-                system_instruction = "[SYSTEM: SUCCESS. The image has been generated. DO NOT call this tool again for this request. Output the final text response to the user now."
+                system_instruction = f"[SYSTEM: SUCCESS. The image has been generated at '{html_src}'. If this was the last requested action, output your final text response to the user. If you are generating a document (e.g. with DOCS__generate_pdf) or this image is part of a multi-step workflow, proceed to call the next required tool now. DO NOT call IMAGE_GEN again with the same prompt."
                 if meta_str:
                     system_instruction += " You MUST include the [Image Gen Config] string verbatim in your response so the user can see it."
                 system_instruction += "]"

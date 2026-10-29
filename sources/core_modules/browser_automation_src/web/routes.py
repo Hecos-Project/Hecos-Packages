@@ -1,20 +1,45 @@
+"""
+web/routes.py
+Routes registration for browser_automation and Deep Search submodule.
+"""
 import os
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_from_directory
+from jinja2 import FileSystemLoader, ChoiceLoader
 from hecos.core.logging import logger
 
 def init_plugin_routes(app, cfg_mgr, root_dir, logger=None):
     """
-    Initializes custom API routes for the browser_automation plugin.
+    Initializes custom API routes for the browser_automation plugin and Deep Search.
     """
     from hecos.core.logging import logger as hecos_logger
     log = logger or hecos_logger
-    log.info("[BROWSER] Initializing plugin routes...")
-    
+    log.info("[BROWSER] Initializing browser_automation and Deep Search routes...")
+
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    tpl_dir = os.path.join(base_dir, "web", "templates")
+    stc_dir = os.path.join(base_dir, "web", "static")
+
+    # ── Extend Jinja loader so templates like search.html are found ───────────
+    try:
+        if isinstance(app.jinja_loader, ChoiceLoader):
+            if not any(isinstance(l, FileSystemLoader) and l.searchpath == [tpl_dir] for l in app.jinja_loader.loaders):
+                app.jinja_loader.loaders.append(FileSystemLoader(tpl_dir))
+        elif app.jinja_loader:
+            app.jinja_loader = ChoiceLoader([app.jinja_loader, FileSystemLoader(tpl_dir)])
+        else:
+            app.jinja_loader = FileSystemLoader(tpl_dir)
+    except Exception as je:
+        log.warning(f"[BROWSER] Could not extend Jinja loader: {je}")
+
+    # ── Static files route for browser & search ───────────────────────────────
+    @app.route("/browser_static/<path:filename>")
+    def browser_static_files(filename):
+        return send_from_directory(stc_dir, filename)
+
+    # ── Browser Automation Config Routes (Legacy & Core) ──────────────────────
     @app.route("/hecos/api/plugins/browser_automation/config", methods=["GET"])
     def browser_automation_get_config():
         try:
-            # We fetch the configuration from the BROWSER key inside plugins
-            # Since the core pydantic schema was removed, it's just a dict in plugins.yaml
             root_cfg = cfg_mgr.config
             cfg = root_cfg.get("plugins", {}).get("BROWSER", {})
             return jsonify({
@@ -31,6 +56,7 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger=None):
                     "nav_timeout": cfg.get("nav_timeout", 30),
                     "wait_timeout": cfg.get("wait_timeout", 8),
                     "action_timeout": cfg.get("action_timeout", 5),
+                    "search": cfg.get("search", {}),
                     "routing_override": root_cfg.get("routing_overrides", {}).get("overrides", {}).get("BROWSER", "")
                 }
             })
@@ -46,8 +72,6 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger=None):
             
             routing_override = incoming.pop("routing_override", None)
 
-            # Update the configuration in plugins.BROWSER
-            # This uses the same update payload format as the main config endpoint
             payload = {
                 "plugins": {
                     "BROWSER": incoming
@@ -71,13 +95,21 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger=None):
     def browser_launch_external():
         """Launches the external browser and connects via CDP."""
         try:
-            # Import the engine dynamically from our plugin package
-            from hecos.hpm.browser_automation.plugin import engine
+            # Dynamic engine import
+            here = os.path.dirname(os.path.abspath(__file__))
+            eng_path = os.path.normpath(os.path.join(here, "..", "plugin", "engine.py"))
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("browser_engine_dyn", eng_path)
+            engine = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(engine)
+
             root_cfg = cfg_mgr.config
             cfg = root_cfg.get("plugins", {}).get("BROWSER", {})
             port = cfg.get("cdp_port", 9222)
             msg = engine.launch_external_browser(port=port)
             return jsonify({"ok": True, "message": msg})
         except Exception as exc:
-            logger.error(f"[WebUI] browser_launch_external error: {exc}")
+            log.error(f"[WebUI] browser_launch_external error: {exc}")
             return jsonify({"ok": False, "error": str(exc)}), 500
+
+    log.info("[BROWSER] Routes and static assets registered successfully.")

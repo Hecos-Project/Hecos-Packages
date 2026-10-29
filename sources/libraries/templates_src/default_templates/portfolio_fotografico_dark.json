@@ -1,0 +1,35 @@
+{
+  "id": "doc-portfolio-dark-001",
+  "name": "Portfolio Fotografico — Dark Gallery",
+  "channel": "document",
+  "description": "Portfolio fotografico di lusso su sfondo scuro con griglia visiva fluida, metadati di scatto e statement artistico. Variabili: title, subtitle, artist_statement, img1-img6, caption1-caption6, artist_name, footer_text.",
+  "subject": "{{ title }} — {{ artist_name }}",
+  "body_html": "<!DOCTYPE html>\n<html lang=\"it\">\n<head>\n<meta charset=\"UTF-8\">\n<title>{{ title }}</title>\n<style>\n  :root {\n    --bg: #0b0c10;\n    --card: #14161d;\n    --accent: #66fcf1;\n    --accent-dim: #45a29e;\n    --text: #c5c6c7;\n    --text-bright: #ffffff;\n    --font-heading: 'Cinzel', 'Playfair Display', serif;\n    --font-body: 'Inter', 'Segoe UI', sans-serif;\n  }\n  * { margin:0; padding:0; box-sizing:border-box; }\n  body {\n    background: var(--bg);\n    color: var(--text);\n    font-family: var(--font-body);\n    min-height: 100vh;\n  }\n  .portfolio-header {\n    text-align: center;\n    padding: 70px 40px 40px;\n    border-bottom: 1px solid rgba(102,252,241,0.2);\n    background: radial-gradient(circle at top, #1f2833 0%, var(--bg) 70%);\n  }\n  .portfolio-header h1 {\n    font-family: var(--font-heading);\n    font-size: 3.4em;\n    letter-spacing: 8px;\n    text-transform: uppercase;\n    color: var(--text-bright);\n    margin-bottom: 12px;\n  }\n  .portfolio-header .subtitle {\n    font-size: 1.1em;\n    letter-spacing: 4px;\n    text-transform: uppercase;\n    color: var(--accent);\n  }\n  .artist-box {\n    max-width: 800px;\n    margin: 40px auto;\n    padding: 0 40px;\n    text-align: center;\n    font-style: italic;\n    font-size: 1.1em;\n    line-height: 1.8;\n    color: rgba(255,255,255,0.7);\n  }\n  .gallery {\n    display: grid;\n    grid-template-columns: repeat(2, 1fr);\n    gap: 32px;\n    max-width: 960px;\n    margin: 40px auto;\n    padding: 0 40px;\n  }\n  .photo-card {\n    background: var(--card);\n    border-radius: 12px;\n    overflow: hidden;\n    border: 1px solid rgba(255,255,255,0.06);\n    box-shadow: 0 16px 36px rgba(0,0,0,0.5);\n  }\n  .photo-card img {\n    width: 100%;\n    height: 380px;\n    object-fit: cover;\n    display: block;\n  }\n  .caption {\n    padding: 20px;\n    font-size: 0.9em;\n    line-height: 1.5;\n    color: var(--text-bright);\n    background: #14161d;\n    border-top: 1px solid rgba(102,252,241,0.15);\n  }\n  .caption .scene-num {\n    display: block;\n    font-size: 0.75em;\n    letter-spacing: 2px;\n    text-transform: uppercase;\n    color: var(--accent);\n    margin-bottom: 4px;\n  }\n  .footer {\n    text-align: center;\n    padding: 40px;\n    font-size: 0.85em;\n    color: var(--accent-dim);\n    letter-spacing: 2px;\n    border-top: 1px solid rgba(255,255,255,0.05);\n  }\n  @media print {\n    @page { background: #0b0c10; }\n    body { background: #0b0c10 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }\n    .photo-card { break-inside: avoid; }\n  }\n</style>\n</head>\n<body>\n  <div class=\"portfolio-header\">\n    <h1>{{ title }}</h1>\n    <div class=\"subtitle\">{{ subtitle }}</div>\n  </div>\n  <div class=\"artist-box\">\n    <p>&ldquo;{{ artist_statement }}&rdquo;</p>\n  </div>\n  <div class=\"gallery\">\n    <div class=\"photo-card\">\n      <img src=\"{{ img1 }}\" alt=\"Foto 1\">\n      <div class=\"caption\"><span class=\"scene-num\">Scena I</span>{{ caption1 }}</div>\n    </div>\n    <div class=\"photo-card\">\n      <img src=\"{{ img2 }}\" alt=\"Foto 2\">\n      <div class=\"caption\"><span class=\"scene-num\">Scena II</span>{{ caption2 }}</div>\n    </div>\n    <div class=\"photo-card\">\n      <img src=\"{{ img3 }}\" alt=\"Foto 3\">\n      <div class=\"caption\"><span class=\"scene-num\">Scena III</span>{{ caption3 }}</div>\n    </div>\n    <div class=\"photo-card\">\n      <img src=\"{{ img4 }}\" alt=\"Foto 4\">\n      <div class=\"caption\"><span class=\"scene-num\">Scena IV</span>{{ caption4 }}</div>\n    </div>\n  </div>\n  <div class=\"footer\">\n    <p>{{ artist_name }} &nbsp;·&nbsp; {{ footer_text }}</p>\n  </div>\n</body>\n</html>",
+  "variables": [
+    "title",
+    "subtitle",
+    "artist_statement",
+    "img1",
+    "img2",
+    "img3",
+    "img4",
+    "caption1",
+    "caption2",
+    "caption3",
+    "caption4",
+    "artist_name",
+    "footer_text"
+  ],
+  "tags": [
+    "portfolio",
+    "photobook",
+    "dark",
+    "luxury",
+    "art",
+    "photography",
+    "document"
+  ],
+  "created_at": "2026-10-28T12:00:00.000000+00:00",
+  "updated_at": "2026-10-28T12:00:00.000000+00:00",
+  "versions": []
+}
