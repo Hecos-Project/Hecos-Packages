@@ -64,7 +64,7 @@ class DarkHaystakEngine(BaseEngine):
 
         for s_url in search_urls:
             try:
-                resp = http_client.get(s_url, network="tor", params=params, headers=auth_headers, timeout=min(query.timeout, 10.0))
+                resp = http_client.get(s_url, network="tor", params=params, headers=auth_headers, timeout=min(query.timeout, 5.0))
                 if resp.status_code == 200:
                     from bs4 import BeautifulSoup
                     soup = BeautifulSoup(resp.text, "lxml")

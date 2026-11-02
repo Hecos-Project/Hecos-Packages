@@ -73,7 +73,7 @@ class DarkTorchEngine(BaseEngine):
             # kp="-2" disables SafeSearch content moderation
             data = {"q": query.query, "b": "", "kp": "-2" if not query.safe_search else "1"}
 
-            resp = http_client.post(ddg_onion, network="tor", data=data, headers=headers, timeout=min(query.timeout, 18.0))
+            resp = http_client.post(ddg_onion, network="tor", data=data, headers=headers, timeout=min(query.timeout, 6.0))
             if resp.status_code == 200:
                 from bs4 import BeautifulSoup
                 soup = BeautifulSoup(resp.text, "lxml")
@@ -113,7 +113,7 @@ class DarkTorchEngine(BaseEngine):
         # 2. Torch fallback
         try:
             params = {"P": query.query}
-            resp = http_client.get(torch_onion, network="tor", params=params, timeout=min(query.timeout, 12.0))
+            resp = http_client.get(torch_onion, network="tor", params=params, timeout=min(query.timeout, 6.0))
             if resp.status_code == 200:
                 from bs4 import BeautifulSoup
                 soup = BeautifulSoup(resp.text, "lxml")

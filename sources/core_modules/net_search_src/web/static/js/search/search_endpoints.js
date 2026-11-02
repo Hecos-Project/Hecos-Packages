@@ -4,7 +4,7 @@
  * Provides rich card rendering, automatic URL decomposition/composition,
  * protocol selection (including custom protocols), port configuration, and persistence.
  */
-window.SearchEndpoints = (function() {
+window.SearchEndpoints = (function () {
 
   function escapeHtml(str) {
     if (!str && str !== 0) return '';
@@ -346,6 +346,92 @@ window.SearchEndpoints = (function() {
     return id;
   }
 
+  function renderSearxngEngineCard(item, options = {}) {
+    const id = item.id || ('sx_eng_' + Math.random().toString(36).substr(2, 9));
+    const name = item.name || item.id || '';
+    const label = item.label || (name ? name.charAt(0).toUpperCase() + name.slice(1) : '');
+    const category = item.category || 'general';
+    const enabled = item.enabled !== false;
+
+    return `
+      <div class="endpoint-card searxng-engine-card" id="card-${id}" data-id="${id}" style="margin-bottom:8px; border-left:3px solid var(--accent-cyan, #06b6d4);">
+        <div class="endpoint-card-header" style="align-items:center;">
+          <div class="endpoint-card-title-group" style="flex:1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <input type="text" class="engine-name-input" value="${escapeHtml(name)}" placeholder="Engine ID (e.g. bing, yandex)" style="font-family:monospace; font-weight:700; max-width:140px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg0); color:var(--text); font-size:11px;" title="SearXNG backend adapter name" oninput="window.SearchEndpoints.syncEngineCard('${id}')">
+            <input type="text" class="engine-label-input" value="${escapeHtml(label)}" placeholder="Display Label (e.g. Bing Search)" style="flex:1; min-width:140px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg0); color:var(--text); font-size:11px;" title="Human-readable label" oninput="window.SearchEndpoints.syncEngineCard('${id}')">
+            <select class="engine-category-select" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg0); color:var(--text); font-size:11px;" onchange="window.SearchEndpoints.syncEngineCard('${id}')" title="Engine category">
+              <option value="general" ${category === 'general' ? 'selected' : ''}>🌐 General (Web)</option>
+              <option value="videos" ${category === 'videos' ? 'selected' : ''}>🎬 Videos (Media)</option>
+              <option value="images" ${category === 'images' ? 'selected' : ''}>🖼️ Images</option>
+              <option value="news" ${category === 'news' ? 'selected' : ''}>📰 News</option>
+              <option value="files" ${category === 'files' ? 'selected' : ''}>📁 Files / Dorks</option>
+              <option value="music" ${category === 'music' ? 'selected' : ''}>🎵 Music / Audio</option>
+            </select>
+          </div>
+          <div class="endpoint-card-actions" style="display:flex; align-items:center; gap:8px;">
+            <label class="endpoint-toggle-label" title="Enable or disable this engine without deleting" style="cursor:pointer;">
+              <input type="checkbox" class="engine-enabled-checkbox" ${enabled ? 'checked' : ''} onchange="window.SearchEndpoints.syncEngineCard('${id}')">
+              <span class="engine-toggle-text badge-pill ${enabled ? 'badge-ok' : 'badge-neutral'}" style="font-size:10px;">${enabled ? 'Active' : 'Disabled'}</span>
+            </label>
+            <button type="button" class="btn-icon-del" onclick="this.closest('.searxng-engine-card').remove(); if(typeof window.updateSearxngEnginesCount==='function') window.updateSearxngEnginesCount();" title="Remove this engine">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function syncEngineCard(id) {
+    const card = document.getElementById(`card-${id}`);
+    if (!card) return;
+    const checkbox = card.querySelector('.engine-enabled-checkbox');
+    const toggleText = card.querySelector('.engine-toggle-text');
+    if (checkbox && toggleText) {
+      const isAct = checkbox.checked;
+      toggleText.textContent = isAct ? 'Active' : 'Disabled';
+      toggleText.className = `engine-toggle-text badge-pill ${isAct ? 'badge-ok' : 'badge-neutral'}`;
+    }
+    if (typeof window.updateSearxngEnginesCount === 'function') {
+      window.updateSearxngEnginesCount();
+    }
+  }
+
+  function collectSearxngEngineCard(card) {
+    if (!card) return null;
+    const id = card.dataset.id;
+    const name = card.querySelector('.engine-name-input')?.value.trim().toLowerCase() || '';
+    const label = card.querySelector('.engine-label-input')?.value.trim() || name;
+    const category = card.querySelector('.engine-category-select')?.value || 'general';
+    const enabled = card.querySelector('.engine-enabled-checkbox')?.checked ?? true;
+    if (!name) return null;
+    return { id, name, label, category, enabled };
+  }
+
+  function addSearxngEngine(containerId, defaultItem = {}) {
+    const wrap = document.getElementById(containerId);
+    if (!wrap) return null;
+    const id = defaultItem.id || ('sx_eng_' + Math.random().toString(36).substr(2, 9));
+    const item = {
+      id: id,
+      name: defaultItem.name || '',
+      label: defaultItem.label || '',
+      category: defaultItem.category || 'general',
+      enabled: defaultItem.enabled !== false
+    };
+    const html = renderSearxngEngineCard(item);
+    wrap.insertAdjacentHTML('beforeend', html);
+    const added = document.getElementById(`card-${id}`);
+    if (added && !item.name) {
+      const nameInp = added.querySelector('.engine-name-input');
+      if (nameInp) nameInp.focus();
+    }
+    if (typeof window.updateSearxngEnginesCount === 'function') {
+      window.updateSearxngEnginesCount();
+    }
+    return id;
+  }
+
   return {
     escapeHtml,
     decomposeUrl,
@@ -358,6 +444,10 @@ window.SearchEndpoints = (function() {
     syncUrl,
     collectCard,
     collectContainer,
-    addEndpoint
+    addEndpoint,
+    renderSearxngEngineCard,
+    syncEngineCard,
+    collectSearxngEngineCard,
+    addSearxngEngine
   };
 })();

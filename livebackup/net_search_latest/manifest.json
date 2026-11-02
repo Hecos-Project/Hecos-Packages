@@ -1,0 +1,203 @@
+{
+    "tag": "NETSEARCH",
+    "display_name": "Net Search",
+    "name": "Net Search",
+    "description": "Hecos Net Search & Intelligence System App. Privacy-preserving ClearWeb multi-engine meta-search, Tor DarkWeb (.onion) hidden services, OSINT identity lookup, media discovery, and deep file hunting.",
+    "version": "1.0.0",
+    "author": "Antonio Meloni / Hecos Team",
+    "lazy_load": false,
+    "is_class_based": true,
+    "type": "system_app",
+    "status": "ONLINE",
+    "icon": "fa-satellite-dish",
+    "icon_url": "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png",
+    "screenshots": [
+        "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png"
+    ],
+    "config_panel": {
+        "tab_id": "netsearch",
+        "tab_label": "Net Search & Tor",
+        "tab_icon": "fa-satellite-dish",
+        "template_file": "web/templates/config_netsearch.html",
+        "js_file": "web/static/js/netsearch_panel.js",
+        "js_files": [
+            "web/static/js/search/search_endpoints.js",
+            "web/static/js/netsearch_panel.js"
+        ],
+        "css_file": "web/static/css/search.css",
+        "category": "SISTEMA",
+        "api_routes_file": "web/routes.py",
+        "config_api_get": "/hecos/api/plugins/net_search/config",
+        "config_api_post": "/hecos/api/plugins/net_search/config"
+    },
+    "commands": {},
+    "tool_schema": [
+        {
+            "function": {
+                "name": "NETSEARCH__web_search",
+                "description": "Searches the Clear Web using multi-engine aggregation (SearXNG, DuckDuckGo, Brave, Mojeek, Qwant). Returns dense summarized results with title, link, and snippet.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "query"
+                    ],
+                    "properties": {
+                        "max_results": {
+                            "default": 10,
+                            "description": "Maximum number of search results to return (5 to 30).",
+                            "type": "integer"
+                        },
+                        "query": {
+                            "description": "The search query string.",
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "function": {
+                "name": "NETSEARCH__dark_search",
+                "description": "Searches the Dark Web (.onion hidden services) through Ahmia, TorDex, Phobos, and onion crawlers routed through the local SOCKS5h Tor proxy.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "query"
+                    ],
+                    "properties": {
+                        "max_results": {
+                            "default": 10,
+                            "description": "Maximum number of dark web results to return (5 to 25).",
+                            "type": "integer"
+                        },
+                        "query": {
+                            "description": "The search query string.",
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "function": {
+                "name": "NETSEARCH__deep_search",
+                "description": "Aggregates Clear Web, Tor Dark Web, and file dorks simultaneously. Returns comprehensive multi-network intelligence.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "query"
+                    ],
+                    "properties": {
+                        "max_results": {
+                            "default": 15,
+                            "description": "Maximum total combined results (10 to 40).",
+                            "type": "integer"
+                        },
+                        "query": {
+                            "description": "The search query string.",
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "function": {
+                "name": "NETSEARCH__media_search",
+                "description": "Searches for images, videos, audio/soundtracks, and podcasts matching the query.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "query"
+                    ],
+                    "properties": {
+                        "max_results": {
+                            "default": 10,
+                            "description": "Maximum media items to return.",
+                            "type": "integer"
+                        },
+                        "media_type": {
+                            "default": "all",
+                            "description": "Filter by media type: 'all', 'images', 'videos', or 'audio'.",
+                            "type": "string"
+                        },
+                        "query": {
+                            "description": "The media search query.",
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "function": {
+                "name": "NETSEARCH__fetch_page",
+                "description": "Reads, extracts and cleans the textual content of any webpage (Clearnet or Tor .onion) using fast HTTP and readability extraction.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "url"
+                    ],
+                    "properties": {
+                        "max_chars": {
+                            "default": 4000,
+                            "description": "Maximum characters of cleaned text to return.",
+                            "type": "integer"
+                        },
+                        "url": {
+                            "description": "The target webpage URL (http:// or https://, including .onion addresses).",
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "function": {
+                "name": "NETSEARCH__file_search",
+                "description": "Hunts for downloadable files and documents (PDF, DOCX, XLSX, ZIP, EPUB, etc.) using multi-extension file dork queries across the Clear Web and Archive.org open library.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "query"
+                    ],
+                    "properties": {
+                        "query": {
+                            "description": "The file search query string.",
+                            "type": "string"
+                        },
+                        "file_types": {
+                            "default": "pdf,docx,xlsx,zip,epub",
+                            "description": "Comma-separated list of file extensions to hunt (e.g. 'pdf,docx,xlsx').",
+                            "type": "string"
+                        },
+                        "max_results": {
+                            "default": 20,
+                            "description": "Maximum number of file results to return.",
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "function": {
+                "name": "NETSEARCH__osint_search",
+                "description": "OSINT identity hunt: concurrently probes 15+ major platforms (GitHub, Reddit, Telegram, Steam, Twitch, Medium, SoundCloud, Flickr, etc.) to discover active user profiles matching the given username.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "username"
+                    ],
+                    "properties": {
+                        "username": {
+                            "description": "The username or handle to investigate (single word, no spaces).",
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "slash_commands": []
+}

@@ -64,7 +64,7 @@ class DarkOnionlandEngine(BaseEngine):
         for url, net in endpoints:
             try:
                 hecos_logger.info(f"[SEARCH:ONIONLAND] Querying Onion Search Engine via {net}: '{query.query}'...")
-                resp = http_client.get(url, network=net, params=params, timeout=query.timeout)
+                resp = http_client.get(url, network=net, params=params, timeout=min(query.timeout, 6.0))
                 if resp.status_code == 200:
                     from bs4 import BeautifulSoup
                     soup = BeautifulSoup(resp.text, "lxml")

@@ -66,7 +66,7 @@ window.builderRunBuild = async function(autoInstall = false) {
             // Success Animation
             window.builderLog(`Package successfully built and saved!`, 'success');
             if (data.out_dir) {
-                const link = `<a href="javascript:void(0)" onclick="window.builderOpenFolder('${data.out_dir.replace(/\\/g, '\\\\')}')" style="color:#60a5fa; text-decoration:underline;"><i class="fas fa-folder-open"></i> ${data.out_dir}</a>`;
+                const link = `<a href="javascript:void(0)" onclick="window.builderOpenFolder(decodeURIComponent('${encodeURIComponent(data.out_dir)}'))" style="color:#60a5fa; text-decoration:underline;"><i class="fas fa-folder-open"></i> ${data.out_dir}</a>`;
                 window.builderLog(`Destination: ${link}`, 'info');
             } else if (data.out_path) {
                 window.builderLog(`Saved to: ${data.out_path}`, 'info');
@@ -177,13 +177,21 @@ window._executeBatchBuild = async function(packagesCsv) {
 
 
 window.builderOpenFolder = async function(path) {
+    if (!path) return;
     try {
-        await fetch('/api/hpm/builder/open-folder', {
+        const resp = await fetch('/api/hpm/builder/open-folder', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ path: path })
         });
-    } catch(e) {}
+        const data = await resp.json();
+        if (!data || !data.ok) {
+            const err = (data && data.error) ? data.error : 'Unknown error';
+            window.builderLog(`Could not open folder: ${err}`, 'error');
+        }
+    } catch(e) {
+        window.builderLog(`Error opening folder: ${e.message}`, 'error');
+    }
 };
 
 window.builderGenerateKeys = async function() {

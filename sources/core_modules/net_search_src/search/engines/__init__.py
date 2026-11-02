@@ -75,7 +75,7 @@ def get_engines_for_mode(mode: str, requested_engines: Optional[List[str]] = Non
     cfg = get_search_config().get("engines", {})
 
     mode_map = {
-        "clear": ["clear_ddgs", "clear_news", "media_images", "media_videos", "files_dorks", "clear_searxng"],
+        "clear": ["clear_ddgs", "clear_news", "media_images", "media_videos", "media_audio", "files_dorks", "clear_searxng"],
         "dark": [
             "dark_ahmia", "dark_torch", "dark_haystak", "dark_onionland",
             "dark_excavator", "dark_phobos", "dark_tor66", "dark_danieltore", "dark_custom"

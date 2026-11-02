@@ -29,12 +29,105 @@ DEFAULT_PORT = 8888
 _GLOBAL_SEARXNG_PROC: Optional[subprocess.Popen] = None
 
 
+def _kill_process_on_port(port: int):
+    """Kills any process listening on the given port on Windows."""
+    try:
+        if sys.platform == "win32":
+            out = subprocess.check_output(f"netstat -ano | findstr :{port}", shell=True, text=True)
+            for line in out.strip().splitlines():
+                if "LISTENING" in line:
+                    parts = line.strip().split()
+                    pid = parts[-1]
+                    if pid and pid != "0":
+                        subprocess.call(["taskkill", "/F", "/PID", pid], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+
 def _get_searxng_dir() -> str:
     here = os.path.dirname(os.path.abspath(__file__))
     hecos_root = os.path.normpath(os.path.join(here, "..", "..", "..", ".."))
     searxng_dir = os.path.join(hecos_root, "data", "searxng")
     os.makedirs(searxng_dir, exist_ok=True)
     return searxng_dir
+
+
+def update_searxng_engines(engines: list, port: int = DEFAULT_PORT) -> bool:
+    """Dynamically updates the engines block in data/searxng/settings.yml and restarts the local daemon if running."""
+    sdir = _get_searxng_dir()
+    config_path = os.path.join(sdir, "settings.yml")
+    secret = "d10d6c4ea36c4eb1ca5154e9ac917227"
+    if os.path.isfile(config_path):
+        try:
+            import yaml
+            with open(config_path, "r", encoding="utf-8") as f:
+                existing = yaml.safe_load(f)
+                secret = existing.get("server", {}).get("secret_key", secret)
+                port = int(existing.get("server", {}).get("port", port))
+        except Exception:
+            pass
+
+    lines = [
+        "# Hecos Pure-Python SearXNG Configuration (Docker-Free)",
+        "use_default_settings: true",
+        "",
+        "general:",
+        "  debug: false",
+        '  instance_name: "Hecos-SearXNG"',
+        "",
+        "search:",
+        "  safe_search: 0",
+        "  autocomplete: 'duckduckgo'",
+        "  formats:",
+        "    - html",
+        "    - json",
+        "",
+        "server:",
+        f"  port: {port}",
+        '  bind_address: "127.0.0.1"',
+        f'  secret_key: "{secret}"',
+        "  limiter: false",
+        "  image_proxy: false",
+        "  public_instance: false",
+        "",
+        "redis:",
+        "  url: false",
+        "",
+        "outgoing:",
+        "  request_timeout: 6.0",
+        "  max_request_timeout: 10.0",
+        "",
+        "ui:",
+        "  static_use_hash: false",
+        "",
+        "engines:"
+    ]
+
+    for eng in engines:
+        if not isinstance(eng, dict):
+            continue
+        name = str(eng.get("name") or eng.get("id") or "").strip().lower()
+        if not name:
+            continue
+        category = str(eng.get("category", "general")).strip()
+        enabled = eng.get("enabled", True) is not False
+        lines.append(f"  - name: {name}")
+        lines.append(f"    engine: {name}")
+        if category:
+            lines.append(f"    categories: {category}")
+        lines.append(f"    disabled: {'false' if enabled else 'true'}")
+
+    content = "\n".join(lines) + "\n"
+    with open(config_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    hecos_logger.info(f"[SEARXNG] Synchronized {len(engines)} configured engines into {config_path}")
+
+    comp = SearXNGComponent()
+    if comp.is_running():
+        hecos_logger.info("[SEARXNG] Restarting daemon to apply engine modifications...")
+        comp.restart()
+    return True
 
 
 def _ensure_searxng_config(port: int = DEFAULT_PORT) -> str:
@@ -72,15 +165,35 @@ ui:
   static_use_hash: false
 
 engines:
+  - name: google
+    disabled: false
   - name: bing
     disabled: false
-  - name: yahoo
+  - name: duckduckgo
     disabled: false
   - name: brave
     disabled: false
+  - name: yandex
+    disabled: false
+  - name: yahoo
+    disabled: false
+  - name: qwant
+    disabled: false
+  - name: startpage
+    disabled: false
   - name: wikipedia
     disabled: false
-  - name: duckduckgo
+  - name: google_videos
+    disabled: false
+  - name: bing_videos
+    disabled: false
+  - name: dailymotion
+    disabled: false
+  - name: vimeo
+    disabled: false
+  - name: bilibili
+    disabled: false
+  - name: peertube
     disabled: false
 """
         with open(config_path, "w", encoding="utf-8") as f:
@@ -151,7 +264,8 @@ class SearXNGComponent(BaseComponent):
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             startupinfo.wShowWindow = 0  # SW_HIDE
-            creationflags = subprocess.CREATE_NO_WINDOW
+            # DETACHED_PROCESS (0x8) | CREATE_NEW_PROCESS_GROUP (0x200) | CREATE_NO_WINDOW (0x08000000)
+            creationflags = subprocess.CREATE_NO_WINDOW | 0x00000008 | 0x00000200
 
         env = os.environ.copy()
         env["SEARXNG_SETTINGS_PATH"] = os.path.abspath(settings_file)
@@ -196,16 +310,24 @@ class SearXNGComponent(BaseComponent):
         if _GLOBAL_SEARXNG_PROC and _GLOBAL_SEARXNG_PROC.poll() is None:
             try:
                 _GLOBAL_SEARXNG_PROC.terminate()
-                _GLOBAL_SEARXNG_PROC.wait(timeout=3.0)
+                _GLOBAL_SEARXNG_PROC.wait(timeout=2.0)
             except Exception:
                 try:
                     _GLOBAL_SEARXNG_PROC.kill()
                 except Exception:
                     pass
             _GLOBAL_SEARXNG_PROC = None
-            hecos_logger.info("[SEARXNG] Native SearXNG daemon stopped.")
-            return True, "SearXNG daemon stopped."
-        return True, "SearXNG was not running."
+
+        cfg = get_search_config().get("searxng", {})
+        port = int(cfg.get("port", DEFAULT_PORT))
+        _kill_process_on_port(port)
+        hecos_logger.info("[SEARXNG] Native SearXNG daemon stopped.")
+        return True, "SearXNG daemon stopped."
+
+    def restart(self) -> Tuple[bool, str]:
+        self.stop()
+        time.sleep(0.6)
+        return self.start()
 
     def uninstall(self) -> Tuple[bool, str]:
         self.stop()

@@ -265,11 +265,11 @@ window.builderRenderGrid = function() {
                     <img src="${imgUrl}" onerror="this.src='${fallbackImg}'" style="width:100%;height:100%;object-fit:cover;padding:2px;box-sizing:border-box;transition:transform .3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                   </div>
                   <div style="display:flex;gap:6px;margin-top:6px;">
-                    <button onclick="event.stopPropagation();window.builderOpenFolder('${absolutePath.replace(/\\/g,'\\\\')}')"
+                    <button onclick="event.stopPropagation();window.builderOpenFolder(decodeURIComponent('${encodeURIComponent(absolutePath)}'))"
                       title="Open source folder" style="flex:1;font-size:10px;padding:3px 0;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:5px;cursor:pointer;">
                       <i class='fas fa-folder-open'></i> Source
                     </button>
-                    ${src.built ? `<button onclick="event.stopPropagation();window.builderOpenFolder('${src.hpkg_path.replace(/\\/g,'\\\\').replace(/[^/\\\\]+$/, '')}')"
+                    ${src.built ? `<button onclick="event.stopPropagation();window.builderOpenFolder(decodeURIComponent('${encodeURIComponent(src.hpkg_path || '')}'))"
                       title="Open built package folder" style="flex:1;font-size:10px;padding:3px 0;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;border-radius:5px;cursor:pointer;">
                       <i class='fas fa-box'></i> .hpkg
                     </button>` : `<button disabled style="flex:1;font-size:10px;padding:3px 0;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);color:#4b5563;border-radius:5px;cursor:not-allowed;">
@@ -309,11 +309,11 @@ window.builderRenderGrid = function() {
                     ? `<span style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:9px;font-weight:800;letter-spacing:.8px;padding:2px 8px;border-radius:10px;white-space:nowrap;"><i class='fas fa-check-circle' style='margin-right:3px;'></i>BUILT</span>`
                     : `<span style="background:rgba(255,255,255,0.05);color:#6b7280;font-size:9px;font-weight:700;letter-spacing:.6px;padding:2px 8px;border-radius:10px;white-space:nowrap;">NOT BUILT</span>`
                   }
-                  <button onclick="event.stopPropagation();window.builderOpenFolder('${absolutePath.replace(/\\/g,'\\\\')}')"
+                  <button onclick="event.stopPropagation();window.builderOpenFolder(decodeURIComponent('${encodeURIComponent(absolutePath)}'))"
                     title="Open source" style="margin-left:4px;font-size:10px;padding:2px 6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:5px;cursor:pointer;flex-shrink:0;">
                     <i class='fas fa-folder-open'></i>
                   </button>
-                  ${src.built ? `<button onclick="event.stopPropagation();window.builderOpenFolder('${src.hpkg_path.replace(/\\/g,'\\\\').replace(/[^/\\\\]+$/, '')}')"
+                  ${src.built ? `<button onclick="event.stopPropagation();window.builderOpenFolder(decodeURIComponent('${encodeURIComponent(src.hpkg_path || '')}'))"
                     title="Open .hpkg folder" style="font-size:10px;padding:2px 6px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;border-radius:5px;cursor:pointer;flex-shrink:0;">
                     <i class='fas fa-box'></i>
                    </button>` : ''}

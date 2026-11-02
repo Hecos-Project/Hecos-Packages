@@ -44,7 +44,140 @@ class NetSearchTools:
             "6. OSINT: If the user asks to find a person's online accounts, usernames, or social profiles, call NETSEARCH__osint_search(username=...).\n"
             "7. READ WEBPAGE: If the user asks to inspect, read, or scrape a specific URL (clearnet or .onion), call NETSEARCH__fetch_page(url=...)."
         )
-        self.slash_commands = ["/netsearch", "/search", "/dark", "/tor_new", "/files", "/osint"]
+        self.slash_commands = [
+            {
+                "id": "search",
+                "aliases": ["/search", "/netsearch", "/cerca", "/websearch"],
+                "description": "Searches the web, dark web, media, and files across all engines",
+                "usage": "/search <query>",
+                "example": "/search artificial intelligence",
+                "icon": "🌐",
+                "category": "NETSEARCH",
+                "method": "slash_search",
+                "args_schema": {"query": "str"},
+                "requires_args": True,
+            },
+            {
+                "id": "dark",
+                "aliases": ["/dark", "/onion", "/tor_search"],
+                "description": "Searches the Tor Dark Web (.onion hidden services)",
+                "usage": "/dark <query>",
+                "example": "/dark cybersecurity",
+                "icon": "🧅",
+                "category": "NETSEARCH",
+                "method": "slash_dark",
+                "args_schema": {"query": "str"},
+                "requires_args": True,
+            },
+            {
+                "id": "media",
+                "aliases": ["/media", "/find_media"],
+                "description": "Searches for images, videos, podcasts and audio online",
+                "usage": "/media <query>",
+                "example": "/media 4k nature",
+                "icon": "🎬",
+                "category": "NETSEARCH",
+                "method": "slash_media",
+                "args_schema": {"query": "str"},
+                "requires_args": True,
+            },
+            {
+                "id": "videos",
+                "aliases": ["/videos", "/video", "/cerca_video"],
+                "description": "Searches for videos across YouTube, Vimeo, Peertube, and web sources",
+                "usage": "/videos <query>",
+                "example": "/videos flying horses",
+                "icon": "📹",
+                "category": "NETSEARCH",
+                "method": "slash_videos",
+                "args_schema": {"query": "str"},
+                "requires_args": True,
+            },
+            {
+                "id": "images",
+                "aliases": ["/images", "/immagini", "/foto_web", "/cerca_immagini"],
+                "description": "Searches the web for real photos, illustrations, and images",
+                "usage": "/images <query>",
+                "example": "/images flying horses",
+                "icon": "🖼️",
+                "category": "NETSEARCH",
+                "method": "slash_images",
+                "args_schema": {"query": "str"},
+                "requires_args": True,
+            },
+            {
+                "id": "files",
+                "aliases": ["/files", "/file", "/dorks", "/cerca_file"],
+                "description": "Hunts for downloadable files, PDFs, ebooks, and archives online",
+                "usage": "/files <query>",
+                "example": "/files machine learning pdf",
+                "icon": "📁",
+                "category": "NETSEARCH",
+                "method": "slash_files",
+                "args_schema": {"query": "str"},
+                "requires_args": True,
+            },
+            {
+                "id": "osint",
+                "aliases": ["/osint", "/whois_user"],
+                "description": "Searches for a username across 15+ social and coding platforms",
+                "usage": "/osint <username>",
+                "example": "/osint johndoe",
+                "icon": "🕵️",
+                "category": "NETSEARCH",
+                "method": "slash_osint",
+                "args_schema": {"username": "str"},
+                "requires_args": True,
+            },
+            {
+                "id": "fetch",
+                "aliases": ["/fetch", "/scrape", "/read_page"],
+                "description": "Fetches and extracts clean text from any URL (Clearnet or Tor .onion)",
+                "usage": "/fetch <url>",
+                "example": "/fetch https://example.com",
+                "icon": "📄",
+                "category": "NETSEARCH",
+                "method": "slash_fetch",
+                "args_schema": {"url": "str"},
+                "requires_args": True,
+            },
+            {
+                "id": "tor_new",
+                "aliases": ["/tor_new", "/new_circuit"],
+                "description": "Requests a new Tor identity circuit",
+                "usage": "/tor_new",
+                "example": "/tor_new",
+                "icon": "🧅",
+                "category": "NETSEARCH",
+                "method": "slash_tor_new",
+                "args_schema": {},
+                "requires_args": False,
+            },
+            {
+                "id": "search_engines",
+                "aliases": ["/search_engines", "/engines"],
+                "description": "Displays the status of active search engines and daemons",
+                "usage": "/search_engines",
+                "example": "/search_engines",
+                "icon": "🛰️",
+                "category": "NETSEARCH",
+                "method": "slash_search_engines",
+                "args_schema": {},
+                "requires_args": False,
+            },
+            {
+                "id": "search_config",
+                "aliases": ["/search_config"],
+                "description": "Inspects or updates Net Search configuration",
+                "usage": "/search_config [set <key> <val>]",
+                "example": "/search_config",
+                "icon": "⚙️",
+                "category": "NETSEARCH",
+                "method": "slash_search_config",
+                "args_schema": {"args": "str"},
+                "requires_args": False,
+            }
+        ]
         self._tools_impl = SearchTools()
 
     # ── LLM Function Calling Tools ────────────────────────────────────────────
@@ -115,6 +248,73 @@ class NetSearchTools:
         except Exception as e:
             return f"⚠️ Tor command error: {e}"
 
+    def slash_images(self, args: str) -> str:
+        if not args:
+            return "Please specify an image query. Example: `/images running horses`"
+        return self.media_search(args.strip(), media_type="images")
+
+    def slash_videos(self, args: str) -> str:
+        if not args:
+            return "Please specify a video query. Example: `/videos flying horses`"
+        return self.media_search(args.strip(), media_type="videos")
+
+    def slash_audio(self, args: str) -> str:
+        if not args:
+            return "Please specify an audio or podcast query. Example: `/audio epic soundtrack`"
+        return self.media_search(args.strip(), media_type="audio")
+
+    def slash_media(self, args: str) -> str:
+        if not args:
+            return "Please specify a media query. Example: `/media 4k nature`"
+        return self.media_search(args.strip(), media_type="all")
+
+    def slash_fetch(self, args: str) -> str:
+        if not args:
+            return "Please specify a URL to scrape and analyze. Example: `/fetch https://example.com`"
+        return self.fetch_page(args.strip())
+
+    def slash_search_engines(self, args: str = "") -> str:
+        from .search.config import get_search_config
+        from .search.components.catalog import get_all_statuses
+        cfg = get_search_config()
+        lines = ["### 🛰 Net Search Engine & Subsystem Status\n"]
+        lines.append(f"- **Local Privacy Shield**: `{'ACTIVE' if cfg.get('local_only') else 'OFF'}`")
+        lines.append(f"- **Tor Routing**: `{'ACTIVE' if cfg.get('tor', {}).get('enabled') else 'OFF'}`")
+        lines.append(f"- **SearXNG Daemon**: `{'ACTIVE' if cfg.get('searxng', {}).get('enabled') else 'OFF'}` ({cfg.get('searxng', {}).get('url')})")
+        lines.append("\n**Components:**")
+        for st in get_all_statuses():
+            is_run = st.get("is_running", False)
+            is_inst = st.get("is_installed", False)
+            ico = "🟢" if is_run else ("⚪" if is_inst else "🔴")
+            lines.append(f"- {ico} **{st.get('name', 'Component')}** (`{st.get('id')}`): {'Running' if is_run else ('Installed' if is_inst else 'Not installed')}")
+        return "\n".join(lines)
+
+    def slash_search_config(self, args: str = "") -> str:
+        from .search.config import get_search_config, update_search_config
+        arg_str = args.strip()
+        if not arg_str:
+            cfg = get_search_config()
+            return (
+                "### ⚙️ Net Search Config\n"
+                f"- `local_only`: `{cfg.get('local_only', False)}` (strictly local SearXNG daemon)\n"
+                f"- `default_mode`: `{cfg.get('default_mode', 'clear')}`\n"
+                f"- `safe_search`: `{cfg.get('safe_search', False)}`\n"
+                f"- `tor.enabled`: `{cfg.get('tor', {}).get('enabled', False)}`\n"
+                "\n*Use `/search_config set local_only true|false` or `/search_config set tor true|false` to update.*"
+            )
+        parts = arg_str.split()
+        if len(parts) >= 3 and parts[0].lower() == "set":
+            key, val = parts[1].lower(), parts[2].lower()
+            bval = val in ("1", "true", "yes", "on", "si")
+            if key in ("local_only", "privacy_shield"):
+                update_search_config({"local_only": bval})
+                return f"✅ `local_only` set to `{bval}`."
+            elif key in ("tor", "tor_enabled"):
+                update_search_config({"tor": {"enabled": bval}})
+                return f"✅ `tor.enabled` set to `{bval}`."
+        return "⚠️ Usage: `/search_config` or `/search_config set <local_only|tor> <true|false>`"
+
+
 
 tools = NetSearchTools()
 
@@ -154,19 +354,26 @@ def info() -> Dict[str, Any]:
         "type": "system_app",
         "description": "Hecos Net Search & Intelligence System App: Multi-engine ClearWeb, Tor DarkWeb, Media and File hunting.",
         "commands": {
-            "web_search": "Cerca nel Clear Web senza filtri.",
-            "dark_search": "Cerca nel Dark Web (.onion) via Tor.",
-            "deep_search": "Ricerca profonda combinata Clear + Tor + File.",
-            "media_search": "Cerca immagini, video e audio.",
-            "file_search": "Cerca file e documenti (PDF, DOCX, ZIP, EPUB) con dorks e Archive.org.",
-            "osint_search": "OSINT: ricerca profili utente su 15+ piattaforme.",
-            "fetch_page": "Leggi e pulisci il testo di qualsiasi pagina (Clearnet o .onion).",
-            "/netsearch": "Ricerca profonda da chat",
-            "/search": "Ricerca profonda da chat",
-            "/dark": "Ricerca Dark Web da chat",
-            "/files": "Cerca file e documenti da chat",
-            "/osint": "OSINT username hunt da chat",
-            "/tor_new": "Genera una nuova identità e circuito Tor (NEWNYM)"
+            "web_search": "Search the clear web without censorship.",
+            "dark_search": "Search the Tor dark web (.onion hidden services).",
+            "deep_search": "Deep uninhibited search combining clear, dark web, and file hunting.",
+            "media_search": "Search images, videos, podcasts, and audio.",
+            "file_search": "Hunt for documents and files (PDF, DOCX, ZIP, EPUB) using dorks and Archive.org.",
+            "osint_search": "OSINT profile hunt across 15+ major platforms.",
+            "fetch_page": "Extract and clean text content of any webpage (Clearnet or Tor .onion).",
+            "/netsearch": "Deep search from chat",
+            "/search": "Deep search from chat",
+            "/dark": "Tor Dark Web search from chat",
+            "/files": "Hunt files and documents from chat",
+            "/osint": "OSINT username hunt from chat",
+            "/tor_new": "Generate a new Tor circuit identity (NEWNYM)",
+            "/images": "Search images and photos from chat",
+            "/videos": "Search videos with thumbnails and players from chat",
+            "/audio": "Search audio tracks and podcasts from chat",
+            "/media": "Search combined media (images, videos, audio) from chat",
+            "/fetch": "Scrape and clean webpage content from chat",
+            "/search_engines": "Show status of all search engines and daemons",
+            "/search_config": "Inspect or set quick search configuration"
         }
     }
 

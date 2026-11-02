@@ -1,0 +1,287 @@
+id = "net_search"
+manifest_version = "1"
+name = "Net Search"
+version = "1.0.0"
+author = "Antonio Meloni / Hecos Team"
+license = "GPL-3.0"
+description = "Hecos Net Search & Intelligence System App. Privacy-preserving ClearWeb multi-engine meta-search, Tor DarkWeb (.onion) hidden services, OSINT identity lookup, media discovery, and deep file hunting."
+icon = "fa-satellite-dish"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png",
+]
+category = "CORE MODULES"
+tag = "NETSEARCH"
+is_class_based = true
+type = "system_app"
+target_dir = "modules"
+pip_isolation = "shared"
+plugin_dir = "."
+lazy_load = false
+on_load = true
+readme = "README.md"
+readme_url = ""
+platform = []
+dependencies = []
+pip_requirements = [
+    "requests>=2.31.0",
+    "requests[socks]>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "readability-lxml>=0.8.1",
+]
+python_requires = ">=3.11"
+signature = "jN2wYpEAzXuDsWXhriHiCSuggOGwZ0yYfFgZwOvnNbI099X9awkndTeWJj0PY3ObHjbahUOZuRncbQ5HTxoWCQ=="
+
+[ui]
+pill_label = "Net Search"
+pill_icon = "fa-satellite-dish"
+pill_route = "/search"
+pill_order = 42
+
+[config_panel]
+tab_id = "netsearch"
+tab_label = "Net Search & Tor"
+tab_icon = "fa-satellite-dish"
+template_file = "web/templates/config_netsearch.html"
+js_file = "web/static/js/netsearch_panel.js"
+js_files = [
+    "web/static/js/search/search_endpoints.js",
+    "web/static/js/netsearch_panel.js",
+]
+css_file = "web/static/css/search.css"
+category = "SISTEMA"
+api_routes_file = "web/routes.py"
+config_api_get = "/hecos/api/plugins/net_search/config"
+config_api_post = "/hecos/api/plugins/net_search/config"
+
+[routing]
+instructions = "NET SEARCH & INTELLIGENCE EXECUTION RULES:\n\n1. WEB SEARCH: If the user asks to search the web, find news, or search anything online, call NETSEARCH__web_search(query=...).\n2. DARK WEB: If the user asks for Tor, .onion, dark web, or unrestricted search, call NETSEARCH__dark_search(query=...).\n3. MEDIA: If the user asks for images, videos or music/audio, call NETSEARCH__media_search(query=..., media_type=...).\n4. DEEP SEARCH: If the user asks for extensive / deep search across all clear and dark web sources, call NETSEARCH__deep_search(query=...).\n5. FILE SEARCH: If the user asks for PDFs, ebooks, documents, zip archives, or downloadable files, call NETSEARCH__file_search(query=..., file_types=...).\n6. OSINT: If the user asks to find a person's accounts, usernames, or online profiles, call NETSEARCH__osint_search(username=...).\n7. READ WEBPAGE: If the user asks to read a specific URL, call NETSEARCH__fetch_page(url=...)."
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__web_search"
+description = "Searches the Clear Web using multi-engine aggregation (SearXNG, DuckDuckGo, Brave, Mojeek, Qwant). Returns dense summarized results with title, link, and snippet."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "query",
+]
+
+[tool_schema.function.parameters.properties.max_results]
+default = 10
+description = "Maximum number of search results to return (5 to 30)."
+type = "integer"
+
+[tool_schema.function.parameters.properties.query]
+description = "The search query string."
+type = "string"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__dark_search"
+description = "Searches the Dark Web (.onion hidden services) through Ahmia, TorDex, Phobos, and onion crawlers routed through the local SOCKS5h Tor proxy."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "query",
+]
+
+[tool_schema.function.parameters.properties.max_results]
+default = 10
+description = "Maximum number of dark web results to return (5 to 25)."
+type = "integer"
+
+[tool_schema.function.parameters.properties.query]
+description = "The search query string."
+type = "string"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__deep_search"
+description = "Aggregates Clear Web, Tor Dark Web, and file dorks simultaneously. Returns comprehensive multi-network intelligence."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "query",
+]
+
+[tool_schema.function.parameters.properties.max_results]
+default = 15
+description = "Maximum total combined results (10 to 40)."
+type = "integer"
+
+[tool_schema.function.parameters.properties.query]
+description = "The search query string."
+type = "string"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__media_search"
+description = "Searches for images, videos, audio/soundtracks, and podcasts matching the query."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "query",
+]
+
+[tool_schema.function.parameters.properties.max_results]
+default = 10
+description = "Maximum media items to return."
+type = "integer"
+
+[tool_schema.function.parameters.properties.media_type]
+default = "all"
+description = "Filter by media type: 'all', 'images', 'videos', or 'audio'."
+type = "string"
+
+[tool_schema.function.parameters.properties.query]
+description = "The media search query."
+type = "string"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__fetch_page"
+description = "Reads, extracts and cleans the textual content of any webpage (Clearnet or Tor .onion) using fast HTTP and readability extraction."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "url",
+]
+
+[tool_schema.function.parameters.properties.max_chars]
+default = 4000
+description = "Maximum characters of cleaned text to return."
+type = "integer"
+
+[tool_schema.function.parameters.properties.url]
+description = "The target webpage URL (http:// or https://, including .onion addresses)."
+type = "string"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__file_search"
+description = "Hunts for downloadable files and documents (PDF, DOCX, XLSX, ZIP, EPUB, etc.) using multi-extension file dork queries across the Clear Web and Archive.org open library."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "query",
+]
+
+[tool_schema.function.parameters.properties.query]
+description = "The file search query string."
+type = "string"
+
+[tool_schema.function.parameters.properties.file_types]
+default = "pdf,docx,xlsx,zip,epub"
+description = "Comma-separated list of file extensions to hunt (e.g. 'pdf,docx,xlsx')."
+type = "string"
+
+[tool_schema.function.parameters.properties.max_results]
+default = 20
+description = "Maximum number of file results to return."
+type = "integer"
+
+[[tool_schema]]
+
+[tool_schema.function]
+name = "NETSEARCH__osint_search"
+description = "OSINT identity hunt: concurrently probes 15+ major platforms (GitHub, Reddit, Telegram, Steam, Twitch, Medium, SoundCloud, Flickr, etc.) to discover active user profiles matching the given username."
+
+[tool_schema.function.parameters]
+type = "object"
+required = [
+    "username",
+]
+
+[tool_schema.function.parameters.properties.username]
+description = "The username or handle to investigate (single word, no spaces)."
+type = "string"
+
+[capabilities]
+llm_tools = [
+    "web_search",
+    "dark_search",
+    "deep_search",
+    "media_search",
+    "fetch_page",
+    "file_search",
+    "osint_search",
+]
+slash_commands = []
+has_widget = false
+has_config_panel = true
+has_api_routes = true
+has_system_calls = false
+syscall_notes = ""
+notes = ""
+
+[file_hashes]
+"main.py" = "3a4c3f197a0539f544717864f6a3baf072d688cc7ff6fcf0e93fdb62b19b6c27"
+"manifest.json" = "652b7ee2fefb0ad911c91693d52e76324cf571de2057676293a698fb57e67ef2"
+"preview.png" = "7c4384be682d7210b90448b3c3d9a71801b3a75e38659aaa214d803d42302cc5"
+"README.md" = "c2558256f3368e4aa921a853c1ce3053427e02da6e11a4cff7bc00e6bdf2b460"
+"__init__.py" = "0df0cc66bf575984ccbe427ca8bf14ba56acf76c63ced6fae43132cc42ddff27"
+"search/bookmarks.py" = "5af3c7c51fe33c778bd51c6705c1a96de61564da7a652c197525688315544dc1"
+"search/config.py" = "753e639d4b214fa239a52489e79f4c8a4f0274e228ac14ac37f515ca71b16a0f"
+"search/http_client.py" = "c0bcfb2b7a18d465ef00ee56be7315aee8359c68af097aadbf65b4d174c330d9"
+"search/models.py" = "ced21a2fe13bbe26d3ad9f051fb5b8dc3564fdcb9a133f37ce7d7902197f6277"
+"search/service.py" = "bac84e872d61da03eefb04249c8480ba8d5ca5a3ef1cdfd454ca09cde4e0026b"
+"search/sessions.py" = "507ea90030b029b301c0612902ff1da0865b759b110fa8299daf04f94da3c9bc"
+"search/tools.py" = "0020d81c43f41e109f35659d7cba80a0cd2395a5cf685e7be1e0b0251dc988ba"
+"search/__init__.py" = "53ca7cc8a425beb61acae23184661557406f1456169638685b8991133948b8c0"
+"search/components/base.py" = "4cfc884b059e59bc3c8f0178fd7ab76c422b2a574479ae3a27bb363d1d32aa80"
+"search/components/catalog.py" = "323888720798587ec36790b913e73e2180530294e9e2f5833be7376ab97c739b"
+"search/components/pip_component.py" = "ee12e00242262c09d967f0067c48da81c4aaae96c7152dc9bcc4cc7cba56996e"
+"search/components/searxng_component.py" = "91af77f0fea01d2d2d827e231aead5fcbe200e58a364c56ee334195dab7016f5"
+"search/components/supervisor.py" = "3e8694fd5b7ae73ad661e8ace3c7fb4388d7adedd58b4c971f99e1123d040f72"
+"search/components/tor_daemon.py" = "1c654e89d340c66d6dce36a7f0599d9a831e40a1c037c2d5dbdc1a915b04d683"
+"search/engines/base.py" = "a21b5c0d25cb97eaa89aaabebc072b129be3d16861dc74833ad806763e2ff8ed"
+"search/engines/clear_ddgs.py" = "8a071cf931798f637a34a76683b011db9f6048d66a8dcab44065f184bec4fbba"
+"search/engines/clear_news.py" = "42a94c78cf7eece4cc3f61836fc06272099d6eec3a44e7844f482e9387ba6c29"
+"search/engines/clear_searxng.py" = "34f883e52bd494f49a79790ce50e88a3def4eab0e4617d2d8619540c26ba0674"
+"search/engines/dark_ahmia.py" = "d612a91f59826713df36c1cfe9786d0802c55a91c8f1435cd364a4d3c711bbf2"
+"search/engines/dark_custom.py" = "5a969e4063c985b5afdc1d0a407d5ede8e808d4ce156f98a9999811ac477f699"
+"search/engines/dark_danieltore.py" = "ad981c9f7655ee0d61316462826eda84339484ce6325fa2b9327becaa817003e"
+"search/engines/dark_excavator.py" = "fa7a27767fcc44a842610ad64afeb794925d2008190a31141a6b746dfb0c5a78"
+"search/engines/dark_haystak.py" = "148986618c2a466bf3f1efd6d79c4414a4babefd890a1b2039fbea50648f7c94"
+"search/engines/dark_onionland.py" = "4d4b05501c0a31be6cb5b3827e2723c1cca06d26ec185ba0ef741fb28e409096"
+"search/engines/dark_phobos.py" = "abba36ee6030ebdd3bb91d5f27683c1d1a935ea04895f5fdf67f5e07029b7583"
+"search/engines/dark_tor66.py" = "39853e704bf92336e8514bce00ab8f3d0ba85d2f8034ca8603ebaac85f70f911"
+"search/engines/dark_torch.py" = "f253f86a18ad5898db1b8e4253e682c95c98b855cd5dd28cdca01017dfc919d0"
+"search/engines/files_dorks.py" = "a1d08c2572b148f37859751f7bd9fc07af848e8134a0a450c2fb874086481c37"
+"search/engines/media_audio.py" = "d92fb0f6197860088046733f2a4c3902e2ca2be8a64e82add755c54c9a659c42"
+"search/engines/media_images.py" = "c84940d137c6444429850133d3f8a6f52b275056c97fe4a63573033431a15e1e"
+"search/engines/media_videos.py" = "a3f1a1d6ff93e099f82ca171092452234c89dc717d4439e4812ce587cb9f3da2"
+"search/engines/osint_sherlock.py" = "520c85055419c5d965f1c8c1b0a424bc798aa9aff4f9fb6164151ae35458a959"
+"search/engines/__init__.py" = "846ad7927d3c49d0d0fb1545b90bc737cf6c6dfb82f79bf72c76e645350901d9"
+"search/extract/cleaner.py" = "9856d48c45a9ecc0b6b2e4af071783c099bc5ab1ee0cb04e716f37fdfed9167b"
+"search/extract/fetcher.py" = "6ece3a79e06f8b151e47c650f2a8dc71a814259f3c334e50242e32e820f63e90"
+"web/routes.py" = "99ecd53b5b80067c96c8cd5b6577a511d1d4f3655f072e73bd606684ead1c4d0"
+"web/search_bookmarks_routes.py" = "936b228330b8173fc35b8a5f5dd07abfabc5d96687df3d87b3e88edaf1741dbf"
+"web/search_routes.py" = "5f09f44e1f704f688ece79e637e0e6f0a07ecfa7d2aea932329b466b5c736ac9"
+"web/__init__.py" = "906ff58e8cd05d093d6154c3517f48a51d24153a724f0b413405406f5e494d83"
+"web/static/css/search.css" = "b26064e08b3e5791ad92648f5efa41df0a8a91dd86333a08454a630cbd51448b"
+"web/static/js/netsearch_panel.js" = "2bb517b034c3d2dec6cfb76fa5bdfd21498de01f4f423c789fa28843905a7836"
+"web/static/js/search/search_api.js" = "f013fccadc33150d051194090cc65175431603252528f73f83c96b36243c8219"
+"web/static/js/search/search_bookmarks.js" = "dd27dd89d7ba81b7109ed2c3f88a67844c3454900fa73715aae41ebc8c0bb928"
+"web/static/js/search/search_chat_card.js" = "935297c59c9dcfca67f7bf769f1d94988f10fc43cc74b2cded89fc7a79963c19"
+"web/static/js/search/search_copilot.js" = "643e58e2aeed79ac31899441313d36eb54f9474ed2a7b2672979c6fbcf841e31"
+"web/static/js/search/search_endpoints.js" = "56b05d3c03e5b36537818de518859ca4daa59495019b9811f61e727bfbd49bbc"
+"web/static/js/search/search_main.js" = "f40332b02826d5e927f734a01ed6161c263e342fa1725159ceac2dfe396ee608"
+"web/static/js/search/search_results.js" = "530cd65049bd86380aa5a19aa42001d88ce2d14dc583d5117778398dcf8b7b13"
+"web/static/js/search/search_state.js" = "58f7416a42b45433b62ed75e907f56deabc4bdfb28a0956b9949126ee38c4c9e"
+"web/templates/config_netsearch.html" = "c00bfb9e53358fa46989b3fe9cef19fa7ac0b8af43516b44f07193a67a174aea"
+"web/templates/search.html" = "4ff87a186624838295af8466732989653587b7978a85ed93dd4c3232e15110af"
+"web/templates/search_viewer.html" = "971a44c4d33df5698994ba24331e64fb46ca0bff238f938cc56424f1e4bf3b00"

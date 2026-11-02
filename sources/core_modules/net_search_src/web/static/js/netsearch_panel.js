@@ -3,7 +3,7 @@
  * Central Hub panel logic for Hecos Net Search System App.
  * Manages Net Search settings, Tor network status, and Resilient Search Endpoints, Nodes & Fallbacks.
  */
-(function() {
+(function () {
   let _endpointsLoading = false;
 
   function _notify(msg, type = 'info') {
@@ -32,7 +32,7 @@
     }
   }
 
-  window.updateNetSearchConfig = async function(keyPath, value) {
+  window.updateNetSearchConfig = async function (keyPath, value) {
     try {
       const parts = keyPath.split('.');
       const payload = {};
@@ -51,6 +51,17 @@
 
       if (res.ok) {
         _notify('Net Search setting saved', 'success');
+        if (keyPath === 'tor.onion_action') {
+          const a = document.getElementById('search-tor-onion-action');
+          const b = document.getElementById('endp-tor-onion-action');
+          if (a) a.value = value;
+          if (b) b.value = value;
+        } else if (keyPath === 'tor.tor_browser_path') {
+          const a = document.getElementById('search-tor-browser-path');
+          const b = document.getElementById('endp-tor-browser-path');
+          if (a) a.value = value;
+          if (b) b.value = value;
+        }
       } else {
         _notify('Failed to save Net Search setting: ' + (res.error || 'Unknown'), 'error');
       }
@@ -59,7 +70,7 @@
     }
   };
 
-  window.loadNetSearchPanelConfig = async function() {
+  window.loadNetSearchPanelConfig = async function () {
     if (_endpointsLoading) return;
     _endpointsLoading = true;
     try {
@@ -71,6 +82,10 @@
       const masterSw = document.getElementById('search-master-enabled');
       if (masterSw) masterSw.checked = cfg.enabled !== false;
 
+      // Privacy Shield (Local-Only Mode)
+      const localOnlySw = document.getElementById('search-local-only-enabled');
+      if (localOnlySw) localOnlySw.checked = cfg.local_only === true;
+
       // Tor settings
       const tor = cfg.tor || {};
       const torSw = document.getElementById('search-tor-enabled');
@@ -81,8 +96,13 @@
       if (ctrlInput) ctrlInput.value = tor.control_port || 9056;
       const onionAct = document.getElementById('search-tor-onion-action');
       if (onionAct) onionAct.value = tor.onion_action || 'hecos_viewer';
+      const endpOnionAct = document.getElementById('endp-tor-onion-action');
+      if (endpOnionAct) endpOnionAct.value = tor.onion_action || 'hecos_viewer';
+
       const torPath = document.getElementById('search-tor-browser-path');
       if (torPath) torPath.value = tor.tor_browser_path || '';
+      const endpTorPath = document.getElementById('endp-tor-browser-path');
+      if (endpTorPath) endpTorPath.value = tor.tor_browser_path || '';
 
       // SearXNG settings
       const sx = cfg.searxng || {};
@@ -114,7 +134,7 @@
     }
   };
 
-  window.renderNetSearchEndpointsUI = function(ep, torCfg = {}) {
+  window.renderNetSearchEndpointsUI = function (ep, torCfg = {}) {
     _ensureSearchEndpoints((SE) => {
       const sx = ep.searxng || {};
       const ahmia = ep.dark_ahmia || {};
@@ -141,6 +161,17 @@
           key: 'searxng_local',
           category: 'searxng'
         });
+      }
+
+      // 1b. Populate SearXNG Aggregated Engines
+      const enginesWrap = document.getElementById('endp-searxng-engines-wrap');
+      const sxEngines = Array.isArray(sx.engines) ? sx.engines : [];
+      if (enginesWrap) {
+        enginesWrap.innerHTML = '';
+        sxEngines.forEach(eng => {
+          SE.addSearxngEngine('endp-searxng-engines-wrap', eng);
+        });
+        window.updateSearxngEnginesCount();
       }
 
       // 2. Populate SearXNG fallbacks
@@ -255,10 +286,57 @@
           });
         });
       }
+
+      // 6. Update counts on section badges
+      const fbCount = document.getElementById('badge-searxng-fallbacks-count');
+      if (fbCount) fbCount.textContent = `${fallbacks.length} Mirrors`;
+
+      const torCount = document.getElementById('badge-tor-engines-count');
+      if (torCount) {
+        const totalTor = 10 + customTorEngines.length;
+        torCount.textContent = `${totalTor} Engines`;
+      }
+
+      const customCount = document.getElementById('badge-custom-nodes-count');
+      if (customCount) customCount.textContent = `${customNodes.length} Nodes`;
     });
   };
 
-  window.checkTorStatusBadge = async function() {
+  window.toggleEndpointSection = function (triggerEl, bodyId, forceExpand) {
+    const body = document.getElementById(bodyId);
+    if (!body) return;
+    const isCurrentlyHidden = (body.style.display === 'none');
+    const shouldShow = (typeof forceExpand === 'boolean') ? forceExpand : isCurrentlyHidden;
+
+    body.style.display = shouldShow ? '' : 'none';
+
+    // Find corresponding toggle button in the group
+    const group = body.closest('.endpoint-group');
+    const btn = group ? group.querySelector('.btn-group-toggle') : null;
+    if (btn) {
+      btn.innerHTML = shouldShow ? '<i class="fas fa-minus"></i>' : '<i class="fas fa-plus"></i>';
+      btn.title = shouldShow ? 'Collapse Section (-)' : 'Expand Section (+)';
+      btn.setAttribute('aria-expanded', shouldShow ? 'true' : 'false');
+    }
+  };
+
+  window.toggleAllEndpointSections = function (expand = true) {
+    const groups = document.querySelectorAll('#netsearch-endpoints-manager-container .endpoint-group');
+    groups.forEach(g => {
+      const body = g.querySelector('.endpoint-group-body');
+      const btn = g.querySelector('.btn-group-toggle');
+      if (body) {
+        body.style.display = expand ? '' : 'none';
+        if (btn) {
+          btn.innerHTML = expand ? '<i class="fas fa-minus"></i>' : '<i class="fas fa-plus"></i>';
+          btn.title = expand ? 'Collapse Section (-)' : 'Expand Section (+)';
+          btn.setAttribute('aria-expanded', expand ? 'true' : 'false');
+        }
+      }
+    });
+  };
+
+  window.checkTorStatusBadge = async function () {
     const badge = document.getElementById('tor-cfg-status-badge');
     if (!badge) return;
     try {
@@ -277,15 +355,45 @@
     }
   };
 
-  window.detectTorBrowserPath = async function() {
+  window.torNewCircuit = async function () {
+    try {
+      const res = await fetch('/api/hsearch/tor_newnym', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      }).then(r => r.json());
+      if (res.ok) {
+        _notify('New Tor identity (circuit) requested successfully!', 'success');
+        window.checkTorStatusBadge();
+      } else {
+        _notify('Tor circuit request: ' + (res.message || res.error || 'Failed to switch identity'), 'warning');
+      }
+    } catch (e) {
+      _notify('Error requesting new Tor circuit: ' + e.message, 'error');
+    }
+  };
+
+  window.syncTorActionFromEndpoints = function (val) {
+    const topSel = document.getElementById('search-tor-onion-action');
+    if (topSel) topSel.value = val;
+    window.updateNetSearchConfig('tor.onion_action', val);
+  };
+
+  window.syncTorPathFromEndpoints = function (val) {
+    const topPath = document.getElementById('search-tor-browser-path');
+    if (topPath) topPath.value = val;
+    window.updateNetSearchConfig('tor.tor_browser_path', val);
+  };
+
+  window.detectTorBrowserPath = async function () {
     try {
       const res = await fetch('/api/hsearch/detect_tor_browser').then(r => r.json());
       if (res.ok && res.path) {
         const input = document.getElementById('search-tor-browser-path');
-        if (input) {
-          input.value = res.path;
-          window.updateNetSearchConfig('tor.tor_browser_path', res.path);
-        }
+        if (input) input.value = res.path;
+        const endpInput = document.getElementById('endp-tor-browser-path');
+        if (endpInput) endpInput.value = res.path;
+        window.updateNetSearchConfig('tor.tor_browser_path', res.path);
         _notify('Tor Browser detected: ' + res.path, 'success');
       } else {
         _notify('Tor Browser could not be detected automatically.', 'warning');
@@ -296,7 +404,8 @@
   };
   window.autoDetectTorBrowser = window.detectTorBrowserPath;
 
-  window.addSearxngFallbackNode = function() {
+  window.addSearxngFallbackNode = function () {
+    window.toggleEndpointSection(null, 'endp-searxng-fallbacks-body', true);
     _ensureSearchEndpoints((SE) => {
       SE.addEndpoint('endp-searxng-fallbacks-wrap', {
         name: 'Custom Fallback Node',
@@ -314,7 +423,8 @@
     });
   };
 
-  window.addCustomTorEngineNode = function() {
+  window.addCustomTorEngineNode = function () {
+    window.toggleEndpointSection(null, 'endp-tor-engines-body', true);
     _ensureSearchEndpoints((SE) => {
       SE.addEndpoint('endp-tor-engines-wrap', {
         name: 'Custom Onion Engine',
@@ -332,7 +442,8 @@
     });
   };
 
-  window.addCustomSearchNode = function() {
+  window.addCustomSearchNode = function () {
+    window.toggleEndpointSection(null, 'endp-custom-nodes-body', true);
     _ensureSearchEndpoints((SE) => {
       SE.addEndpoint('endp-custom-nodes-wrap', {
         name: 'Custom Search Node',
@@ -350,11 +461,63 @@
     });
   };
 
-  window.saveEndpointsFromUI = async function() {
+  window.updateSearxngEnginesCount = function () {
+    const countBadge = document.getElementById('badge-searxng-engines-count');
+    if (!countBadge) return;
+    const cards = document.querySelectorAll('#endp-searxng-engines-wrap .searxng-engine-card');
+    let active = 0;
+    cards.forEach(c => {
+      if (c.querySelector('.engine-enabled-checkbox')?.checked) active++;
+    });
+    countBadge.textContent = `${cards.length} Engines (${active} Active)`;
+  };
+
+  window.addSearxngEngineNode = function (presetData) {
+    window.toggleEndpointSection(null, 'endp-searxng-engines-body', true);
+    _ensureSearchEndpoints((SE) => {
+      SE.addSearxngEngine('endp-searxng-engines-wrap', presetData || {
+        name: '',
+        label: '',
+        category: 'general',
+        enabled: true
+      });
+    });
+  };
+
+  window.quickAddSearxngEngine = function (name, label, category) {
+    window.toggleEndpointSection(null, 'endp-searxng-engines-body', true);
+    // Check if engine with this name already exists in wrap
+    const existing = document.querySelector(`#endp-searxng-engines-wrap .searxng-engine-card input.engine-name-input[value="${name}"]`);
+    if (existing) {
+      const card = existing.closest('.searxng-engine-card');
+      const cb = card.querySelector('.engine-enabled-checkbox');
+      if (cb && !cb.checked) {
+        cb.checked = true;
+        _ensureSearchEndpoints(SE => SE.syncEngineCard(card.dataset.id));
+        _notify(`Activated existing engine: ${label}`, 'info');
+      } else {
+        _notify(`Engine ${label} is already configured and active.`, 'info');
+      }
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    window.addSearxngEngineNode({ name, label, category, enabled: true });
+    _notify(`Added ${label} to aggregated engines. Click 'Save Endpoints' to apply.`, 'success');
+  };
+
+  window.saveEndpointsFromUI = async function () {
     _ensureSearchEndpoints(async (SE) => {
       // 1. SearXNG local
       const localCard = document.querySelector('#endp-searxng-local-wrap .endpoint-card');
       const localItem = SE.collectCard(localCard);
+
+      // 1b. SearXNG aggregated engines
+      const engineCards = document.querySelectorAll('#endp-searxng-engines-wrap .searxng-engine-card');
+      const sxEngines = [];
+      engineCards.forEach(c => {
+        const item = SE.collectSearxngEngineCard(c);
+        if (item && item.name) sxEngines.push(item);
+      });
 
       // 2. SearXNG fallbacks
       const fallbackCards = document.querySelectorAll('#endp-searxng-fallbacks-wrap .endpoint-card');
@@ -418,7 +581,8 @@
         searxng: {
           local_instance: localItem,
           local_url: localItem?.url || 'http://127.0.0.1:8888',
-          fallbacks: fallbacks
+          fallbacks: fallbacks,
+          engines: sxEngines
         },
         dark_ahmia: {
           onion: ahmiaOnion,
@@ -477,6 +641,11 @@
           if (localItem && localItem.url) {
             window.updateNetSearchConfig('searxng.url', localItem.url);
           }
+          // Also persist Tor onion action and Tor browser path if present
+          const curAction = document.getElementById('endp-tor-onion-action')?.value || document.getElementById('search-tor-onion-action')?.value;
+          if (curAction) window.updateNetSearchConfig('tor.onion_action', curAction);
+          const curPath = (document.getElementById('endp-tor-browser-path')?.value || document.getElementById('search-tor-browser-path')?.value || '').trim();
+          if (curPath) window.updateNetSearchConfig('tor.tor_browser_path', curPath);
         } else {
           _notify('Failed to save endpoints: ' + (res.error || 'Unknown error'), 'error');
         }
@@ -486,7 +655,7 @@
     });
   };
 
-  window.resetEndpointsFromUI = async function() {
+  window.resetEndpointsFromUI = async function () {
     if (!confirm('Reset all search endpoints and fallback pools to factory defaults?')) return;
     try {
       const res = await fetch('/api/hsearch/endpoints/reset', { method: 'POST' }).then(r => r.json());
@@ -501,7 +670,7 @@
     }
   };
 
-  window.reloadNetSearchEndpoints = function() {
+  window.reloadNetSearchEndpoints = function () {
     window.loadNetSearchPanelConfig();
   };
 

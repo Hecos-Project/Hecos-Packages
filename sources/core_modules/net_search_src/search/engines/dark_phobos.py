@@ -57,7 +57,7 @@ class DarkPhobosEngine(BaseEngine):
         hecos_logger.info(f"[SEARCH:PHOBOS] Querying Phobos via Tor: '{query.query}' at {search_url}...")
 
         try:
-            resp = http_client.get(search_url, network="tor", params=params, timeout=min(query.timeout, 10.0))
+            resp = http_client.get(search_url, network="tor", params=params, timeout=min(query.timeout, 5.0))
             if resp.status_code == 200:
                 from bs4 import BeautifulSoup
                 soup = BeautifulSoup(resp.text, "lxml")

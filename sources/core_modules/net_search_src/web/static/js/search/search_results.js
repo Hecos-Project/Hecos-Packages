@@ -3,7 +3,7 @@
  * Renders search results (standard cards, media grids, audio players, file dorks)
  * with interactive actions and filtering capabilities.
  */
-window.SearchResults = (function() {
+window.SearchResults = (function () {
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -143,6 +143,24 @@ window.SearchResults = (function() {
     const durBadge = dur ? `<span class="video-dur-badge"><i class="fas fa-play"></i> ${dur}</span>` : '';
     const safeEngine = escapeHtml(item.engine || 'media_videos');
 
+    // Dynamic brand icon and style
+    let brandIcon = 'fas fa-video';
+    const lowerEngine = safeEngine.toLowerCase();
+    const lowerPub = pub.toLowerCase();
+    if (lowerEngine.includes('youtube') || lowerPub.includes('youtube')) {
+      brandIcon = 'fab fa-youtube" style="color:#ef4444;';
+    } else if (lowerEngine.includes('dailymotion') || lowerPub.includes('dailymotion')) {
+      brandIcon = 'fas fa-circle-play" style="color:#3b82f6;';
+    } else if (lowerEngine.includes('peertube') || lowerPub.includes('peertube') || lowerPub.includes('sepia')) {
+      brandIcon = 'fas fa-cube" style="color:#f97316;';
+    } else if (lowerEngine.includes('archive') || lowerPub.includes('archive')) {
+      brandIcon = 'fas fa-landmark" style="color:#eab308;';
+    } else if (lowerEngine.includes('vimeo') || lowerPub.includes('vimeo')) {
+      brandIcon = 'fab fa-vimeo-v" style="color:#06b6d4;';
+    } else if (lowerEngine.includes('bilibili') || lowerPub.includes('bilibili')) {
+      brandIcon = 'fab fa-tv" style="color:#ec4899;';
+    }
+
     return `
       <div class="media-card video-card" data-url="${safeUrl}" data-category="videos" data-engine="${safeEngine}">
         <div class="media-thumb-box video-thumb-box">
@@ -155,7 +173,7 @@ window.SearchResults = (function() {
         <div class="media-card-body">
           <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="media-card-title" title="${safeTitle}">${safeTitle}</a>
           <div class="media-card-footer">
-            <span class="media-source-tag"><i class="fab fa-youtube"></i> ${pub}</span>
+            <span class="media-source-tag"><i class="${brandIcon}"></i> ${pub} <small style="opacity:0.75; margin-left:4px;">(${safeEngine})</small></span>
             <div class="media-card-actions">
               <button class="btn-result-action" style="padding:3px 7px; font-size:10px;" onclick="SearchResults.copyLink('${safeUrl}')" title="Copy video link">
                 <i class="fas fa-copy"></i>
@@ -174,29 +192,51 @@ window.SearchResults = (function() {
   function renderAudioCard(item) {
     const safeTitle = escapeHtml(item.title || 'Audio Result');
     const safeUrl = escapeHtml(item.url);
-    const safeSnippet = escapeHtml(item.snippet);
+    const safeSnippet = escapeHtml(item.snippet || '');
     const domain = getDomain(item.url);
-    const isDirectAudio = item.url.match(/\.(mp3|wav|ogg|m4a|aac)(\?.*)?$/i) || (item.media_url && item.media_url.match(/\.(mp3|wav|ogg|m4a|aac)(\?.*)?$/i));
-    const directAudioUrl = isDirectAudio ? (item.media_url || item.url) : '';
+    const thumb = item.thumbnail_url || item.metadata?.artwork || item.metadata?.image || '';
+    const artist = escapeHtml(item.metadata?.artist || item.metadata?.creator || '');
+    const isDirectAudio = item.url.match(/\.(mp3|wav|ogg|m4a|aac)(\?.*)?$/i) ||
+      (item.media_url && item.media_url.match(/\.(mp3|wav|ogg|m4a|aac)(\?.*)?$/i)) ||
+      Boolean(item.metadata?.preview_url);
+    const directAudioUrl = isDirectAudio ? (item.metadata?.preview_url || item.media_url || item.url) : '';
     const safeEngine = escapeHtml(item.engine || 'media_audio');
+
+    // Brand icon resolution
+    let brandIcon = 'fas fa-music';
+    const engLower = (item.engine || '').toLowerCase() + ' ' + (item.url || '').toLowerCase();
+    if (engLower.includes('itunes') || engLower.includes('apple')) brandIcon = 'fab fa-apple';
+    else if (engLower.includes('soundcloud')) brandIcon = 'fab fa-soundcloud';
+    else if (engLower.includes('bandcamp')) brandIcon = 'fab fa-bandcamp';
+    else if (engLower.includes('spotify')) brandIcon = 'fab fa-spotify';
+    else if (engLower.includes('archive')) brandIcon = 'fas fa-box-archive';
+    else if (engLower.includes('genius')) brandIcon = 'fas fa-align-left';
+    else if (engLower.includes('podcast')) brandIcon = 'fas fa-podcast';
 
     return `
       <div class="result-card audio-result-card" data-url="${safeUrl}" data-category="audio" data-engine="${safeEngine}">
         <div class="result-top-meta">
           <span class="badge-network audio-badge"><i class="fas fa-music"></i> Audio</span>
-          <span class="result-engine-tag">${safeEngine}</span>
+          <span class="result-engine-tag"><i class="${brandIcon}"></i> ${safeEngine}</span>
+          ${artist ? `<span class="audio-artist-tag"><i class="fas fa-microphone-lines"></i> ${artist}</span>` : ''}
           <span class="result-domain">${domain}</span>
         </div>
-        <div style="display:flex; align-items:flex-start; gap:14px; margin-top:4px;">
-          <div class="audio-disc-icon">
-            <i class="fas fa-compact-disc fa-spin-pulse"></i>
+        <div class="audio-main-row">
+          <div class="audio-cover-box">
+            ${thumb ? `
+              <img src="${escapeHtml(thumb)}" alt="${safeTitle}" class="audio-cover-img" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'audio-disc-icon\\'><i class=\\'fas fa-compact-disc\\'></i></div>';">
+            ` : `
+              <div class="audio-disc-icon">
+                <i class="fas fa-compact-disc"></i>
+              </div>
+            `}
           </div>
-          <div style="flex:1;">
-            <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="result-title">${safeTitle}</a>
-            <div class="result-snippet">${safeSnippet}</div>
+          <div class="audio-content-col">
+            <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="result-title audio-title" title="${safeTitle}">${safeTitle}</a>
+            ${safeSnippet ? `<div class="result-snippet audio-snippet">${safeSnippet}</div>` : ''}
             ${directAudioUrl ? `
-              <div style="margin-top:10px;">
-                <audio controls preload="none" style="width:100%; height:36px; border-radius:18px;">
+              <div class="audio-player-box">
+                <audio controls preload="none" class="audio-inline-player">
                   <source src="${escapeHtml(directAudioUrl)}">
                   Your browser does not support audio playback.
                 </audio>
@@ -204,7 +244,7 @@ window.SearchResults = (function() {
             ` : ''}
           </div>
         </div>
-        <div class="result-actions" style="margin-top:8px;">
+        <div class="result-actions audio-actions">
           <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="btn-result-action primary">
             <i class="fas fa-headphones"></i> Listen on ${domain}
           </a>
@@ -307,9 +347,19 @@ window.SearchResults = (function() {
         return;
       }
 
-      if (activeFilter === 'files') {
+      if (activeFilter === 'files' || activeFilter.startsWith('files_') || activeFilter === 'deep_files') {
         container.className = 'results-list';
         container.innerHTML = results.map(r => safeRender(renderFileCard, r)).join('');
+        return;
+      }
+
+      if (activeFilter === 'deep_media') {
+        container.className = 'results-grid';
+        container.innerHTML = results.map(r => {
+          if (r.category === 'videos') return safeRender(renderVideoCard, r);
+          if (r.category === 'audio') return safeRender(renderAudioCard, r);
+          return safeRender(renderImageCard, r);
+        }).join('');
         return;
       }
 
@@ -327,7 +377,7 @@ window.SearchResults = (function() {
           if (r.category === 'images') return safeRender(renderImageCard, r);
           if (r.category === 'videos') return safeRender(renderVideoCard, r);
           if (r.category === 'audio') return safeRender(renderAudioCard, r);
-          if (r.category === 'files') return safeRender(renderFileCard, r);
+          if (r.category === 'files' || r.metadata?.extension) return safeRender(renderFileCard, r);
           return safeRender(renderStandardCard, r);
         }).join('');
       }

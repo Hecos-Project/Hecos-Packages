@@ -52,6 +52,11 @@ class SearchQuery:
     file_types: List[str] = field(default_factory=list)   # e.g. ["pdf", "epub"]
     auto_fallback_tor: bool = True     # If clearweb yields zero, fallback to Tor
     target_username: Optional[str] = None  # for OSINT mode
+    page: int = 1
+    local_only: bool = False
+    excluded_providers: List[str] = field(default_factory=list)
+    language: Optional[str] = None
+    domain_filter: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

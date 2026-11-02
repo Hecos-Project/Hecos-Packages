@@ -1,4 +1,5 @@
-import os, sys, re
+import os, sys, re, shutil, datetime
+from pathlib import Path
 _cur_dir = os.path.dirname(os.path.abspath(__file__))
 if _cur_dir not in sys.path:
     sys.path.insert(0, _cur_dir)
@@ -14,17 +15,164 @@ _ANSI_RE = re.compile(r'\x1b(?:\[[0-9;]*[a-zA-Z]|\][^\x07]*\x07)')
 def _strip_ansi(text: str) -> str:
     return _ANSI_RE.sub('', text or '')
 
+
+def _get_repo_root(src_dir_or_pkg_path: str) -> Path:
+    """Finds the repository root (e.g. C:\Hecos-Packages or C:\Hecos-Elite) containing 'sources' or 'packages'."""
+    try:
+        p = Path(src_dir_or_pkg_path).resolve()
+        for parent in [p] + list(p.parents):
+            if (parent / 'sources').is_dir() or (parent / 'packages').is_dir():
+                return parent
+    except Exception:
+        pass
+    return Path(r"C:\Hecos-Packages")
+
+
+def _find_live_package_path(pkg_id: str, hecos_root: str = r"C:\Hecos\hecos", pkg_type: str = None) -> Path | None:
+    """Locates the live (installed) directory of a package within Hecos."""
+    import sqlite3
+    live_path = None
+    db_path = Path(hecos_root) / 'data' / 'packages.db'
+    if not db_path.is_file():
+        db_path = Path(r"C:\Hecos\hecos\data\packages.db")
+    
+    candidates = []
+    for cand in [pkg_id, pkg_id.replace('_', '-'), pkg_id.replace('-', '_')]:
+        if cand and cand not in candidates:
+            candidates.append(cand)
+
+    if db_path.is_file():
+        try:
+            conn = sqlite3.connect(str(db_path))
+            cursor = conn.cursor()
+            for cand in candidates:
+                cursor.execute(
+                    "SELECT install_path FROM packages WHERE id = ? OR name = ?",
+                    (cand, cand)
+                )
+                row = cursor.fetchone()
+                if row and row[0] and Path(row[0]).is_dir():
+                    live_path = Path(row[0])
+                    break
+            conn.close()
+        except Exception as e_db:
+            info(f"[BUILDER] packages.db check failed: {e_db}")
+
+    if not live_path:
+        base_dir = Path(hecos_root)
+        subdirs = [
+            'modules', 'hpm', 'hpm/playbooks', 'hpm/libraries',
+            'hpm/plugins', 'hpm/skill_packs', 'plugins', 'personas', 'themes', 'widgets'
+        ]
+        if pkg_type:
+            type_dir_map = {
+                "core_module": "modules",
+                "system_app": "modules",
+                "generic_module": "hpm",
+                "plugin": "hpm",
+                "library": "hpm",
+                "extension": "hpm",
+                "app": "hpm",
+                "persona": "personas",
+                "theme": "themes",
+                "playbook": "hpm/playbooks",
+                "skill_pack": "hpm/skill_packs",
+            }
+            pref = type_dir_map.get(pkg_type)
+            if pref and pref in subdirs:
+                subdirs.remove(pref)
+                subdirs.insert(0, pref)
+
+        for sub in subdirs:
+            for cand in candidates:
+                test_path = base_dir / sub / cand
+                if test_path.is_dir():
+                    live_path = test_path
+                    break
+            if live_path:
+                break
+
+    return live_path
+
+
+def _backup_live_package(pkg_id: str, repo_root: Path, hecos_root: str = r"C:\Hecos\hecos", log_func=None) -> Path | None:
+    """
+    Creates an automatic full copy of the live installed package before building or installing.
+    Destination: <repo_root>/livebackup/<pkg_id>_<timestamp>/ and <repo_root>/livebackup/<pkg_id>_latest/
+    """
+    import datetime, shutil
+    if not pkg_id:
+        return None
+    try:
+        live_path = _find_live_package_path(pkg_id, hecos_root)
+        if not live_path or not live_path.is_dir():
+            msg = f"[LIVE-BACKUP] No live version found for '{pkg_id}' in {hecos_root} (skipping auto-backup)."
+            if log_func:
+                log_func(msg)
+            return None
+
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        livebackup_root = repo_root / "livebackup"
+        dest_timestamp = livebackup_root / f"{pkg_id}_{timestamp}"
+        dest_latest = livebackup_root / f"{pkg_id}_latest"
+
+        dest_timestamp.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(str(live_path), str(dest_timestamp), dirs_exist_ok=True)
+
+        # Also maintain a ready-to-inspect latest mirror
+        shutil.copytree(str(live_path), str(dest_latest), dirs_exist_ok=True)
+
+        msg = f"[LIVE-BACKUP] Auto live backup created for '{pkg_id}' -> {dest_timestamp}"
+        if log_func:
+            log_func(msg)
+        info(msg)
+        return dest_timestamp
+    except Exception as e:
+        err_msg = f"[LIVE-BACKUP] Failed to create auto live backup for '{pkg_id}': {e}"
+        if log_func:
+            log_func(err_msg)
+        error(err_msg)
+        return None
+
+
 def init_plugin_routes(app, cfg_mgr, hecos_src, log):
     @app.route('/api/hpm/builder/open-folder', methods=['POST'])
     @login_required
     def builder_open_folder():
-        import os
+        import os, subprocess
         data = request.get_json() or {}
-        path = data.get('path')
-        if path and os.path.exists(path):
-            os.startfile(path)
+        raw_path = data.get('path', '')
+        if not raw_path:
+            return jsonify({'ok': False, 'error': 'No path provided'})
+
+        path = os.path.normpath(str(raw_path).strip().strip('"').strip("'"))
+        log.info(f"[Builder] open-folder requested for: {path}")
+
+        target_exists = os.path.exists(path)
+        parent_dir = path if os.path.isdir(path) else os.path.dirname(path)
+
+        if not target_exists and not os.path.exists(parent_dir):
+            log.warning(f"[Builder] Path not found: {path}")
+            return jsonify({'ok': False, 'error': f'Path not found: {path}'})
+
+        try:
+            if os.path.isfile(path):
+                subprocess.Popen(['explorer', f'/select,{path}'])
+            elif os.path.isdir(path):
+                os.startfile(path)
+            elif os.path.exists(parent_dir):
+                os.startfile(parent_dir)
+            else:
+                subprocess.Popen(['explorer', parent_dir])
             return jsonify({'ok': True})
-        return jsonify({'ok': False, 'error': 'Path not found'})
+        except Exception as e:
+            try:
+                dest = path if os.path.isdir(path) else parent_dir
+                subprocess.Popen(['explorer', dest])
+                return jsonify({'ok': True})
+            except Exception as e2:
+                log.error(f"[Builder] Failed to open folder: {e2}")
+                return jsonify({'ok': False, 'error': str(e2)})
 
     @app.route('/api/hpm/builder/load', methods=['POST'])
     @login_required
@@ -99,6 +247,11 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
         if not save_manifest(src_dir, manifest):
             return jsonify({'ok': False, 'error': 'Failed to save manifest'})
             
+        # 0. Auto Live Backup before compilation
+        pkg_id = manifest.get('id', Path(src_dir).name)
+        repo_root = _get_repo_root(src_dir)
+        live_bk = _backup_live_package(pkg_id, repo_root, log_func=log.info)
+
         # 2. Compile .hpkg
         out_dir = data.get('out_dir')
         cli_dir = data.get('builder_cli_dir')
@@ -117,7 +270,7 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
         except Exception as e:
             info(f"Could not invalidate store cache: {e}")
             
-        return jsonify({'ok': True, 'out_dir': build_res.get("out_dir"), 'hpkg_path': build_res.get("hpkg_path"), 'logs': build_res.get("logs")})
+        return jsonify({'ok': True, 'out_dir': build_res.get("out_dir"), 'hpkg_path': build_res.get("hpkg_path"), 'logs': build_res.get("logs"), 'live_backup': str(live_bk) if live_bk else None})
 
     @app.route('/api/hpm/builder/add-image', methods=['POST'])
     @login_required
@@ -311,7 +464,13 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
             info(f"Starting Batch Build for {len(packages)} packages...")
             
             all_logs = []
+            repo_root = _get_repo_root(str(sources_dir))
             for rel_path in packages:
+                pkg_path = sources_dir / rel_path
+                if pkg_path.exists() and (pkg_path / "hpkg_manifest.toml").exists():
+                    m = load_manifest(str(pkg_path))
+                    p_id = m.get('id', pkg_path.name) if m else pkg_path.name
+                    _backup_live_package(p_id, repo_root, log_func=info)
                 pkg_path = sources_dir / rel_path
                 if pkg_path.exists() and (pkg_path / "hpkg_manifest.toml").exists():
                     # Load name for separator
@@ -426,6 +585,21 @@ def init_plugin_routes(app, cfg_mgr, hecos_src, log):
             return f"event: {event}\ndata: {json.dumps(d)}\n\n"
             
         def generate():
+            # Auto Live Backup before installing
+            try:
+                import zipfile, tomllib
+                with zipfile.ZipFile(hpkg_path, 'r') as zf:
+                    if 'hpkg_manifest.toml' in zf.namelist():
+                        m_data = tomllib.loads(zf.read('hpkg_manifest.toml').decode('utf-8'))
+                        p_id = m_data.get('id')
+                        if p_id:
+                            r_root = _get_repo_root(hpkg_path)
+                            bk_path = _backup_live_package(p_id, r_root, log_func=log.info)
+                            if bk_path:
+                                yield _sse("progress", {"step": "backup", "message": f"Auto live backup created: {bk_path.name}"})
+            except Exception as e_bk:
+                log.warning(f"[Builder] Auto live backup before install note: {e_bk}")
+
             yield _sse("progress", {"step": "install", "message": "Installing locally built package..."})
             try:
                 # Use the shared HPM helper

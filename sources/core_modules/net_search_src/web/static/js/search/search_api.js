@@ -2,7 +2,7 @@
  * search_api.js
  * API communication layer for Hecos Deep Search.
  */
-window.SearchAPI = (function() {
+window.SearchAPI = (function () {
   const BASE_URL = '/api/hsearch';
 
   async function postJson(endpoint, data) {
@@ -25,17 +25,22 @@ window.SearchAPI = (function() {
       const qs = new URLSearchParams({
         q: params.query,
         mode: params.mode || 'clear',
-        limit: (params.limit !== undefined && params.limit !== null) ? params.limit : 50,
+        limit: (params.limit !== undefined && params.limit !== null) ? params.limit : (parseInt(typeof localStorage !== 'undefined' && localStorage.getItem('hecos_netsearch_depth')) || 250),
+        page: params.page || 1,
         safe_search: params.safe_search ? 'true' : 'false',
         dark_bypass: params.dark_bypass !== false ? 'true' : 'false',
-        file_types: (params.file_types || []).join(','),
-        engines: (params.engines || []).join(''),
+        local_only: params.local_only ? 'true' : 'false',
+        excluded_providers: params.excluded_providers || '',
+        language: params.language || '',
+        domain_filter: params.domain_filter || '',
+        file_types: Array.isArray(params.file_types) ? params.file_types.join(',') : (params.file_types || ''),
+        engines: Array.isArray(params.engines) ? params.engines.join(',') : (params.engines || ''),
         time_range: params.time_range || ''
       });
 
       const es = new EventSource(`${BASE_URL}/query_stream?${qs.toString()}`);
 
-      es.onmessage = function(e) {
+      es.onmessage = function (e) {
         try {
           const data = JSON.parse(e.data);
           if (data.type === 'complete') {
@@ -52,7 +57,7 @@ window.SearchAPI = (function() {
         }
       };
 
-      es.onerror = function(err) {
+      es.onerror = function (err) {
         es.close();
         if (onError) onError(err);
       };

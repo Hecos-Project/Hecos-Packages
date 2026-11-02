@@ -36,22 +36,25 @@ class ClearDdgsEngine(BaseEngine):
         return True
 
     def search(self, query: SearchQuery) -> List[SearchResult]:
+        import time
+        t0 = time.time()
         results: List[SearchResult] = []
         seen_urls: Set[str] = set()
         is_unlimited = (query.limit is not None and query.limit <= 0)
         target_limit = 100000 if is_unlimited else max(query.limit, 40)
-        max_pages = 50 if is_unlimited else min(50, max(6, (target_limit // 20) + 2))
         safesearch_val = "off" if not query.safe_search else "moderate"
+        per_timeout = min(query.timeout, 4.0)
 
-        # 1. Multi-Page querying via ddgs library
+        # 1. Multi-Page querying via ddgs library (bounded to max 3 pages / 8s to prevent UI freeze)
         try:
             from ddgs import DDGS
-            hecos_logger.info(f"[SEARCH:DDGS] Querying via ddgs multi-page (target={'UNLIMITED' if is_unlimited else target_limit}, max_pages={max_pages}, safesearch={safesearch_val}): '{query.query}'...")
-            ddg = DDGS(timeout=query.timeout)
+            ddg = DDGS(timeout=per_timeout)
+            start_page = max(1, getattr(query, "page", 1))
+            pages_to_fetch = 3 if start_page == 1 else 2
+            hecos_logger.info(f"[SEARCH:DDGS] Querying via ddgs multi-page (start={start_page}, pages={pages_to_fetch}, timeout={per_timeout}s): '{query.query}'...")
 
-            # Paginate through pages
-            for page_num in range(1, max_pages + 1):
-                if len(results) >= target_limit:
+            for page_num in range(start_page, start_page + pages_to_fetch):
+                if len(results) >= target_limit or (time.time() - t0 > 8.0):
                     break
                 try:
                     raw = ddg.text(
@@ -111,10 +114,11 @@ class ClearDdgsEngine(BaseEngine):
                 "Content-Type": "application/x-www-form-urlencoded"
             }
 
-            for _page in range(1, max_pages + 1):
+            if results: return results
+            for _page in range(1, 2):
                 if len(results) >= target_limit:
                     break
-                resp = http_client.post(url, network="clearnet", data=data, headers=headers, timeout=query.timeout)
+                resp = http_client.post(url, network="clearnet", data=data, headers=headers, timeout=min(query.timeout, 3.5))
                 if resp.status_code != 200:
                     break
 

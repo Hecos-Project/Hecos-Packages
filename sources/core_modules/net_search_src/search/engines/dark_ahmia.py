@@ -131,7 +131,7 @@ class DarkAhmiaEngine(BaseEngine):
                     if current_page > 1:
                         page_params["page"] = current_page
 
-                    resp = http_client.get(base_url, network=net, params=page_params, headers=headers, timeout=query.timeout)
+                    resp = http_client.get(base_url, network=net, params=page_params, headers=headers, timeout=min(query.timeout, 7.0))
                     if resp.status_code != 200:
                         break
 
@@ -189,5 +189,39 @@ class DarkAhmiaEngine(BaseEngine):
                     return results
             except Exception as e:
                 logger.warning(f"[DarkAhmia] Search query via {net} failed: {e}")
+
+        # Dark Bypass: If Ahmia moral filtering yielded 0 results and dark_bypass is enabled, query unmoderated dark gateway
+        if not results and getattr(query, "dark_bypass", True):
+            hecos_logger.info(f"[DarkAhmia:BYPASS] Ahmia yielded 0 results. Triggering unmoderated dark gateway bypass for '{query.query}'...")
+            try:
+                bypass_url = "https://onionsearchengine.com/search.php"
+                resp = http_client.get(bypass_url, network="clearnet", params={"q": query.query}, headers=headers, timeout=min(query.timeout, 6.0))
+                if resp.status_code == 200:
+                    from bs4 import BeautifulSoup
+                    soup = BeautifulSoup(resp.text, "lxml")
+                    seen_urls = set()
+                    for a in soup.find_all("a", href=True):
+                        href = a["href"].strip()
+                        if ".onion" in href and href not in seen_urls and "report" not in href:
+                            title = a.get_text(strip=True)
+                            if title and len(title) > 2:
+                                parent = a.find_parent(["div", "li", "article"])
+                                snippet = parent.get_text(" ", strip=True)[:260] if parent else ""
+                                seen_urls.add(href)
+                                results.append(SearchResult(
+                                    title=title,
+                                    url=href,
+                                    snippet=snippet,
+                                    engine="dark_bypass:onion",
+                                    category="onion",
+                                    network="tor",
+                                    metadata={"unmoderated": True}
+                                ))
+                                if len(results) >= target_limit:
+                                    break
+                    if results:
+                        hecos_logger.info(f"[DarkAhmia:BYPASS] Unmoderated bypass retrieved {len(results)} .onion results")
+            except Exception as b_err:
+                hecos_logger.debug(f"[DarkAhmia:BYPASS] Unmoderated bypass note: {b_err}")
 
         return results

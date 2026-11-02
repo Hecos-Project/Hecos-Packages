@@ -62,7 +62,7 @@ class HecosSearchService:
         if not cfg.get("enabled", True):
             hecos_logger.warning(f"[SEARCH] Query aborted: Deep Search is disabled in system configuration.")
             session.total_results = 0
-            session.error = "Deep Search is disabled in system settings. Enable it under Browser Settings (/hecos/config/ui#browser)."
+            session.error = "Deep Search is disabled in system settings. Enable it under Net Search Settings (/hecos/config/ui#netsearch)."
             if stream_cb:
                 stream_cb({
                     "type": "error",
@@ -78,7 +78,7 @@ class HecosSearchService:
         if not engines:
             hecos_logger.warning(f"[SEARCH] No active/available engines for mode '{query.mode}'.")
             session.total_results = 0
-            session.error = f"No active engines available for mode '{query.mode}'. Ensure required components (e.g. Tor or DDGS) are installed and enabled in settings (/hecos/config/ui#browser)."
+            session.error = f"No active engines available for mode '{query.mode}'. Ensure required components (e.g. Tor or DDGS) are installed and enabled in settings (/hecos/config/ui#netsearch)."
             if stream_cb:
                 stream_cb({
                     "type": "error",
@@ -152,6 +152,7 @@ class HecosSearchService:
                         "type": "engine_done",
                         "engine": engine_id,
                         "duration_ms": dur,
+                        "raw_count": len(items),
                         "new_results": new_items_for_stream,
                         "total_so_far": len(accumulated_results),
                         "error": err

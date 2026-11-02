@@ -46,7 +46,9 @@ class ClearNewsEngine(BaseEngine):
             from ddgs import DDGS
             hecos_logger.info(f"[SEARCH:NEWS] Querying ddgs news multi-page (target={'UNLIMITED' if is_unlimited else target_limit}, max_pages={max_pages}): '{query.query}'...")
             ddg = DDGS(timeout=query.timeout)
-            for page_num in range(1, max_pages + 1):
+            start_page = max(1, getattr(query, "page", 1))
+            pages_to_fetch = max_pages if start_page == 1 else 2
+            for page_num in range(start_page, start_page + pages_to_fetch):
                 if len(results) >= target_limit:
                     break
                 try:
