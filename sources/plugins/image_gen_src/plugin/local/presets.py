@@ -32,8 +32,8 @@ LOCAL_BUILTIN_PRESETS: dict[str, dict[str, Any]] = {
         "_builtin": True,
         "_local": True,
         "_description": (
-            "Flux Schnell locale via SwarmUI. Velocissimo (4 step). "
-            "Richiede modello Flux.1 Schnell installato in SwarmUI."
+            "Local Flux Schnell via SwarmUI. Ultra-fast (4 steps). "
+            "Requires Flux.1 Schnell model installed in SwarmUI."
         ),
     },
 
@@ -61,8 +61,8 @@ LOCAL_BUILTIN_PRESETS: dict[str, dict[str, Any]] = {
         "_builtin": True,
         "_local": True,
         "_description": (
-            "Stable Diffusion XL locale via SwarmUI. Ottima qualità, 30 step. "
-            "Richiede modello SDXL installato in SwarmUI."
+            "Local Stable Diffusion XL via SwarmUI. High quality, 30 steps. "
+            "Requires SDXL model installed in SwarmUI."
         ),
     },
 
@@ -106,7 +106,7 @@ LOCAL_BUILTIN_PRESETS: dict[str, dict[str, Any]] = {
         "style": "none",
         "_builtin": True,
         "_local": True,
-        "_description": "Standard Flux.1 Dev (FP8). Ottimo per fotorealismo e testi.",
+        "_description": "Standard Flux.1 Dev (FP8). Great for photorealism and text.",
     },
 
     "🔥 PornMaster Flux2 Klein": {

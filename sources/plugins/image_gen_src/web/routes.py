@@ -84,8 +84,12 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
                 except Exception as e:
                     logger.error(f"[ImageGen] Failed to write routing override: {e}")
 
-            # Merge
+            # Merge (including deep merge for [local] sub-dict)
             existing = cfg.get("image_gen", {})
+            if "local" in igen_incoming and isinstance(igen_incoming["local"], dict):
+                merged_local = (existing.get("local") or {}).copy()
+                merged_local.update(igen_incoming["local"])
+                igen_incoming["local"] = merged_local
             existing.update(igen_incoming)
             cfg["image_gen"] = existing
 
@@ -196,17 +200,57 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
     def get_image_gen_local_status():
         try:
             from plugin.providers.swarmui import SwarmUIProvider
-            models = SwarmUIProvider.get_models()
-            if not models:
-                return jsonify({"ok": False, "error": "SwarmUI reachable but no models found", "status_text": "SwarmUI Reachable"})
-            return jsonify({
-                "ok": True,
-                "status_text": "SwarmUI Reachable",
-                "version": "Unknown",
-                "url": "http://localhost:7801",
-                "models_count": len(models)
-            })
+            from plugin.local.launcher import SwarmUILauncher
+
+            cfg = get_config().get("image_gen", {})
+            local_cfg = cfg.get("local", {})
+            st = SwarmUILauncher.get_instance().check_status(local_cfg)
+
+            if st.get("running"):
+                models = SwarmUIProvider.get_models()
+                st["models_count"] = len(models)
+                if not models:
+                    st["ok"] = False
+                    st["error"] = "SwarmUI is active but no models were found in the Models directory."
+                    st["status_text"] = "SwarmUI Online (0 models)"
+                else:
+                    st["ok"] = True
+                    st["status_text"] = "SwarmUI Online"
+
+            return jsonify(st)
         except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/local_start", methods=["POST"])
+    def start_image_gen_local_backend():
+        """Manually or automatically launch SwarmUI from the Image Gen UI panel."""
+        try:
+            from plugin.providers.swarmui import SwarmUIProvider
+            from plugin.local.launcher import SwarmUILauncher
+
+            cfg = get_config().get("image_gen", {})
+            local_cfg = cfg.get("local", {}).copy()
+
+            body = request.get_json(silent=True) or {}
+            if body.get("install_path"):
+                local_cfg["install_path"] = str(body["install_path"]).strip()
+
+            launcher = SwarmUILauncher.get_instance()
+            ok, status_code, msg = launcher.ensure_running(local_cfg, force_start=True)
+            st = launcher.check_status(local_cfg)
+            st["ok"] = ok
+            st["status_code"] = status_code
+            st["message"] = msg
+            if not ok and not st.get("error"):
+                st["error"] = msg
+
+            if st.get("running"):
+                models = SwarmUIProvider.get_models()
+                st["models_count"] = len(models)
+
+            return jsonify(st)
+        except Exception as exc:
+            logger.error(f"[ImageGen] local_start error: {exc}")
             return jsonify({"ok": False, "error": str(exc)}), 500
 
     @app.route("/hecos/api/plugins/image_gen/local_compat_info", methods=["GET"])
@@ -249,7 +293,7 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
             
             refined = client.generate(system_prompt, user_msg, backend_config, llm_cfg)
             
-            if refined and not isinstance(refined, dict) and not refined.startswith("âš ï¸"):
+            if refined and not isinstance(refined, dict) and not refined.startswith("⚠️"):
                 cleaned = refined.strip().strip('"').strip("'")
                 return jsonify({"ok": True, "refined": cleaned})
                 
@@ -405,13 +449,13 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
         except Exception as exc:
             return jsonify({"ok": False, "error": str(exc)}), 500
 
-    # --- 5. Provider Probe / Diagnostica ---
+    # --- 5. Provider Probe / Diagnostics ---
 
     @app.route("/hecos/api/plugins/image_gen/probe", methods=["GET"])
     def probe_providers():
         """
-        Testa tutti i provider e i server HuggingFace in parallelo.
-        Chiamato dal bottone 'Testa Provider' nel pannello di configurazione.
+        Tests all providers and HuggingFace servers in parallel.
+        Called by the 'Test Providers' button in the configuration panel.
         """
         try:
             import os
@@ -497,4 +541,3 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
             return jsonify({"ok": True, "models": models})
         except Exception as exc:
             return jsonify({"ok": False, "error": str(exc)}), 500
-

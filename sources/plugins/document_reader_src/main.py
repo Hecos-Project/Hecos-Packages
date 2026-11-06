@@ -329,7 +329,7 @@ def info():
     return {
         "tag": TAG,
         "name": "Hecos Document Reader",
-        "version": "1.0.0",
+        "version": "1.0.1",
         "description": "Universal document reader with TTS. Fullscreen reading mode with audiobook-style controls and visual PDF rendering.",
     }
 

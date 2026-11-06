@@ -9,7 +9,7 @@ window.checkHordeAccount = async function() {
     var tEl = document.getElementById('horde-account-text');
     var btn = (typeof event !== 'undefined' && event) ? event.currentTarget : null;
     if (kEl) kEl.textContent = '... Kudos';
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Attendere...'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...'; }
     try {
         var res  = await fetch('/hecos/api/plugins/image_gen/horde/status');
         var data = await res.json();
@@ -17,21 +17,21 @@ window.checkHordeAccount = async function() {
             if (kEl) kEl.textContent = Math.floor(data.kudos).toLocaleString() + ' Kudos';
             if (iEl && tEl) {
                 iEl.style.display = 'block';
-                tEl.innerHTML = 'Connesso come: <strong>' + data.username + '</strong> <span style="margin:0 6px;">|</span> Worker attivi: <strong>' + data.worker_count + '</strong>';
+                tEl.innerHTML = 'Connected as: <strong>' + data.username + '</strong> <span style="margin:0 6px;">|</span> Active workers: <strong>' + data.worker_count + '</strong>';
                 if (data.is_anonymous) {
-                    tEl.innerHTML += '<br><span style="color:#e74c3c;"><i class="fas fa-exclamation-circle"></i> Account anonimo. La priorit\u00e0 di generazione \u00e8 bassa.</span>';
+                    tEl.innerHTML += '<br><span style="color:#e74c3c;"><i class="fas fa-exclamation-circle"></i> Anonymous account. Generation priority is low.</span>';
                 }
             }
         } else {
-            if (kEl) kEl.textContent = 'Errore API';
+            if (kEl) kEl.textContent = 'API Error';
             if (iEl && tEl) {
                 iEl.style.display = 'block';
-                tEl.innerHTML = '<span style="color:#e74c3c;"><i class="fas fa-times-circle"></i> ' + (data.error || 'Errore di connessione a AI Horde') + '</span>';
+                tEl.innerHTML = '<span style="color:#e74c3c;"><i class="fas fa-times-circle"></i> ' + (data.error || 'Connection error to AI Horde') + '</span>';
             }
         }
     } catch(e) {
         if (kEl) kEl.textContent = 'Offline';
     } finally {
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-check"></i> Verifica'; }
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-check"></i> Check'; }
     }
 };

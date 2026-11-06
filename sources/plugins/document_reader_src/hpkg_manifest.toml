@@ -24,7 +24,7 @@ screenshots = [
 tag = "DOCUMENT_READER"
 target_dir = "hpm"
 type = "plugin"
-version = "1.0.0"
+version = "1.0.1"
 update_date = "2026-10-25T08:42:02Z"
 signature = "1k0A9uHOq6x+zbNaMHhL5C/MDnGlYUiauEbKaIkWixOqKUmxyH6gS41gup3Pwz8/HOjifxiP2azE1UsjRhmtCA=="
 

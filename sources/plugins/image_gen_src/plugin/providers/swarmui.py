@@ -2,11 +2,21 @@
 image_gen — SwarmUI Provider
 Bridge between the existing provider registry and the local/ subsystem.
 Follows the same static interface as all other providers (generate, get_models).
+Includes automatic installation detection, auto-startup of SwarmUI if closed,
+and real-time user traces/logs.
 """
 
 import os
 
-from ..local.client import SwarmUIClient, SwarmUIError
+from ..local.client import SwarmUIClient, SwarmUIError, SwarmUIConnectionError
+from ..local.launcher import (
+    SwarmUILauncher,
+    SwarmUIBackendFailure,
+    SwarmUINotInstalledError,
+    SwarmUINotRunningError,
+    SwarmUIStartupError,
+    _emit_trace,
+)
 from ..local.params import build_swarmui_params, extract_generation_metadata
 from ..local.models import discover_models, get_default_model
 from .utils import log_debug, save_image_bytes
@@ -40,7 +50,7 @@ def _get_client(local_cfg: dict = None) -> SwarmUIClient:
     if local_cfg is None:
         local_cfg = _get_local_config()
 
-    url = local_cfg.get("url", "http://localhost:7801")
+    url = local_cfg.get("url") or local_cfg.get("host") or "http://localhost:7801"
     timeout = local_cfg.get("timeout", 120)
     auth_token = local_cfg.get("auth_token", "")
 
@@ -59,7 +69,7 @@ def _get_or_create_client(local_cfg: dict = None) -> SwarmUIClient:
     if local_cfg is None:
         local_cfg = _get_local_config()
 
-    url = local_cfg.get("url", "http://localhost:7801")
+    url = local_cfg.get("url") or local_cfg.get("host") or "http://localhost:7801"
 
     # Recreate client if URL changed
     if _cached_client is None or _cached_url != url:
@@ -75,6 +85,7 @@ class SwarmUIProvider:
     Implements the same static interface as other providers.
     """
     NAME = "swarmui"
+    last_autostart_notice: str = ""
 
     @staticmethod
     def get_models() -> list:
@@ -156,29 +167,71 @@ class SwarmUIProvider:
                  **kwargs) -> str:
         """
         Generate an image via SwarmUI.
-
-        Follows the same signature as all other providers.
-        The api_key parameter is ignored (local generation doesn't need it).
+        Automatically checks if SwarmUI is installed & running, and launches it
+        if needed, emitting live user traces at each step.
 
         Returns:
             Filename of the saved image.
         """
-        local_cfg = _get_local_config()
+        SwarmUIProvider.last_autostart_notice = ""
+        local_cfg = dict(_get_local_config() or {})
+        if isinstance(kwargs.get("local"), dict):
+            local_cfg.update(kwargs["local"])
+        model = str(model or "")
+
+        # ── 1. Ensure SwarmUI is installed and running (auto-launch if closed) ──
+        launcher = SwarmUILauncher.get_instance()
+        ok, status_code, status_msg = launcher.ensure_running(local_cfg)
+        if not ok:
+            if status_code == "NOT_INSTALLED":
+                raise SwarmUINotInstalledError(status_msg, status_code=status_code, user_notice=status_msg)
+            elif status_code in ("OFFLINE_CLOSED", "REMOTE_OFFLINE", "AUTH_REQUIRED"):
+                raise SwarmUINotRunningError(status_msg, status_code=status_code, user_notice=status_msg)
+            else:
+                raise SwarmUIStartupError(status_msg, status_code=status_code, user_notice=status_msg)
+
+        if status_code == "STARTED":
+            SwarmUIProvider.last_autostart_notice = status_msg
+
         client = _get_or_create_client(local_cfg)
+        if status_code == "STARTED":
+            # Fresh instance started — clear any stale session id
+            client._invalidate_session()
 
-        # ── Resolve model name ────────────────────────────────────────────
+        # ── 2. Resolve model name ─────────────────────────────────────────
+        try:
+            available_models = discover_models(client, force_refresh=(status_code == "STARTED"))
+        except Exception as e:
+            available_models = []
+            log_debug(f"[SwarmUIProvider] Model discovery warning: {e}")
+
         if not model or model.lower() in ("auto", "default", ""):
-            # Auto-discover and pick default
-            try:
-                models = discover_models(client)
-                model = get_default_model(models)
-                if not model:
-                    raise Exception("No models found in SwarmUI")
-                log_debug(f"[SwarmUIProvider] Auto-selected model: {model}")
-            except Exception as e:
-                raise Exception(f"SwarmUI model auto-selection failed: {e}")
+            model = get_default_model(available_models) if available_models else ""
+            if not model:
+                err_txt = (
+                    "❌ **No models found in SwarmUI.**\n"
+                    f"- SwarmUI is active on `{client.base_url}`, but no models were found in `Models/Stable-Diffusion` or `Models/diffusion_models`.\n"
+                    "- Add at least one `.safetensors` model in SwarmUI and try again."
+                )
+                _emit_trace("No models found in SwarmUI.", level="error")
+                raise SwarmUIBackendFailure(err_txt, status_code="NO_MODELS", user_notice=err_txt)
+            log_debug(f"[SwarmUIProvider] Auto-selected model: {model}")
+        elif available_models:
+            # Verify configured model exists in SwarmUI; if not, fallback to available default with trace
+            model_names = [m.get("name", "") for m in available_models if m.get("name")]
+            if model_names and model not in model_names:
+                matched = next((m for m in model_names if model.lower() in m.lower()), None)
+                if matched:
+                    model = matched
+                else:
+                    fallback_model = get_default_model(available_models) or model_names[0]
+                    _emit_trace(
+                        f"⚠️ Model '{model}' not found in SwarmUI. Using available model: '{fallback_model}'.",
+                        level="warning",
+                    )
+                    model = fallback_model
 
-        # ── Build SwarmUI params ──────────────────────────────────────────
+        # ── 3. Build SwarmUI params ───────────────────────────────────────
         params = build_swarmui_params(
             prompt=prompt,
             model=model,
@@ -195,26 +248,47 @@ class SwarmUIProvider:
             loras=kwargs.get("loras", []),
         )
 
+        _emit_trace(
+            f"🎨 Generating with SwarmUI: model='{model}', {width}x{height}, steps={num_inference_steps}, cfg={guidance_scale}...",
+            level="tool",
+        )
         log_debug(f"[SwarmUIProvider] Generating with params: "
                   f"model={model}, steps={num_inference_steps}, "
                   f"cfg={guidance_scale}, size={width}x{height}")
 
-        # ── Generate ──────────────────────────────────────────────────────
+        # ── 4. Generate ───────────────────────────────────────────────────
         try:
             logger.info(f"[SwarmUIProvider] Sending generate request to {client.base_url}")
             image_paths, response_data = client.generate(params)
+        except SwarmUIConnectionError as e:
+            err_txt = (
+                f"❌ **Connection to SwarmUI lost during generation** (`{client.base_url}`).\n"
+                f"- **Details:** `{e}`\n"
+                "- **Resolution:** Check that SwarmUI was not closed or crashed due to insufficient GPU memory (VRAM)."
+            )
+            _emit_trace(f"Connection to SwarmUI lost during generation: {e}", level="error")
+            raise SwarmUIBackendFailure(err_txt, status_code="CONNECTION_LOST", user_notice=err_txt)
         except Exception as e:
             logger.error(f"[SwarmUIProvider] SwarmUI generation failed: {e}")
-            raise Exception(f"SwarmUI generation failed: {e}")
+            err_txt = (
+                f"❌ **SwarmUI generation error:** `{e}`\n"
+                f"- **Model:** `{model}`\n"
+                f"- **Server:** `{client.base_url}`\n"
+                "- **Resolution:** Check the SwarmUI console (or the selected model/LoRA in the Image Gen panel)."
+            )
+            _emit_trace(f"SwarmUI generation error: {e}", level="error")
+            raise SwarmUIBackendFailure(err_txt, status_code="GENERATION_ERROR", user_notice=err_txt)
 
-        # ── Download the first image ──────────────────────────────────────
+        # ── 5. Download the first image ───────────────────────────────────
         image_path = image_paths[0]
         try:
             image_bytes = client.download_image(image_path)
         except SwarmUIError as e:
-            raise Exception(f"SwarmUI image download failed: {e}")
+            err_txt = f"❌ **Image download from SwarmUI failed:** `{e}`"
+            _emit_trace(err_txt, level="error")
+            raise SwarmUIBackendFailure(err_txt, status_code="DOWNLOAD_ERROR", user_notice=err_txt)
 
-        # ── Determine file extension ──────────────────────────────────────
+        # ── 6. Determine file extension & save ────────────────────────────
         ext = "png"
         if image_path.lower().endswith(".jpg") or image_path.lower().endswith(".jpeg"):
             ext = "jpg"
@@ -223,9 +297,10 @@ class SwarmUIProvider:
 
         log_debug(f"[SwarmUIProvider] Image downloaded: {len(image_bytes)} bytes ({ext})")
 
-        # ── Save using the standard utility ───────────────────────────────
         metadata = extract_generation_metadata(params, backend="swarmui")
-        return save_image_bytes(
+        saved_file = save_image_bytes(
             image_bytes, ext, prompt=prompt,
             params=metadata,
         )
+        _emit_trace(f"✅ SwarmUI image generated and saved: {saved_file}", level="success")
+        return saved_file

@@ -45,7 +45,7 @@ def validate_manifests():
     else:
         print("[INFO] tomllib not available, skipping deep TOML syntax parse.")
 
-    return m_data.get("id", "document_reader"), m_data.get("version", "1.0.0")
+    return m_data.get("id", "document_reader"), m_data.get("version", "1.0.1")
 
 
 def build_hpkg(pkg_id: str, version: str) -> str:

@@ -35,9 +35,17 @@ except ImportError:
 # -- Local config sub-model --------------------------------------------------
 
 class LocalConfig(BaseModel):
-    enabled: bool = False
+    enabled: bool = True
+    url: str = "http://localhost:7801"
     host: str = "http://localhost:7801"
     backend: str = "swarmui"
+    timeout: int = 120
+    auto_discover_models: bool = True
+    default_model: str = ""
+    auth_token: str = ""
+    install_path: str = ""
+    auto_start: bool = True
+    startup_timeout: int = 90
 
 
 class ImageGenConfig(BaseModel):
@@ -169,6 +177,10 @@ def get_config() -> dict:
     """Returns the full image_gen config dict."""
     raw = _read_toml()
     try:
+        local_defaults = LocalConfig().model_dump(mode='json')
+        if isinstance(raw.get("local"), dict):
+            local_defaults.update(raw["local"])
+        raw["local"] = local_defaults
         obj = ImageGenConfig.model_validate(raw)
     except Exception:
         obj = ImageGenConfig()
@@ -186,10 +198,11 @@ def save_config(data: dict) -> bool:
         return False
     try:
         incoming = data[_ROOT_KEY]
-        if "local" not in incoming:
-            existing_local = get_image_gen_config().get("local", {})
-            if existing_local:
-                incoming["local"] = existing_local
+        existing_local = LocalConfig().model_dump(mode='json')
+        existing_local.update(get_image_gen_config().get("local", {}) or {})
+        if "local" in incoming and isinstance(incoming["local"], dict):
+            existing_local.update(incoming["local"])
+        incoming["local"] = existing_local
         obj = ImageGenConfig.model_validate(incoming)
         return _write_toml(obj.model_dump(mode='json'))
     except Exception as e:
@@ -200,6 +213,11 @@ def save_config(data: dict) -> bool:
 def save_image_gen_section(section: dict) -> bool:
     """Saves just the [image_gen] section, merging with existing config."""
     current = get_image_gen_config()
+    if "local" in section and isinstance(section["local"], dict):
+        merged_local = current.get("local", {}).copy()
+        merged_local.update(section["local"])
+        section = dict(section)
+        section["local"] = merged_local
     current.update(section)
     try:
         obj = ImageGenConfig.model_validate(current)

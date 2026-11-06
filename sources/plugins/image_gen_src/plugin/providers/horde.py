@@ -194,15 +194,15 @@ class HordeProvider:
 
 
         if resp.status_code == 401:
-            raise Exception("Horde: API key non valida. Usa una key valida oppure lascia vuoto per accesso anonimo.")
+            raise Exception("Horde: Invalid API key. Use a valid key or leave empty for anonymous access.")
         if resp.status_code == 503:
-            raise Exception("Horde: nessun worker disponibile per questo modello al momento.")
+            raise Exception("Horde: No workers currently available for this model.")
         if resp.status_code not in (200, 202):
             raise Exception(f"Horde submit HTTP {resp.status_code}: {resp.text[:200]}")
 
         job_id = resp.json().get("id")
         if not job_id:
-            raise Exception(f"Horde: nessun job ID ricevuto. Risposta: {resp.text[:200]}")
+            raise Exception(f"Horde: No job ID received. Response: {resp.text[:200]}")
 
         logger.info(f"[Horde] Job submitted. id={job_id}")
 
@@ -240,12 +240,12 @@ class HordeProvider:
             logger.info(f"[Horde] done={done} faulted={faulted} wait={wait_time}s queue_pos={queue_pos} elapsed={elapsed}s")
 
             if faulted:
-                raise Exception("Horde: la generazione è fallita lato worker. Riprova o cambia modello.")
+                raise Exception("Horde: Generation failed on worker side. Retry or change model.")
 
             if done:
                 generations = status.get("generations", [])
                 if not generations:
-                    raise Exception("Horde: generazione completata ma nessuna immagine ricevuta.")
+                    raise Exception("Horde: Generation completed but no image was received.")
 
                 gen = generations[0]
                 img_url  = gen.get("img", "")
@@ -265,10 +265,10 @@ class HordeProvider:
                     try:
                         img_bytes = base64.b64decode(img_b64)
                     except Exception as e:
-                        raise Exception(f"Horde: impossibile decodificare l'immagine base64: {e}")
+                        raise Exception(f"Horde: Failed to decode base64 image: {e}")
 
                 if not img_bytes:
-                    raise Exception("Horde: immagine ricevuta vuota.")
+                    raise Exception("Horde: Received empty image.")
 
                 worker_name = gen.get("worker_name", "unknown")
                 horde_model = gen.get("model", model)
@@ -288,4 +288,4 @@ class HordeProvider:
             requests.delete(poll_url, headers=headers, timeout=10, proxies=get_proxies("horde"))
         except Exception:
             pass
-        raise Exception(f"Horde: timeout dopo {max_wait}s. Il cluster potrebbe essere occupato. Riprova tra qualche minuto.")
+        raise Exception(f"Horde: Timed out after {max_wait}s. The cluster may be busy. Please try again in a few minutes.")

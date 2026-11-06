@@ -102,6 +102,10 @@ window.collectIgenConfig = function() {
         vae:                    get('igen-vae', ''),
         loras:                  Array.from((document.getElementById('igen-loras') || {}).selectedOptions || []).map(o => o.value),
         cloud_enabled:          chk('igen-cloud-enabled', false),
+        local: {
+            auto_start:         chk('igen-local-autostart', true),
+            install_path:       (get('igen-local-install-path', '') || '').trim(),
+        },
     };
 };
 
@@ -126,6 +130,10 @@ window.applyIgenConfig = function(cfg) {
     chk('horde-nsfw',       cfg.horde_nsfw !== undefined ? cfg.horde_nsfw : true);
     set('horde-worker-blacklist', cfg.horde_worker_blacklist || '');
     set('igen-vae',         cfg.vae || '');
+
+    const localCfg = cfg.local || {};
+    chk('igen-local-autostart', localCfg.auto_start !== undefined ? localCfg.auto_start : true);
+    set('igen-local-install-path', localCfg.install_path || '');
     
     const lorasEl = document.getElementById('igen-loras');
     if (lorasEl && cfg.loras && Array.isArray(cfg.loras)) {
@@ -158,4 +166,4 @@ window.applyIgenConfig = function(cfg) {
 
     onAspectRatioChanged();
     if (window._applyCloudToggleState) window._applyCloudToggleState();
-    };
+};

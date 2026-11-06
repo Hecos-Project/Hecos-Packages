@@ -1,5 +1,5 @@
 """
-Plugin: Image Generation â€” Generator
+Plugin: Image Generation — Generator
 Core generation loop: reads autonomous config, resolves params, builds prompt,
 handles key rotation, retry logic, and delegates to the provider engine.
 """
@@ -14,6 +14,7 @@ except ImportError:
         def info(self, *a): print("[GENERATOR]", *a)
         def warning(self, *a): print("[GENERATOR WARN]", *a)
         def error(self, *a): print("[GENERATOR ERR]", *a)
+        def debug(self, *a): pass
     logger = _L()
     class translator:
         @staticmethod
@@ -26,6 +27,8 @@ except ImportError:
 from .dimensions import resolve_dimensions
 from .prompt_engine import build_prompt
 from .providers import generate_image as _engine_generate
+from .providers.swarmui import SwarmUIProvider
+from .local.launcher import SwarmUIBackendFailure
 
 
 _RETRIABLE_SIGNALS = [
@@ -124,6 +127,7 @@ def _mark_exhausted(provider: str, api_key: str, err_msg: str) -> None:
 
 
 def run_generation(raw_prompt: str, provider_override: str = "", model_override: str = "", hf_server_override: str = "") -> str:
+    meta_str = ""
     try:
         cfg = get_effective_config()
 
@@ -134,7 +138,16 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
 
         cloud_enabled = cfg.get("cloud_enabled", False)
         if not cloud_enabled and provider != "swarmui":
-            raise Exception(f"Cloud providers are currently disabled. Cannot use '{provider}'. Enable them in the Image Gen settings.")
+            notice = (
+                f"⚠️ **Cloud Providers disabled (`{provider}`)**.\n"
+                "- In **Image Gen** settings the *Enable Cloud Providers* option is disabled.\n"
+                "- Enable Cloud providers or select **SwarmUI (Local Backend)**."
+            )
+            return (
+                f"[[IGEN_ALERT]]\n{notice}\n[[/IGEN_ALERT]]\n\n"
+                "[SYSTEM: FATAL_BACKEND_ERROR — Cloud providers are disabled in Image Gen settings. "
+                "DO NOT call /img or IMAGE_GEN again in this turn. Inform the user directly with the message above.]"
+            )
 
         model       = model_override.strip() if model_override else cfg.get("model", "flux")
         hf_provider = hf_server_override.strip() if hf_server_override else cfg.get("hf_provider", "hf-inference")
@@ -180,15 +193,14 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
         loras                 = cfg.get("loras", [])
 
         if provider_override or model_override or hf_server_override:
-            logger.info(f"[GENERATOR] Override attivo — provider={provider}, model={model}, hf_provider={hf_provider}")
+            logger.info(f"[GENERATOR] Active override → provider={provider}, model={model}, hf_provider={hf_provider}")
 
-        meta_str = ""
         if show_meta_chat:
             hf_suffix = f", HF Server: `{hf_provider}`" if provider == "huggingface" else ""
             meta_str = f"\n\n> **[Image Gen Config]** Provider: `{provider}`, Model: `{model}`, Seed: `{seed}`, CFG: `{guidance}`, Sampler: `{sampler}`, Steps: `{steps}`{hf_suffix}"
 
         final_width, final_height = resolve_dimensions(aspect_ratio, width, height)
-        logger.info(f"[GENERATOR] Aspect ratio '{aspect_ratio}' â†’ {final_width}Ã—{final_height}")
+        logger.info(f"[GENERATOR] Aspect ratio '{aspect_ratio}' → {final_width}×{final_height}")
 
         final_prompt = build_prompt(
             raw_prompt=raw_prompt, style=style, auto_enrich=auto_enrich,
@@ -196,7 +208,8 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
             flux_instructions=flux_instructions,
         )
 
-        max_attempts = 5
+        # For SwarmUI, do not retry 5 times on failure because launcher.ensure_running already handles startup & polling
+        max_attempts = 1 if provider == "swarmui" else 5
         last_error   = None
         current_pinned = pinned_key
 
@@ -225,21 +238,29 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
                     loras=loras,
                 )
 
+                html_src = f"/api/images/{filename}"
                 clean_prompt = final_prompt.strip()
                 if len(clean_prompt) > 250:
                     clean_prompt = clean_prompt[:247] + "..."
-                prefix = f"🎨 Ecco l'immagine generata per: {clean_prompt}"
+                prefix = f"🎨 Generated image for: {clean_prompt}"
+                autostart_note = ""
+                if provider == "swarmui" and getattr(SwarmUIProvider, "last_autostart_notice", ""):
+                    autostart_note = f"\n\n> 🖥️ **[SwarmUI Auto-Start]** {SwarmUIProvider.last_autostart_notice}"
+
                 system_instruction = f"[SYSTEM: SUCCESS. The image has been generated at '{html_src}'. If this was the last requested action, output your final text response to the user. If you are generating a document (e.g. with DOCS__generate_pdf) or this image is part of a multi-step workflow, proceed to call the next required tool now. DO NOT call IMAGE_GEN again with the same prompt."
                 if meta_str:
                     system_instruction += " You MUST include the [Image Gen Config] string verbatim in your response so the user can see it."
                 system_instruction += "]"
                 
-                return f"{prefix}\n\n[[IMG:{filename}]]\n<!-- HTML_SRC: {html_src} | To embed in HTML use: <img src=\"{html_src}\"> -->{meta_str}\n\n{system_instruction}"
+                return f"{prefix}{autostart_note}\n\n[[IMG:{filename}]]\n<!-- HTML_SRC: {html_src} | To embed in HTML use: <img src=\"{html_src}\"> -->{meta_str}\n\n{system_instruction}"
 
+            except SwarmUIBackendFailure:
+                # Non-retriable local SwarmUI failure — break immediately
+                raise
             except Exception as e:
                 last_error = e
                 err_msg = str(e)
-                if _is_retriable(err_msg):
+                if attempt < max_attempts and _is_retriable(err_msg):
                     logger.warning(f"[GENERATOR] Retriable error on attempt {attempt}: {err_msg}")
                     _mark_exhausted(provider, api_key, err_msg)
                     current_pinned = ""
@@ -248,11 +269,23 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
 
         raise last_error or Exception("Max generation attempts reached without success.")
 
+    except SwarmUIBackendFailure as s_err:
+        logger.error(f"[GENERATOR] SwarmUI backend error [{s_err.status_code}]: {s_err}")
+        notice_body = s_err.user_notice or str(s_err)
+        return (
+            f"[[IGEN_ALERT]]\n{notice_body}\n[[/IGEN_ALERT]]\n\n"
+            f"[SYSTEM: FATAL_BACKEND_ERROR ({s_err.status_code}) — SwarmUI local backend could NOT generate the image: "
+            f"{notice_body}. DO NOT call /img or IMAGE_GEN again in this turn! "
+            f"Explain clearly to the user why SwarmUI failed (e.g. not installed, closed, or failed to start) without making up excuses.]"
+        )
+
     except Exception as e:
         logger.error(f"[GENERATOR] Generation failed: {e}")
         err_str = str(e)
         if "Artist" not in err_str:
             provider_name = cfg.get("provider", "unknown").capitalize() if "cfg" in dir() else "Unknown"
             err_str = f"Artist [{provider_name}] rejected: {err_str}"
-        return f"âš ï¸ Image generation failed. {err_str}. Verify provider config or prompt safety.{meta_str}"
-
+        return (
+            f"[[IGEN_ALERT]]\n⚠️ **Image generation failed:** {err_str}\n[[/IGEN_ALERT]]\n\n"
+            f"[SYSTEM: FATAL_BACKEND_ERROR — {err_str}. DO NOT call /img or IMAGE_GEN again in this turn. Inform the user.{meta_str}]"
+        )

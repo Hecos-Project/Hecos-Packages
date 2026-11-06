@@ -41,3 +41,6 @@ timeout = 120
 auto_discover_models = true
 default_model = ""
 auth_token = ""
+install_path = ""
+auto_start = true
+startup_timeout = 90

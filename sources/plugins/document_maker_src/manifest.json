@@ -141,15 +141,18 @@
     "slash_commands": [
         {
             "id": "pdf",
+            "method": "generate_pdf",
             "aliases": [
                 "/pdf",
                 "/makepdf",
                 "/documento"
             ],
-            "description": "Genera un documento PDF da un testo HTML o da un template Hecos"
+            "description": "Generate a PDF/HTML document from HTML content or a Hecos template",
+            "requires_args": true
         },
         {
             "id": "generate_pdf",
+            "method": "generate_pdf",
             "aliases": [
                 "/DOCS__generate_pdf",
                 "/pdf",
@@ -160,6 +163,7 @@
         },
         {
             "id": "modify_document",
+            "method": "modify_document",
             "aliases": [
                 "/DOCS__modify_document",
                 "/doc_edit",
@@ -170,16 +174,18 @@
         },
         {
             "id": "list_documents",
+            "method": "list_documents",
             "aliases": [
                 "/DOCS__list_documents",
                 "/docs_list",
                 "/list_documents"
             ],
             "description": "List all saved HTML and PDF documents.",
-            "requires_args": true
+            "requires_args": false
         },
         {
             "id": "optimize_layout",
+            "method": "optimize_layout",
             "aliases": [
                 "/DOCS__optimize_layout",
                 "/doc_layout",

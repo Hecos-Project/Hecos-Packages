@@ -21,6 +21,7 @@ from .airforce import AirforceProvider
 from .huggingface import HuggingFaceProvider
 from .horde import HordeProvider
 from .swarmui import SwarmUIProvider
+from ..local.launcher import SwarmUIBackendFailure
 
 PROVIDERS = {
     "pollinations":  PollinationsProvider,
@@ -83,6 +84,10 @@ def generate_image(prompt: str, provider: str, model: str, width: int, height: i
             )
             log_debug(f"[ImageEngine] SUCCESS via {provider} → {filename}")
             return filename
+        except SwarmUIBackendFailure as s_err:
+            log_debug(f"[ImageEngine] swarmui backend failure [{s_err.status_code}]: {s_err}")
+            logger.error(f"[ImageEngine] swarmui backend failure [{s_err.status_code}]: {s_err}")
+            raise
         except Exception as e:
             err_msg = str(e)
             if "400" in err_msg and "CUDA out of memory" not in err_msg and "loading" not in err_msg:
@@ -93,5 +98,5 @@ def generate_image(prompt: str, provider: str, model: str, width: int, height: i
 
     raise Exception(
         f"Provider '{provider}' has no native image generation engine. "
-        "Select a compatible provider (e.g. OpenAI, Gemini Native, Pollinations, Hugging Face)."
+        "Select a compatible provider (e.g. SwarmUI, OpenAI, Gemini Native, Pollinations, Hugging Face)."
     )

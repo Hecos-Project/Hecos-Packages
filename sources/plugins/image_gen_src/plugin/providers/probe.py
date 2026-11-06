@@ -1,13 +1,13 @@
 """
-image_gen — Provider Probe / Diagnostica
-Testa tutti i provider e i server HuggingFace disponibili.
-Nessuna dipendenza da hecos.core. Funziona in ambienti isolati.
+image_gen — Provider Probe / Diagnostics
+Tests all available providers and HuggingFace servers.
+No hecos.core dependency. Works in isolated environments.
 """
 import time
 import concurrent.futures
 from .utils import log_debug
 
-# ── Configurazione server HuggingFace da testare ────────────────────────────────
+# ── HuggingFace servers configuration to test ───────────────────────────────────
 _HF_TEST_MODEL  = "black-forest-labs/FLUX.1-schnell"
 _HF_TEST_WIDTH  = 256
 _HF_TEST_HEIGHT = 256
@@ -31,7 +31,7 @@ def _probe_hf_server(server_id: str, server_label: str, api_key: str) -> dict:
             "name": f"HuggingFace / {server_label}",
             "server_id": server_id,
             "ok": False,
-            "error": "API key mancante — impossibile testare.",
+            "error": "Missing API key — cannot test.",
             "latency_ms": None,
         }
     try:
@@ -41,7 +41,7 @@ def _probe_hf_server(server_id: str, server_label: str, api_key: str) -> dict:
             "name": f"HuggingFace / {server_label}",
             "server_id": server_id,
             "ok": False,
-            "error": "huggingface_hub non installato (pip install huggingface_hub).",
+            "error": "huggingface_hub not installed (pip install huggingface_hub).",
             "latency_ms": None,
         }
 
@@ -56,7 +56,7 @@ def _probe_hf_server(server_id: str, server_label: str, api_key: str) -> dict:
         )
         elapsed = int((time.monotonic() - start) * 1000)
         if pil_image is None:
-            raise ValueError("Il provider ha restituito None invece di un'immagine.")
+            raise ValueError("Provider returned None instead of an image.")
         log_debug(f"[Probe] HF/{server_id} OK in {elapsed}ms")
         return {
             "name": f"HuggingFace / {server_label}",
@@ -68,12 +68,12 @@ def _probe_hf_server(server_id: str, server_label: str, api_key: str) -> dict:
     except Exception as e:
         elapsed = int((time.monotonic() - start) * 1000)
         err_str = str(e)
-        if "401" in err_str: err_str = "API Key non valida (401 Unauthorized)"
-        elif "403" in err_str: err_str = "Accesso negato (403 Forbidden)"
-        elif "404" in err_str: err_str = "Modello non trovato su questo server (404)"
-        elif "410" in err_str: err_str = "Modello rimosso da questo server (410 Gone)"
-        elif "429" in err_str: err_str = "Limite richieste (429 Too Many Requests)"
-        elif "503" in err_str: err_str = "Server sovraccarico (503)"
+        if "401" in err_str: err_str = "Invalid API key (401 Unauthorized)"
+        elif "403" in err_str: err_str = "Access denied (403 Forbidden)"
+        elif "404" in err_str: err_str = "Model not found on this server (404)"
+        elif "410" in err_str: err_str = "Model removed from this server (410 Gone)"
+        elif "429" in err_str: err_str = "Rate limit exceeded (429 Too Many Requests)"
+        elif "503" in err_str: err_str = "Server overloaded (503)"
         log_debug(f"[Probe] HF/{server_id} FAIL in {elapsed}ms: {err_str}")
         return {
             "name": f"HuggingFace / {server_label}",
@@ -84,7 +84,7 @@ def _probe_hf_server(server_id: str, server_label: str, api_key: str) -> dict:
         }
 
 
-# ── Probe provider gratuiti ───────────────────────────────────────────────────────
+# ── Probe free providers ──────────────────────────────────────────────────────────
 
 def _probe_pollinations() -> dict:
     import urllib.request
@@ -120,13 +120,13 @@ def _probe_airforce() -> dict:
         return {"name": "Airforce (Free)", "ok": False, "latency_ms": elapsed, "error": str(e)[:80]}
 
 
-# ── Probe Altri Provider API (Gemini, OpenAI, Stability) ─────────────────────────
+# ── Probe Other API Providers (Gemini, OpenAI, Stability) ────────────────────────
 
 def _probe_gemini(api_key: str) -> dict:
     """Probe Gemini Imagen via Vertex AI Express (v1beta predict endpoint).
     Note: imagen-3 requires Vertex AI; for free API keys this endpoint returns 404.
     We probe the models list instead to validate the key."""
-    if not api_key: return {"name": "Google Gemini (Imagen)", "ok": False, "error": "API Key mancante", "latency_ms": None}
+    if not api_key: return {"name": "Google Gemini (Imagen)", "ok": False, "error": "Missing API key", "latency_ms": None}
     import urllib.request, json
     start = time.monotonic()
     try:
@@ -143,17 +143,17 @@ def _probe_gemini(api_key: str) -> dict:
             return {"name": "Google Gemini (Imagen)", "ok": True, "latency_ms": elapsed, "error": None}
         else:
             return {"name": "Google Gemini (Imagen)", "ok": False, "latency_ms": elapsed,
-                    "error": "Key valida ma Imagen non disponibile (richiede Vertex AI / Piano a pagamento)"}
+                    "error": "Valid key, but Imagen is not available (requires Vertex AI / billing enabled)"}
     except Exception as e:
         elapsed = int((time.monotonic() - start) * 1000)
         err_s = str(e)
-        if "403" in err_s: err_s = "403: API key non autorizzata per questo progetto"
-        elif "401" in err_s: err_s = "401: API Key non valida"
+        if "403" in err_s: err_s = "403: API key not authorized for this project"
+        elif "401" in err_s: err_s = "401: Invalid API key"
         return {"name": "Google Gemini (Imagen)", "ok": False, "latency_ms": elapsed, "error": err_s}
 
 def _probe_gemini_native(api_key: str) -> dict:
     """Probe Gemini 2.0 Flash native image generation (free tier, available to all API keys)."""
-    if not api_key: return {"name": "Gemini Native (Flash)", "ok": False, "error": "API Key mancante", "latency_ms": None}
+    if not api_key: return {"name": "Gemini Native (Flash)", "ok": False, "error": "Missing API key", "latency_ms": None}
     import urllib.request, json
     start = time.monotonic()
     try:
@@ -171,13 +171,13 @@ def _probe_gemini_native(api_key: str) -> dict:
     except Exception as e:
         elapsed = int((time.monotonic() - start) * 1000)
         err_s = str(e)
-        if "403" in err_s: err_s = "403: API non abilitata per questo progetto"
-        elif "401" in err_s: err_s = "401: API Key non valida"
-        elif "404" in err_s: err_s = "404: Modello non ancora disponibile per questa chiave"
+        if "403" in err_s: err_s = "403: API not enabled for this project"
+        elif "401" in err_s: err_s = "401: Invalid API key"
+        elif "404" in err_s: err_s = "404: Model not yet available for this key"
         return {"name": "Gemini Native (Flash)", "ok": False, "latency_ms": elapsed, "error": err_s}
 
 def _probe_openai(api_key: str) -> dict:
-    if not api_key: return {"name": "OpenAI (DALL-E)", "ok": False, "error": "API Key mancante", "latency_ms": None}
+    if not api_key: return {"name": "OpenAI (DALL-E)", "ok": False, "error": "Missing API key", "latency_ms": None}
     import urllib.request, json
     start = time.monotonic()
     try:
@@ -190,11 +190,11 @@ def _probe_openai(api_key: str) -> dict:
         return {"name": "OpenAI (DALL-E)", "ok": True, "latency_ms": elapsed, "error": None}
     except Exception as e:
         elapsed = int((time.monotonic() - start) * 1000)
-        err = "401: API Key non valida" if "401" in str(e) else str(e)
+        err = "401: Invalid API key" if "401" in str(e) else str(e)
         return {"name": "OpenAI (DALL-E)", "ok": False, "latency_ms": elapsed, "error": err}
 
 def _probe_stability(api_key: str) -> dict:
-    if not api_key: return {"name": "Stability AI", "ok": False, "error": "API Key mancante", "latency_ms": None}
+    if not api_key: return {"name": "Stability AI", "ok": False, "error": "Missing API key", "latency_ms": None}
     import urllib.request
     start = time.monotonic()
     try:
@@ -208,7 +208,7 @@ def _probe_stability(api_key: str) -> dict:
         return {"name": "Stability AI", "ok": True, "latency_ms": elapsed, "error": None}
     except Exception as e:
         elapsed = int((time.monotonic() - start) * 1000)
-        err = "401: API Key non valida" if "401" in str(e) else str(e)
+        err = "401: Invalid API key" if "401" in str(e) else str(e)
         return {"name": "Stability AI", "ok": False, "latency_ms": elapsed, "error": err}
 
 
@@ -216,13 +216,13 @@ def _probe_stability(api_key: str) -> dict:
 
 def probe_all_providers(keys: dict = None) -> list:
     """
-    Testa tutti i provider e i server HuggingFace in parallelo.
+    Tests all providers and HuggingFace servers in parallel.
     keys: { "huggingface": "...", "gemini": "...", "openai": "...", "stability": "..." }
-    Restituisce lista di dict: name, ok, latency_ms, error.
+    Returns list of dicts: name, ok, latency_ms, error.
     """
     if keys is None: keys = {}
     hf_api_key = keys.get("huggingface", "")
-    log_debug(f"[Probe] Avvio probe completo. Chiavi trovate: {list(keys.keys())}")
+    log_debug(f"[Probe] Starting full probe. Keys found: {list(keys.keys())}")
     results = []
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
@@ -249,5 +249,5 @@ def probe_all_providers(keys: dict = None) -> list:
                 })
 
     results.sort(key=lambda r: (0 if r["ok"] else 1, r.get("latency_ms") or 9999))
-    log_debug(f"[Probe] Completato. {sum(1 for r in results if r['ok'])}/{len(results)} provider OK.")
+    log_debug(f"[Probe] Completed. {sum(1 for r in results if r['ok'])}/{len(results)} providers OK.")
     return results

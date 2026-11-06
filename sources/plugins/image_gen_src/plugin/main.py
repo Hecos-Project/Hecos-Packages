@@ -1,5 +1,5 @@
 """
-Plugin: Image Generation â€” Entry Point
+Plugin: Image Generation — Entry Point
 Thin wrapper: registers the tool, delegates all logic to sub-modules.
 """
 
@@ -14,6 +14,7 @@ except ImportError:
 from .generator import run_generation
 from .providers.probe import probe_all_providers
 from .local.health import format_status_report, check_backend_status
+from .local.launcher import SwarmUILauncher
 from .local.models import discover_models, get_model_summary
 
 
@@ -26,10 +27,10 @@ class ImageGenTools:
             {
                 "id": "img",
                 "aliases": ["/img", "/image", "/photo", "/foto"],
-                "description": "Genera un'immagine AI da una descrizione testuale",
-                "usage": "/img <descrizione>",
-                "example": "/img foto fotorealistica di un gatto su Marte",
-                "icon": "ðŸ–¼ï¸",
+                "description": "Generates an AI image from a text description",
+                "usage": "/img <description>",
+                "example": "/img photorealistic photo of a cat on Mars",
+                "icon": "🖼️",
                 "method": "generate_image",
                 "args_schema": {"prompt": "str"},
                 "requires_args": True,
@@ -76,7 +77,7 @@ class ImageGenTools:
             }
             results = probe_all_providers(keys=keys)
             # Format into readable markdown
-            lines = ["## 🔍 Diagnostica Provider Image Gen\n"]
+            lines = ["## 🔍 Image Gen Provider Diagnostics\n"]
             for r in results:
                 icon = "✅" if r["ok"] else "❌"
                 latency = f" ({r['latency_ms']}ms)" if r.get("latency_ms") else ""
@@ -85,16 +86,16 @@ class ImageGenTools:
                     lines.append(f"   └ {r['error']}")
             return "\n".join(lines)
         except Exception as e:
-            return f"⚠️ Errore nel probe provider: {e}"
+            return f"⚠️ Provider probe error: {e}"
 
-    def check_local_status(self) -> str:
+    def check_local_status(self, auto_start_if_offline: bool = False) -> str:
         """
         Checks the status of the local image generation backend (SwarmUI).
-        Returns a diagnostic report including connectivity, version,
-        available models, and supported samplers/schedulers.
-        Use when the user asks about local generation status or troubleshooting.
+        Returns a diagnostic report including installation status, path, connectivity,
+        version, available models, and supported samplers/schedulers.
+        If auto_start_if_offline=True, starts SwarmUI automatically if it is installed but closed.
         """
-        logger.info("[IMAGE_GEN] check_local_status called")
+        logger.info(f"[IMAGE_GEN] check_local_status called (auto_start_if_offline={auto_start_if_offline})")
         try:
             try:
                 from igen_config.config_manager import get_image_gen_config
@@ -104,25 +105,33 @@ class ImageGenTools:
             cfg = get_image_gen_config()
             local_cfg = cfg.get("local", {})
             url = local_cfg.get("url", "http://localhost:7801")
-            enabled = local_cfg.get("enabled", False)
 
-            if not enabled:
-                return ("⚠️ Local generation is **disabled** in config.\n"
-                        f"URL configured: `{url}`\n"
-                        "Enable it in the Image Gen config panel under the Local section.")
+            launcher = SwarmUILauncher.get_instance()
+            if auto_start_if_offline:
+                launcher.ensure_running(local_cfg, force_start=True)
 
-            # Try creating a client for detailed info
-            try:
-                from .local.client import SwarmUIClient
-                client = SwarmUIClient(
-                    base_url=url,
-                    timeout=local_cfg.get("timeout", 120),
-                    auth_token=local_cfg.get("auth_token", ""),
-                )
-            except Exception:
-                client = None
+            st = launcher.check_status(local_cfg)
 
-            return format_status_report(url, client=client)
+            lines = ["## 🖥️ Local Backend Status (SwarmUI)\n"]
+            lines.append(f"- **Installed on disk**: {'✅ Yes (`' + st['install_path'] + '`)' if st.get('installed') else '❌ No (not found)'}")
+            lines.append(f"- **Auto-Start enabled**: {'✅ Yes' if st.get('auto_start') else '❌ No'}")
+            lines.append(f"- **Server Status**: **{st.get('status_text', st.get('status_code'))}** (`{url}`)")
+            if st.get("error"):
+                lines.append(f"- **Details**: {st['error']}")
+
+            if st.get("running"):
+                try:
+                    from .local.client import SwarmUIClient
+                    client = SwarmUIClient(
+                        base_url=url,
+                        timeout=local_cfg.get("timeout", 120),
+                        auth_token=local_cfg.get("auth_token", ""),
+                    )
+                except Exception:
+                    client = None
+                lines.append("\n" + format_status_report(url, client=client))
+
+            return "\n".join(lines)
 
         except Exception as e:
             return f"⚠️ Error checking local backend: {e}"
@@ -131,6 +140,7 @@ class ImageGenTools:
         """
         Lists all models available in the local SwarmUI instance,
         categorized by architecture (Flux, SDXL, SD 1.5, etc.).
+        Automatically starts SwarmUI if it is installed and auto_start is enabled.
         """
         logger.info("[IMAGE_GEN] list_local_models called")
         try:
@@ -143,6 +153,11 @@ class ImageGenTools:
             local_cfg = cfg.get("local", {})
             url = local_cfg.get("url", "http://localhost:7801")
 
+            launcher = SwarmUILauncher.get_instance()
+            ok, status_code, msg = launcher.ensure_running(local_cfg)
+            if not ok:
+                return msg
+
             from .local.client import SwarmUIClient
             client = SwarmUIClient(
                 base_url=url,
@@ -152,7 +167,7 @@ class ImageGenTools:
 
             models = discover_models(client, force_refresh=True)
             if not models:
-                return "❌ No models found. Is SwarmUI running and loaded?"
+                return "❌ No models found in SwarmUI. Check the Models directory."
 
             summary = get_model_summary(models)
             return f"## 🧠 Local Models ({len(models)} total)\n\n{summary}"
@@ -161,7 +176,7 @@ class ImageGenTools:
             return f"⚠️ Error listing local models: {e}"
 
 
-# â”€â”€ Module exports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Module exports ───────────────────────────────────────────────────────────
 tools = ImageGenTools()
 
 def info():
@@ -169,4 +184,3 @@ def info():
 
 def status():
     return tools.status
-

@@ -72,7 +72,8 @@ function _igenAttachAutoSave() {
         'igen-use-neg-prompt', 'igen-neg-prompt',
         'igen-auto-enrich', 'igen-enrich-keywords',
         'igen-style', 'igen-nologo', 'igen-show-metadata', 'igen-optimize-flux',
-        'igen-vae', 'igen-loras'
+        'igen-vae', 'igen-loras',
+        'igen-local-autostart', 'igen-local-install-path'
     ];
     fields.forEach(function(id) {
         var el = document.getElementById(id);

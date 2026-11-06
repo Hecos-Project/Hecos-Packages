@@ -2,7 +2,7 @@
  * igen_providers.js - Image Gen Panel: Provider & Model Logic
  * Handles provider dropdown (Local Backends first, then Cloud),
  * model fetching with retry, key status check, tab visibility,
- * SwarmUI test, cloud enable toggle, and aspect ratio.
+ * SwarmUI test & auto-start, cloud enable toggle, and aspect ratio.
  */
 
 // ── Tab switching ────────────────────────────────────────────────────────────
@@ -75,6 +75,9 @@ window.onProviderChanged = async function(userTriggered, _attempt) {
     // ── Show/hide local backend panel ────────────────────────────────────────
     var localWrapper = document.getElementById('igen-local-backend-wrapper');
     if (localWrapper) localWrapper.style.display = isLocal ? 'block' : 'none';
+    if (isLocal && _attempt === 0 && typeof window.checkSwarmUIBadgeSilent === 'function') {
+        window.checkSwarmUIBadgeSilent();
+    }
 
     // ── Show/hide VAE + LoRA tabs ────────────────────────────────────────────
     var vaeTabBtn   = document.getElementById('igen-tab-btn-vae');
@@ -250,6 +253,52 @@ window._igenUpdateKeyStatus = async function(provider) {
 };
 
 
+// ── Update SwarmUI Badge Helper ──────────────────────────────────────────────
+
+function _updateSwarmUIBadge(data) {
+    var badge    = document.getElementById('igen-local-status-badge');
+    var badgeTxt = document.getElementById('igen-local-status-text');
+    var startBtn = document.getElementById('igen-local-start-btn');
+    if (!badge || !badgeTxt) return;
+
+    var ok        = data && data.ok === true;
+    var installed = data && data.installed === true;
+
+    if (ok) {
+        badge.style.background  = 'rgba(16,185,129,0.12)';
+        badge.style.borderColor = 'rgba(16,185,129,0.35)';
+        badge.style.color       = '#34d399';
+        if (badge.querySelector('i')) badge.querySelector('i').style.color = '#34d399';
+        badgeTxt.textContent    = 'Online';
+        if (startBtn) startBtn.style.display = 'none';
+    } else if (installed) {
+        badge.style.background  = 'rgba(245,158,11,0.12)';
+        badge.style.borderColor = 'rgba(245,158,11,0.35)';
+        badge.style.color       = '#fbbf24';
+        if (badge.querySelector('i')) badge.querySelector('i').style.color = '#fbbf24';
+        badgeTxt.textContent    = data.auto_start ? 'Standby (Auto-Start)' : 'Offline (Installed)';
+        if (startBtn) startBtn.style.display = 'inline-flex';
+    } else {
+        badge.style.background  = 'rgba(231,76,60,0.12)';
+        badge.style.borderColor = 'rgba(231,76,60,0.35)';
+        badge.style.color       = '#e74c3c';
+        if (badge.querySelector('i')) badge.querySelector('i').style.color = '#e74c3c';
+        badgeTxt.textContent    = 'Not Installed';
+        if (startBtn) startBtn.style.display = 'inline-flex';
+    }
+}
+
+window.checkSwarmUIBadgeSilent = async function() {
+    try {
+        var res  = await fetch('/hecos/api/plugins/image_gen/local_status');
+        var data = await res.json();
+        _updateSwarmUIBadge(data);
+    } catch (e) {
+        console.debug('[ImageGen] Silent SwarmUI check failed:', e);
+    }
+};
+
+
 // ── Test SwarmUI backend ─────────────────────────────────────────────────────
 
 window.testSwarmUIBackend = async function() {
@@ -262,13 +311,13 @@ window.testSwarmUIBackend = async function() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
     box.style.display = 'block';
-    box.innerHTML = '<div style="color:var(--muted); text-align:center; padding:8px;">\u23f3 Connecting to SwarmUI on localhost:7801...</div>';
+    box.innerHTML = '<div style="color:var(--muted); text-align:center; padding:8px;">\u23f3 Checking SwarmUI installation and server status...</div>';
 
     if (badge) {
         badge.style.background   = 'rgba(255,200,0,0.1)';
         badge.style.borderColor  = 'rgba(255,200,0,0.3)';
         badge.style.color        = '#fbbf24';
-        badge.querySelector('i').style.color = '#fbbf24';
+        if (badge.querySelector('i')) badge.querySelector('i').style.color = '#fbbf24';
     }
     if (badgeTxt) badgeTxt.textContent = 'Testing...';
 
@@ -276,28 +325,28 @@ window.testSwarmUIBackend = async function() {
         var res = await fetch('/hecos/api/plugins/image_gen/local_status');
         var data = await res.json();
 
-        var ok    = data.ok === true;
-        var icon  = ok ? '\u2705' : '\u274c';
-        var color = ok ? '#2ecc71' : '#e74c3c';
+        var ok        = data.ok === true;
+        var installed = data.installed === true;
+        var icon      = ok ? '\u2705' : (installed ? '\u26A0\uFE0F' : '\u274c');
+        var color     = ok ? '#2ecc71' : (installed ? '#f59e0b' : '#e74c3c');
 
         var statusLine = data.status_text || (ok ? 'SwarmUI reachable' : 'SwarmUI unreachable');
         var html  = '<div style="color:' + color + '; font-weight:700; margin-bottom:6px;">' + icon + ' ' + statusLine + '</div>';
 
+        if (installed) {
+            html += '<div style="color:var(--muted);">\uD83D\uDCC2 Install path: <code>' + (data.install_path || 'Detected') + '</code></div>';
+        } else {
+            html += '<div style="color:#e74c3c;">\uD83D\uDCC2 Installation: <b>Not found</b> (install SwarmUI or set custom path above)</div>';
+        }
+        html += '<div style="color:var(--muted);">\u26A1 Auto-Start: <b>' + (data.auto_start ? 'Enabled (launches automatically on image request)' : 'Disabled') + '</b></div>';
         if (data.version)  html += '<div style="color:var(--muted);">\uD83D\uDD16 Version: ' + data.version + '</div>';
         if (data.url)      html += '<div style="color:var(--muted);">\uD83D\uDD17 URL: <code>' + data.url + '</code></div>';
-        if (data.models_count !== undefined) html += '<div style="color:var(--muted);">\uD83E\uDDE0 Models loaded: ' + data.models_count + '</div>';
-        if (data.error)    html += '<div style="color:#e74c3c; margin-top:6px; font-size:11px;">' + data.error + '</div>';
-        if (data.message && !data.error)  html += '<div style="color:var(--muted); margin-top:6px; font-size:11px;">' + data.message + '</div>';
+        if (ok && data.models_count !== undefined) html += '<div style="color:var(--muted);">\uD83E\uDDE0 Models loaded: ' + data.models_count + '</div>';
+        if (data.error && !ok) html += '<div style="color:' + (installed ? '#f59e0b' : '#e74c3c') + '; margin-top:6px; font-size:11px;">' + data.error + '</div>';
+        if (data.message && !data.error) html += '<div style="color:var(--muted); margin-top:6px; font-size:11px;">' + data.message + '</div>';
 
         box.innerHTML = html;
-
-        if (badge) {
-            badge.style.background  = ok ? 'rgba(16,185,129,0.1)'  : 'rgba(231,76,60,0.1)';
-            badge.style.borderColor = ok ? 'rgba(16,185,129,0.3)'  : 'rgba(231,76,60,0.3)';
-            badge.style.color       = ok ? '#34d399'                : '#e74c3c';
-            badge.querySelector('i').style.color = ok ? '#34d399' : '#e74c3c';
-        }
-        if (badgeTxt) badgeTxt.textContent = ok ? 'Online' : 'Offline';
+        _updateSwarmUIBadge(data);
 
     } catch (e) {
         box.innerHTML = '<div style="color:#e74c3c;">\u274c Network error: ' + e.message + '</div>';
@@ -310,6 +359,63 @@ window.testSwarmUIBackend = async function() {
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-stethoscope"></i> Test SwarmUI Connection';
+    }
+};
+
+
+// ── Start SwarmUI backend on demand ──────────────────────────────────────────
+
+window.startSwarmUIBackend = async function() {
+    var startBtn = document.getElementById('igen-local-start-btn');
+    var testBtn  = document.getElementById('igen-local-test-btn');
+    var box      = document.getElementById('igen-local-test-results');
+    var badge    = document.getElementById('igen-local-status-badge');
+    var badgeTxt = document.getElementById('igen-local-status-text');
+    var pathEl   = document.getElementById('igen-local-install-path');
+    if (!startBtn || !box) return;
+
+    startBtn.disabled = true;
+    if (testBtn) testBtn.disabled = true;
+    startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting SwarmUI...';
+    box.style.display = 'block';
+    box.innerHTML = '<div style="color:#60a5fa; text-align:center; padding:8px;">\uD83D\uDE80 Launching local SwarmUI instance in background...<br><small style="color:var(--muted);">Waiting for HTTP server on port 7801 (this may take 15\u201390 seconds)</small></div>';
+
+    if (badge) {
+        badge.style.background   = 'rgba(59,130,246,0.12)';
+        badge.style.borderColor  = 'rgba(59,130,246,0.35)';
+        badge.style.color        = '#60a5fa';
+        if (badge.querySelector('i')) badge.querySelector('i').style.color = '#60a5fa';
+    }
+    if (badgeTxt) badgeTxt.textContent = 'Starting...';
+
+    try {
+        var installPath = pathEl ? pathEl.value.trim() : '';
+        var res = await fetch('/hecos/api/plugins/image_gen/local_start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ install_path: installPath })
+        });
+        var data = await res.json();
+
+        if (data.ok) {
+            box.innerHTML = '<div style="color:#2ecc71; font-weight:700; margin-bottom:4px;">\u2705 ' + (data.message || 'SwarmUI started and ready!') + '</div>' +
+                            (data.install_path ? '<div style="color:var(--muted); font-size:11px;">\uD83D\uDCC2 Path: <code>' + data.install_path + '</code></div>' : '');
+            _updateSwarmUIBadge(data);
+            if (typeof window.refreshImageModels === 'function') {
+                setTimeout(function() { window.refreshImageModels(); }, 400);
+            }
+        } else {
+            var errMsg = data.error || data.message || 'Failed to start SwarmUI.';
+            box.innerHTML = '<div style="color:#e74c3c; font-weight:700; margin-bottom:6px;">\u274c SwarmUI Startup Failed</div>' +
+                            '<div style="color:var(--text); font-size:11.5px; white-space:pre-wrap;">' + errMsg + '</div>';
+            _updateSwarmUIBadge(data);
+        }
+    } catch (e) {
+        box.innerHTML = '<div style="color:#e74c3c;">\u274c Network error while starting SwarmUI: ' + e.message + '</div>';
+    } finally {
+        startBtn.disabled = false;
+        if (testBtn) testBtn.disabled = false;
+        startBtn.innerHTML = '<i class="fas fa-play"></i> Start SwarmUI';
     }
 };
 

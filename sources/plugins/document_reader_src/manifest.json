@@ -3,7 +3,7 @@
     "tag": "DOCUMENT_READER",
     "name": "Document Reader",
     "display_name": "Document Reader",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "plugin",
     "description": "Universal document reader with TTS. Fullscreen reading mode, visual PDF canvas rendering, text selection reading, word-by-word highlighting, audiobook-style controls.",
     "author": "Hecos Team / Antonio Meloni",

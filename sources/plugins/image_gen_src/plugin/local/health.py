@@ -19,11 +19,15 @@ except ImportError:
 try:
     from hecos_sdk import logger
 except ImportError:
-    class _L:
-        def info(self, *a): print("[LOCAL_HEALTH]", *a)
-        def error(self, *a): print("[LOCAL_HEALTH ERR]", *a)
-        def debug(self, *a): pass
-    logger = _L()
+    try:
+        from hecos.core.logging import logger
+    except ImportError:
+        class _L:
+            def info(self, *a): print("[LOCAL_HEALTH]", *a)
+            def warning(self, *a): print("[LOCAL_HEALTH WARN]", *a)
+            def error(self, *a): print("[LOCAL_HEALTH ERR]", *a)
+            def debug(self, *a): pass
+        logger = _L()
 
 
 # ── Status Constants ──────────────────────────────────────────────────────
@@ -210,16 +214,16 @@ def format_status_report(url: str, client=None) -> str:
 
     # Detailed info if client is available and backend is online
     if client and status["status"] == STATUS_ONLINE:
-        lines.append("\n### Dettagli Backend\n")
+        lines.append("\n### Backend Details\n")
         info = get_backend_info(client)
 
-        lines.append(f"🧠 **Modelli disponibili**: {info['models_count']}")
+        lines.append(f"🧠 **Available models**: {info['models_count']}")
 
         if info.get("samplers"):
             sampler_list = ", ".join(info["samplers"][:10])
             lines.append(f"🎛️ **Samplers**: {sampler_list}")
             if len(info["samplers"]) > 10:
-                lines.append(f"   (+{len(info['samplers']) - 10} altri)")
+                lines.append(f"   (+{len(info['samplers']) - 10} more)")
 
         if info.get("schedulers"):
             sched_list = ", ".join(info["schedulers"][:10])

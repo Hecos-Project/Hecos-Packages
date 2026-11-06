@@ -1,67 +1,65 @@
 {
     "tag": "IMAGE_GEN",
     "name": "Image Generation",
-    "version": "2.2.3",
+    "version": "2.2.6",
     "description": "AI Image Generation - Generates images from text prompts with priority support for local backends (SwarmUI/ComfyUI on port 7801). Additionally supports cloud AI providers including Pollinations, Gemini, OpenAI DALL-E, Stability AI, and HuggingFace. Fully autonomous package with its own TOML configuration.",
     "lazy_load": true,
     "is_class_based": true,
     "commands": {},
     "tool_schema": [
         {
-            "name": "IMAGE_GEN__generate_image",
             "description": "Generates an image from a text description. Uses the configured provider.",
+            "name": "IMAGE_GEN__generate_image",
             "parameters": {
-                "type": "object",
                 "required": [
                     "prompt"
                 ],
+                "type": "object",
                 "properties": {
-                    "prompt": {
-                        "type": "string",
-                        "description": "Detailed description of the image or photo to generate. Translate to English if needed."
-                    },
-                    "provider": {
-                        "type": "string",
-                        "description": "Optional: override the configured provider for this call only. Values: 'swarmui' (local SwarmUI backend), 'huggingface', 'pollinations', 'gemini', 'openai', 'stability', 'airforce', 'horde'. Leave empty to use the provider configured by the user."
+                    "hf_server": {
+                        "description": "Optional: HuggingFace target server. Values: 'hf-inference', 'fal-ai', 'together', 'replicate', 'nebius', 'black-forest-labs'. Only used when provider is 'huggingface'.",
+                        "type": "string"
                     },
                     "model": {
-                        "type": "string",
-                        "description": "Optional: override the model for this call only. For HuggingFace use full repo IDs like 'black-forest-labs/FLUX.1-schnell'."
+                        "description": "Optional: override the model for this call only. For HuggingFace use full repo IDs like 'black-forest-labs/FLUX.1-schnell'.",
+                        "type": "string"
                     },
-                    "hf_server": {
-                        "type": "string",
-                        "description": "Optional: HuggingFace target server. Values: 'hf-inference', 'fal-ai', 'together', 'replicate', 'nebius', 'black-forest-labs'. Only used when provider is 'huggingface'."
+                    "prompt": {
+                        "description": "Detailed description of the image or photo to generate. Translate to English if needed.",
+                        "type": "string"
+                    },
+                    "provider": {
+                        "description": "Optional: override the configured provider for this call only. Values: 'swarmui' (local SwarmUI backend), 'huggingface', 'pollinations', 'gemini', 'openai', 'stability', 'airforce', 'horde'. Leave empty to use the provider configured by the user.",
+                        "type": "string"
                     }
                 }
             }
         },
         {
-            "name": "IMAGE_GEN__probe_providers",
             "description": "Tests all image generation providers and HuggingFace servers to see which ones are working. Returns a diagnostic report. Use when the user asks to check, test or diagnose providers, or when image generation keeps failing.",
+            "name": "IMAGE_GEN__probe_providers",
             "parameters": {
-                "type": "object",
                 "required": [],
+                "type": "object",
                 "properties": {
                     "api_key": {
-                        "type": "string",
-                        "description": "Optional HuggingFace API key to use for the probe. Leave empty to use the one from configuration."
+                        "description": "Optional HuggingFace API key to use for the probe. Leave empty to use the one from configuration.",
+                        "type": "string"
                     }
                 }
             }
         },
         {
-            "name": "IMAGE_GEN__check_local_status",
             "description": "Checks the status of the local image generation backend (SwarmUI). Returns a diagnostic report including connectivity, version, available models, and supported samplers/schedulers. Use when the user asks about local generation status, wants to list local models, or troubleshoot local issues.",
+            "name": "IMAGE_GEN__check_local_status",
             "parameters": {
-                "type": "object",
-                "required": []
+                "required": [],
+                "type": "object"
             }
         }
     ],
     "slash_commands": [
         {
-            "id": "img",
-            "manifest_version": "1",
             "aliases": [
                 "/img",
                 "/image",
@@ -69,11 +67,13 @@
                 "/foto"
             ],
             "description": "Generates an AI image from a text description",
-            "usage": "/img <descrizione>",
-            "example": "/img foto fotorealistica di un gatto su Marte",
+            "example": "/img photorealistic photo of a cat on Mars",
             "icon": "ðŸ–¼ï¸",
+            "id": "img",
+            "manifest_version": "1",
             "method": "generate_image",
-            "requires_args": true
+            "requires_args": true,
+            "usage": "/img <description>"
         }
     ],
     "icon": "<i class=\"fas fa-image\"></i>",

@@ -45,27 +45,27 @@ class HuggingFaceProvider:
             )
 
         if not model:
-            model = "black-forest-labs/FLUX.1-schnell"  # Imposta un modello di default valido se assente
+            model = "black-forest-labs/FLUX.1-schnell"  # Set a valid default model if missing
 
-        # Mappatura degli alias (selezionati tipicamente nella configurazione o UI)
-        # ai repository reali di HuggingFace per evitare l'errore 404/410.
+        # Map short aliases (typically selected in config or UI)
+        # to real HuggingFace repositories to avoid 404/410 errors.
         aliases = {
             "flux": "black-forest-labs/FLUX.1-schnell",
             "flux-schnell": "black-forest-labs/FLUX.1-schnell",
             "flux-dev": "black-forest-labs/FLUX.1-dev",
-            "flux-pro": "black-forest-labs/FLUX.1-schnell",  # Fallback a schnell se pro non accessibile via SDK gratuito
+            "flux-pro": "black-forest-labs/FLUX.1-schnell",  # Fallback to schnell if pro is not accessible on free SDK tier
             "flux-realism": "black-forest-labs/FLUX.1-schnell",
             "sdxl": "stabilityai/stable-diffusion-xl-base-1.0",
             "sd3": "stabilityai/stable-diffusion-3.5-large",
             "turbo": "stabilityai/sdxl-turbo",
         }
         
-        # Sostituisce il modello se esiste negli alias, altrimenti usa quello passato
+        # Replace model if present in aliases, otherwise use the passed model
         actual_model = aliases.get(model.lower().strip(), model)
 
         eng_prompt = ensure_english_prompt(prompt)
         safe_api_key = api_key[:4] + "***" + api_key[-4:] if len(api_key) > 8 else "***"
-        log_debug(f"[HuggingFace SDK] Inizio generazione. original_model={model} mapped_model={actual_model} prompt={eng_prompt[:60]} key={safe_api_key}")
+        log_debug(f"[HuggingFace SDK] Starting generation. original_model={model} mapped_model={actual_model} prompt={eng_prompt[:60]} key={safe_api_key}")
 
         # Build kwargs — only pass supported params
         kwargs = {
@@ -95,23 +95,23 @@ class HuggingFaceProvider:
         if seed is not None and seed != -1:
             kwargs["seed"] = seed
 
-        log_debug(f"[HuggingFace SDK] hf_provider ricevuto come parametro: '{hf_provider}'")        
+        log_debug(f"[HuggingFace SDK] hf_provider received as parameter: '{hf_provider}'")        
             
         try:
             # Force hf-inference or external provider (e.g., together)
             client = InferenceClient(provider=hf_provider, api_key=api_key)
-            log_debug(f"[HuggingFace SDK] Client inizializzato con provider '{hf_provider}'")
+            log_debug(f"[HuggingFace SDK] Client initialized with provider '{hf_provider}'")
             log_debug(f"[HuggingFace SDK] Calling text_to_image with kwargs: {kwargs}")
             
             # Using parameters wrapping as sometimes external providers require parameters explicitly
             # but standard SDK `text_to_image` signature unpacks kwargs. We pass them as **kwargs.
             pil_image = client.text_to_image(**kwargs)
-            log_debug("[HuggingFace SDK] text_to_image completato con successo al primo tentativo.")
+            log_debug("[HuggingFace SDK] text_to_image completed successfully on first attempt.")
         except Exception as e:
             err = str(e)
             err_type = type(e).__name__
-            log_debug(f"[HuggingFace SDK] Errore di tipo '{err_type}' durante la generazione.")
-            log_debug(f"[HuggingFace SDK] Traceback completo:\n{traceback.format_exc()}")
+            log_debug(f"[HuggingFace SDK] Error of type '{err_type}' during generation.")
+            log_debug(f"[HuggingFace SDK] Full traceback:\n{traceback.format_exc()}")
             
             # Identify known HTTP errors dynamically
             status_code = None
@@ -120,29 +120,29 @@ class HuggingFaceProvider:
             
             friendly_err = err
             if status_code:
-                log_debug(f"[HuggingFace SDK] HTTP Status Code intercettato: {status_code}")
+                log_debug(f"[HuggingFace SDK] Intercepted HTTP Status Code: {status_code}")
                 if status_code == 401:
-                    friendly_err = f"API Key non valida o mancante (401 Unauthorized) per il provider '{hf_provider}'."
+                    friendly_err = f"Invalid or missing API key (401 Unauthorized) for provider '{hf_provider}'."
                 elif status_code == 403:
-                    friendly_err = f"Accesso negato (403 Forbidden). Verifica i permessi per '{actual_model}' o per il provider '{hf_provider}'."
+                    friendly_err = f"Access denied (403 Forbidden). Check permissions for '{actual_model}' or provider '{hf_provider}'."
                 elif status_code == 404:
-                    friendly_err = f"Modello '{actual_model}' non trovato (404 Not Found). Potrebbe non essere supportato dal provider '{hf_provider}'."
+                    friendly_err = f"Model '{actual_model}' not found (404 Not Found). It may not be supported by provider '{hf_provider}'."
                 elif status_code == 410:
-                    friendly_err = f"Modello rimosso (410 Gone). Il modello '{actual_model}' non è più disponibile o è stato rimosso dal provider '{hf_provider}'."
+                    friendly_err = f"Model removed (410 Gone). Model '{actual_model}' is no longer available on provider '{hf_provider}'."
                 elif status_code == 429:
-                    friendly_err = "Limite di richieste superato (429 Too Many Requests). Attendi qualche istante e riprova."
+                    friendly_err = "Rate limit exceeded (429 Too Many Requests). Please wait a moment and try again."
                 elif status_code == 500:
-                    friendly_err = f"Errore interno del server (500). Il provider '{hf_provider}' sta avendo problemi temporanei."
+                    friendly_err = f"Internal server error (500). Provider '{hf_provider}' is experiencing temporary issues."
                 elif status_code == 503:
-                    friendly_err = "Servizio non disponibile (503 Service Unavailable). Il modello sta caricando o il server è sovraccarico."
+                    friendly_err = "Service unavailable (503 Service Unavailable). The model is loading or the server is overloaded."
                 
-                # Se abbiamo intercettato un errore di rete chiaro, possiamo propagarlo subito per evitare retry inutili
+                # If we intercepted a clear HTTP auth/model error, propagate immediately to avoid useless retries
                 if status_code in (401, 403, 404, 410):
                     raise Exception(f"HuggingFace SDK error: {friendly_err}")
             
             # Retry without optional params that some models don't support
             if any(k in err for k in ("negative_prompt", "num_inference_steps", "scheduler", "guidance_scale")):
-                log_debug("[HuggingFace SDK] Parametro non supportato rilevato, tento retry con parametri minimi...")
+                log_debug("[HuggingFace SDK] Unsupported parameter detected, retrying with minimal parameters...")
                 try:
                     client = InferenceClient(provider=hf_provider, api_key=api_key)
                     pil_image = client.text_to_image(
@@ -151,10 +151,10 @@ class HuggingFaceProvider:
                         width=width,
                         height=height
                     )
-                    log_debug("[HuggingFace SDK] text_to_image completato con successo al secondo tentativo (retry).")
+                    log_debug("[HuggingFace SDK] text_to_image completed successfully on second attempt (retry).")
                 except Exception as e2:
-                    log_debug(f"[HuggingFace SDK] Errore anche nel retry:\n{traceback.format_exc()}")
-                    raise Exception(f"HuggingFace SDK error: Retry fallito. {str(e2)}")
+                    log_debug(f"[HuggingFace SDK] Error on retry as well:\n{traceback.format_exc()}")
+                    raise Exception(f"HuggingFace SDK error: Retry failed. {str(e2)}")
             else:
                 raise Exception(f"HuggingFace SDK error: {friendly_err}")
 
