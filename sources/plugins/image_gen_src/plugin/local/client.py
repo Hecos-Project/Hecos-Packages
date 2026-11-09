@@ -20,14 +20,22 @@ except ImportError:
     requests = None  # type: ignore
 
 try:
-    from hecos_sdk import logger
+    from hecos.core.logging import logger
 except ImportError:
-    class _L:
-        def info(self, *a): print("[SWARM_CLIENT]", *a)
-        def warning(self, *a): print("[SWARM_CLIENT WARN]", *a)
-        def error(self, *a): print("[SWARM_CLIENT ERR]", *a)
-        def debug(self, *a): pass
-    logger = _L()
+    try:
+        from hecos_sdk import logger
+    except ImportError:
+        class _DummyLogger:
+            def _safe(self, prefix, *a):
+                try:
+                    print(prefix, *a)
+                except Exception:
+                    print(prefix, *[str(x).encode('ascii', 'replace').decode('ascii') for x in a])
+            def error(self, *a): self._safe("[CLIENT ERR]", *a)
+            def info(self, *a):  self._safe("[CLIENT]", *a)
+            def warning(self, *a): self._safe("[CLIENT WARN]", *a)
+            def debug(self, *a): pass
+        logger = _DummyLogger()
 
 
 class SwarmUIError(Exception):

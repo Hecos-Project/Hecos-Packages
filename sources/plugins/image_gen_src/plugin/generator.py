@@ -7,18 +7,27 @@ handles key rotation, retry logic, and delegates to the provider engine.
 import os
 
 try:
-    from hecos_sdk import logger
+    from hecos.core.logging import logger
     from hecos.core.i18n import translator
 except ImportError:
-    class _L:
-        def info(self, *a): print("[GENERATOR]", *a)
-        def warning(self, *a): print("[GENERATOR WARN]", *a)
-        def error(self, *a): print("[GENERATOR ERR]", *a)
-        def debug(self, *a): pass
-    logger = _L()
-    class translator:
-        @staticmethod
-        def t(k, **kw): return k
+    try:
+        from hecos_sdk import logger
+        from hecos.core.i18n import translator
+    except ImportError:
+        class _L:
+            def _safe(self, prefix, *a):
+                try:
+                    print(prefix, *a)
+                except Exception:
+                    print(prefix, *[str(x).encode('ascii', 'replace').decode('ascii') for x in a])
+            def info(self, *a): self._safe("[GENERATOR]", *a)
+            def warning(self, *a): self._safe("[GENERATOR WARN]", *a)
+            def error(self, *a): self._safe("[GENERATOR ERR]", *a)
+            def debug(self, *a): pass
+        logger = _L()
+        class translator:
+            @staticmethod
+            def t(k, **kw): return k
 
 try:
     from igen_config.config_manager import get_image_gen_config, save_image_gen_section, get_effective_config
@@ -193,14 +202,14 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
         loras                 = cfg.get("loras", [])
 
         if provider_override or model_override or hf_server_override:
-            logger.info(f"[GENERATOR] Active override → provider={provider}, model={model}, hf_provider={hf_provider}")
+            logger.info(f"[GENERATOR] Active override -> provider={provider}, model={model}, hf_provider={hf_provider}")
 
         if show_meta_chat:
             hf_suffix = f", HF Server: `{hf_provider}`" if provider == "huggingface" else ""
             meta_str = f"\n\n> **[Image Gen Config]** Provider: `{provider}`, Model: `{model}`, Seed: `{seed}`, CFG: `{guidance}`, Sampler: `{sampler}`, Steps: `{steps}`{hf_suffix}"
 
         final_width, final_height = resolve_dimensions(aspect_ratio, width, height)
-        logger.info(f"[GENERATOR] Aspect ratio '{aspect_ratio}' → {final_width}×{final_height}")
+        logger.info(f"[GENERATOR] Aspect ratio '{aspect_ratio}' -> {final_width}x{final_height}")
 
         final_prompt = build_prompt(
             raw_prompt=raw_prompt, style=style, auto_enrich=auto_enrich,

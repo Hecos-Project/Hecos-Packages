@@ -14,14 +14,22 @@ import time
 from typing import Optional
 
 try:
-    from hecos_sdk import logger
+    from hecos.core.logging import logger
 except ImportError:
-    class _L:
-        def info(self, *a): print("[LOCAL_MODELS]", *a)
-        def warning(self, *a): print("[LOCAL_MODELS WARN]", *a)
-        def error(self, *a): print("[LOCAL_MODELS ERR]", *a)
-        def debug(self, *a): pass
-    logger = _L()
+    try:
+        from hecos_sdk import logger
+    except ImportError:
+        class _DummyLogger:
+            def _safe(self, prefix, *a):
+                try:
+                    print(prefix, *a)
+                except Exception:
+                    print(prefix, *[str(x).encode('ascii', 'replace').decode('ascii') for x in a])
+            def error(self, *a): self._safe("[MODELS ERR]", *a)
+            def info(self, *a):  self._safe("[MODELS]", *a)
+            def warning(self, *a): self._safe("[MODELS WARN]", *a)
+            def debug(self, *a): pass
+        logger = _DummyLogger()
 
 
 # ── Architecture detection patterns ──────────────────────────────────────

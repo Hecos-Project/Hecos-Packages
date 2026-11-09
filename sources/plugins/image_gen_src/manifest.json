@@ -1,7 +1,7 @@
 {
     "tag": "IMAGE_GEN",
     "name": "Image Generation",
-    "version": "2.2.6",
+    "version": "2.2.7",
     "description": "AI Image Generation - Generates images from text prompts with priority support for local backends (SwarmUI/ComfyUI on port 7801). Additionally supports cloud AI providers including Pollinations, Gemini, OpenAI DALL-E, Stability AI, and HuggingFace. Fully autonomous package with its own TOML configuration.",
     "lazy_load": true,
     "is_class_based": true,

@@ -22,13 +22,22 @@ from ..local.models import discover_models, get_default_model
 from .utils import log_debug, save_image_bytes
 
 try:
-    from hecos_sdk import logger
+    from hecos.core.logging import logger
 except ImportError:
-    class _L:
-        def info(self, *a): print("[SWARMUI_PROVIDER]", *a)
-        def error(self, *a): print("[SWARMUI_PROVIDER ERR]", *a)
-        def debug(self, *a): pass
-    logger = _L()
+    try:
+        from hecos_sdk import logger
+    except ImportError:
+        class _DummyLogger:
+            def _safe(self, prefix, *a):
+                try:
+                    print(prefix, *a)
+                except Exception:
+                    print(prefix, *[str(x).encode('ascii', 'replace').decode('ascii') for x in a])
+            def error(self, *a): self._safe("[SWARMUI ERR]", *a)
+            def info(self, *a):  self._safe("[SWARMUI]", *a)
+            def warning(self, *a): self._safe("[SWARMUI WARN]", *a)
+            def debug(self, *a): pass
+        logger = _DummyLogger()
 
 
 def _get_local_config() -> dict:

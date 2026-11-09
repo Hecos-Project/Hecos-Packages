@@ -155,6 +155,9 @@ def _build_single_package(target_dir, packages_dir):
         zf.writestr("hpkg_manifest.toml", final_toml)
         for full, rel in files_to_pack:
             zf.write(full, rel)
+
+    # Aggiorna il manifest anche su disco con i file_hashes e la signature generati
+    manifest_path.write_bytes(final_toml)
             
     size_kb = out_path.stat().st_size / 1024
     log_info(f"DONE -> {out_path} ({size_kb:.1f} KB)")

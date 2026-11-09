@@ -4,12 +4,22 @@ Thin wrapper: registers the tool, delegates all logic to sub-modules.
 """
 
 try:
-    from hecos_sdk import logger
+    from hecos.core.logging import logger
 except ImportError:
-    class _DummyLogger:
-        def error(self, *a): print("[IMAGE_GEN ERR]", *a)
-        def info(self, *a):  print("[IMAGE_GEN]", *a)
-    logger = _DummyLogger()
+    try:
+        from hecos_sdk import logger
+    except ImportError:
+        class _DummyLogger:
+            def _safe(self, prefix, *a):
+                try:
+                    print(prefix, *a)
+                except Exception:
+                    print(prefix, *[str(x).encode('ascii', 'replace').decode('ascii') for x in a])
+            def error(self, *a): self._safe("[MAIN ERR]", *a)
+            def info(self, *a):  self._safe("[MAIN]", *a)
+            def warning(self, *a): self._safe("[MAIN WARN]", *a)
+            def debug(self, *a): pass
+        logger = _DummyLogger()
 
 from .generator import run_generation
 from .providers.probe import probe_all_providers
