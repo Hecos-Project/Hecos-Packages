@@ -1,0 +1,26 @@
+{
+  "id": "base_man_deep",
+  "name": "Man 1 (Deep & Resonant)",
+  "description": "Deep male voice with rich chest resonance and commanding authority.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Ma la volpe col suo balzo ha raggiunto il quieto fante all'ombra del tiglio fiorito.",
+  "source_type": "synthetic_fish",
+  "source_seed": 101,
+  "pitch_semitones": -3.5,
+  "pitch_dynamics": 1.05,
+  "vocal_tract_ratio": 0.88,
+  "breathiness": 0.05,
+  "roughness": 0.12,
+  "tremolo": 0.0,
+  "body_gain_db": 4.5,
+  "warmth_gain_db": 2.0,
+  "presence_gain_db": 1.0,
+  "air_gain_db": -1.0,
+  "tags": [
+    "male",
+    "deep",
+    "baritone",
+    "chest"
+  ]
+}

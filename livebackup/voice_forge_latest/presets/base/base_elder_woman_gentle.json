@@ -1,0 +1,26 @@
+{
+  "id": "base_elder_woman_gentle",
+  "name": "Elderly Woman 1 (Gentle Grandmother)",
+  "description": "Loving elderly woman voice with gentle throat warmth and delicate tremor.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Ma la volpe col suo balzo ha raggiunto il quieto fante all'ombra del tiglio fiorito.",
+  "source_type": "synthetic_fish",
+  "source_seed": 701,
+  "pitch_semitones": 1.0,
+  "pitch_dynamics": 0.95,
+  "vocal_tract_ratio": 1.02,
+  "breathiness": 0.3,
+  "roughness": 0.2,
+  "tremolo": 0.45,
+  "body_gain_db": 1.0,
+  "warmth_gain_db": 3.0,
+  "presence_gain_db": 0.5,
+  "air_gain_db": 1.5,
+  "tags": [
+    "elder",
+    "female",
+    "grandmother",
+    "gentle"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "base_child_little_boy",
+  "name": "Child 2 (Little Boy 7yo)",
+  "description": "Seven-year-old boy timbre with joyful bounce.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Ascoltami bene: questo è un momento straordinario, e ogni dettaglio può fare davvero la differenza!",
+  "source_type": "synthetic_fish",
+  "source_seed": 502,
+  "pitch_semitones": 5.0,
+  "pitch_dynamics": 1.3,
+  "vocal_tract_ratio": 1.28,
+  "breathiness": 0.1,
+  "roughness": 0.08,
+  "tremolo": 0.0,
+  "body_gain_db": -3.0,
+  "warmth_gain_db": 0.0,
+  "presence_gain_db": 2.5,
+  "air_gain_db": 1.5,
+  "tags": [
+    "child",
+    "boy",
+    "little",
+    "joyful"
+  ]
+}

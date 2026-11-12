@@ -1,0 +1,26 @@
+{
+  "id": "base_girl_teen",
+  "name": "Girl 3 (Teenager Crisp)",
+  "description": "Modern teen girl voice with crisp articulation and lively cadence.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Ascoltami bene: questo è un momento straordinario, e ogni dettaglio può fare davvero la differenza!",
+  "source_type": "synthetic_fish",
+  "source_seed": 403,
+  "pitch_semitones": 3.5,
+  "pitch_dynamics": 1.15,
+  "vocal_tract_ratio": 1.14,
+  "breathiness": 0.1,
+  "roughness": 0.03,
+  "tremolo": 0.0,
+  "body_gain_db": -1.0,
+  "warmth_gain_db": 1.5,
+  "presence_gain_db": 3.0,
+  "air_gain_db": 2.5,
+  "tags": [
+    "girl",
+    "teen",
+    "crisp",
+    "lively"
+  ]
+}

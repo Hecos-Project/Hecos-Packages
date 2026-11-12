@@ -1,0 +1,26 @@
+{
+  "id": "cine_dwarf",
+  "name": "Dwarf (Re della Montagna)",
+  "description": "Stocky mountain dwarf with dense throat resonance, gravelly chest and stubborn intonation.",
+  "category": "cinematic",
+  "language": "it",
+  "reference_text": "Ascoltami bene: questo è un momento straordinario, e ogni dettaglio può fare davvero la differenza!",
+  "source_type": "synthetic_fish",
+  "source_seed": 815,
+  "pitch_semitones": -3.0,
+  "pitch_dynamics": 1.1,
+  "vocal_tract_ratio": 0.86,
+  "breathiness": 0.1,
+  "roughness": 0.45,
+  "tremolo": 0.0,
+  "body_gain_db": 6.0,
+  "warmth_gain_db": 3.5,
+  "presence_gain_db": 1.0,
+  "air_gain_db": -2.0,
+  "tags": [
+    "dwarf",
+    "mountain",
+    "warrior",
+    "fantasy"
+  ]
+}

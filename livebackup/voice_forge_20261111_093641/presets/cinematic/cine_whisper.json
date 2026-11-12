@@ -1,0 +1,26 @@
+{
+  "id": "cine_whisper",
+  "name": "Whisper (Sussurro Notturno)",
+  "description": "Intimate pure whispered speech with near complete harmonic de-voicing.",
+  "category": "cinematic",
+  "language": "it",
+  "reference_text": "Ascoltami bene: questo è un momento straordinario, e ogni dettaglio può fare davvero la differenza!",
+  "source_type": "synthetic_fish",
+  "source_seed": 806,
+  "pitch_semitones": 0.0,
+  "pitch_dynamics": 0.6,
+  "vocal_tract_ratio": 1.04,
+  "breathiness": 0.95,
+  "roughness": 0.05,
+  "tremolo": 0.0,
+  "body_gain_db": -3.0,
+  "warmth_gain_db": 1.0,
+  "presence_gain_db": 2.0,
+  "air_gain_db": 5.0,
+  "tags": [
+    "whisper",
+    "secret",
+    "intimate",
+    "quiet"
+  ]
+}

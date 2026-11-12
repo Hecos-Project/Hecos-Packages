@@ -1,0 +1,26 @@
+{
+  "id": "base_elder_woman_quaver",
+  "name": "Elderly Woman 2 (Frail Quaver)",
+  "description": "Aged female voice with pronounced pitch wobble and thin resonance.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Buongiorno! Ho preparato tutto per la giornata di oggi. Possiamo iniziare subito con il nostro lavoro.",
+  "source_type": "synthetic_fish",
+  "source_seed": 702,
+  "pitch_semitones": 2.0,
+  "pitch_dynamics": 0.8,
+  "vocal_tract_ratio": 1.06,
+  "breathiness": 0.42,
+  "roughness": 0.35,
+  "tremolo": 0.7,
+  "body_gain_db": -1.0,
+  "warmth_gain_db": 1.0,
+  "presence_gain_db": 1.0,
+  "air_gain_db": 2.0,
+  "tags": [
+    "elder",
+    "female",
+    "frail",
+    "tremor"
+  ]
+}

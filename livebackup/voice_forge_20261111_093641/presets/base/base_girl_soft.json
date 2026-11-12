@@ -1,0 +1,26 @@
+{
+  "id": "base_girl_soft",
+  "name": "Girl 2 (Shy & Gentle)",
+  "description": "Soft-spoken, shy girl timbre with airy breathiness.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Buongiorno! Ho preparato tutto per la giornata di oggi. Possiamo iniziare subito con il nostro lavoro.",
+  "source_type": "synthetic_fish",
+  "source_seed": 402,
+  "pitch_semitones": 4.5,
+  "pitch_dynamics": 0.9,
+  "vocal_tract_ratio": 1.2,
+  "breathiness": 0.28,
+  "roughness": 0.02,
+  "tremolo": 0.0,
+  "body_gain_db": -2.0,
+  "warmth_gain_db": 1.0,
+  "presence_gain_db": 1.0,
+  "air_gain_db": 2.5,
+  "tags": [
+    "girl",
+    "shy",
+    "soft",
+    "whisper"
+  ]
+}

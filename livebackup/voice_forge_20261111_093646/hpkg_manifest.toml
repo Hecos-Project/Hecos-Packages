@@ -1,0 +1,149 @@
+author = "Antonio Meloni"
+build_date = "2026-10-18T11:40:04Z"
+category = "MULTIMEDIA"
+changelog = "Fix Fish Speech preview timeout, add HecosProgress bar & English UI, align button sizing, and add full custom preset lifecycle (New, Update, Rename, Reset, Delete)."
+creation_date = "2026-10-18T11:40:04Z"
+date = ""
+dependencies = []
+description = "Vocal Timbre Sculpting & Forging Studio for Fish Speech S2-Pro. Crafts custom, original acoustic voice profiles via WORLD vocoder analysis-synthesis, pitch, formant warping, aperiodicity and spectral morphing without using existing human voices."
+icon = "🎙️"
+icon_url = "https://raw.githubusercontent.com/Hecos-Project/.github/main/profile/Urania_9800_Logo.png"
+id = "voice_forge"
+lazy_load = true
+license = "GPL-3.0"
+manifest_version = "1"
+name = "Voice Forge"
+pip_isolation = "shared"
+pip_requirements = [
+    "pyworld==0.3.5",
+]
+plugin_dir = "."
+python_requires = ">=3.11"
+readme = "README.md"
+readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Elite/main/sources/apps/voice_forge_src/README.md"
+screenshots = [
+    "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/apps/voice_forge_src/preview_1.png",
+]
+signature = "q0fSCZrDNdVCvG74dUAsnvqdEiSeHjCxVxwR9VWG0DNqw3X3wSjFu37uE/JHViuUy4sKeyy8qI+a0l7VDt7tCA=="
+type = "app"
+update_date = "2026-11-11T08:36:46Z"
+version = "1.0.1"
+
+[capabilities]
+has_api_routes = true
+has_config_panel = true
+has_system_calls = false
+has_widget = false
+llm_tools = []
+notes = ""
+slash_commands = []
+syscall_notes = ""
+
+[config_panel]
+api_routes_file = "web/routes.py"
+category = "MULTIMEDIA"
+config_api_get = "/hecos/api/plugins/voice_forge/presets"
+config_api_post = "/hecos/api/plugins/voice_forge/recipe"
+css_file = "web/static/css/voice_forge.css"
+js_file = "web/static/js/vf_core.js"
+js_files = [
+    "web/static/js/vf_api.js",
+    "web/static/js/vf_presets.js",
+    "web/static/js/vf_viz_radar.js",
+    "web/static/js/vf_viz_spectro.js",
+    "web/static/js/vf_viz_formants.js",
+    "web/static/js/vf_mixer.js",
+    "web/static/js/vf_core.js",
+]
+tab_icon = "<i class=\"fas fa-wave-square\"></i>"
+tab_id = "voice-forge"
+tab_label = "Voice Forge"
+template_file = "web/templates/config_voice_forge.html"
+
+[file_hashes]
+"README.md" = "8d05c99276f81dd3a57dc8263a8d91478e87c0a684e97fa7cbd074e8b90115c3"
+"__init__.py" = "7ae52a9baff3e1411d230cb678eec51eb176d90357c47b26b8bd3978c58700c2"
+"analysis/__init__.py" = "ff1f1239e62059e2e9045358ae6eff7d0893c0fb01c2cc2f02ab654fa385a06d"
+"analysis/acoustic_features.py" = "48632cc4417ada04b87a9f18b49031862785a25a24b69818156a90b74f39fc6d"
+"analysis/spectro_data.py" = "30e82de3aba399bb32b6d0e91b08fc3af4963b78df7d486d4448bb7973f92e3e"
+"analysis/voice_dna.py" = "045c23c0a8758a6dee69bd80443c7b46e75bdb9ebb90548472fd73e82ef8d1bb"
+"core/__init__.py" = "84151168580f00711386da7fd9b34c2a5a8a8dcbb0df6651113994d82791617f"
+"core/acoustic_eq.py" = "02397da420f170cfc7dbc6a3ff4162a6ea5b0f7b43f3a4e740a8831d437a8288"
+"core/morphing.py" = "7d9457f4f2a32cfb358a78d56a8704ef4c565d4c763311a3bdbaf929a72a786e"
+"core/multilang_corpus.py" = "10f35cd2383fa624c48dc94cc28ed27a6e1d19b4275383f7c5eb6d82131b70a1"
+"core/pipeline.py" = "46aff5baaf6cac40510aa733a65dd5228621d83e6e44c4c305531c450718e8a1"
+"core/pitch_formant.py" = "8c0fc2886fec0cd84fd8999e7e86ece7694bd19bc63fd438da1fd06913f6a28a"
+"core/recipe.py" = "3322c9414d81af38409eed81d5f9270b29a7d766ed0e6b0e356e3979dc06eca1"
+"core/sources_audio.py" = "79110f7bd825b6ce7e17f19f565207ffd5d12e5aba9744d3a7d492a27cb25199"
+"core/sources_synthetic.py" = "34725638e1c786d87cf4516275453b25fff9ea243c18bac8ad0ef584aba71646"
+"core/texture.py" = "767ee9ddd15bfc9c8ecea47050976e7ddbc95a042fe768694aca306df419faf2"
+"core/world_vocoder.py" = "d6e4fcd997426652f5199473c61d1fc19d6758bf2947b4f49ce0e3de3b703154"
+"data/baked/base_man_deep/meta.json" = "a9743995f363cc70c5d0bdfecdb195d407e949b6541b0a6b9685a759461a65bd"
+"data/baked/base_man_deep/reference.txt" = "068841dd3451c945a2f8db57b7700f37078f197bd2331fdd3282fb0b38739774"
+"data/baked/base_man_deep/reference.wav" = "7fa32f2ea0047f37f6d6619070046fae4c83b1cf43280fa0a61e44b2e475d4c4"
+"data/baked/cine_witch/meta.json" = "b0860a2ed06a6912de41ae92c28ee413fec331da4aaf27b8666e8baa68750737"
+"data/baked/cine_witch/reference.txt" = "8baa7b6fd051b47bc4ce51f219054ad8a1e949290f79ba8ffe199dbaeb0a56f3"
+"data/baked/cine_witch/reference.wav" = "4d6c65031c491a54a748c2d02a237bd85acf81bbdc0e871ad1b2b09b06ea4fed"
+"data/recipes/base_man_deep.json" = "7f6b3421b2584e93edfa15cae896676a9cbbe9530646cac7ab10f5287729aeaa"
+"data/recipes/cine_witch.json" = "3645321e2d8910a285658cff654107087eca1b94a4369f6f3a09763072abb406"
+"library/__init__.py" = "47627d2c7a24edf884ccaecb3da08105cf5b77b43f138318da69840593efae01"
+"library/fish_registry.py" = "40ea9be2485f86ebc243b6631022725d403eed714967f7bd6fcf72202a5e0aa6"
+"library/presets_manager.py" = "36bbe4cdb7abde2ba165f575680da551466ee18ea1194596849cd51d9d0ec190"
+"library/storage.py" = "cb12fb8d8945936e2caed721340bf6516e508b54674148f128250bdc18b6488f"
+"locales/en.json" = "6a682129bd8c5a6418cb366af3085ffffb0442c6dbeb1a1f190e3164b3e1f4a2"
+"locales/it.json" = "046eae52a67f4fe763b2b58941476b549d589708808f66960524cf7a0c3771be"
+"main.py" = "c6df514d781d231e6ae9a20d5d51fa97680a82237b8dd71b5a23b792db809b30"
+"manifest.json" = "759493eec88a75e4f8c7ff5d47a08ce88e83c0dad3530afa9241475b50c45170"
+"presets/base/base_boy_calm.json" = "dea5dede998f6728e4dcc6065b08468f77b58a3484c2d3698a19ddca855351d7"
+"presets/base/base_boy_energetic.json" = "9a6424c9b148ed54f76b51c744b8a446eeabcaebae3686775e38a56cc5c29962"
+"presets/base/base_boy_teen.json" = "62de573036e125385b0a4d0304b480375a650ea5306672c5f0d74c4a7595af71"
+"presets/base/base_child_cheery.json" = "f03cb65045b63d21753f66299091e620f5771cdbcebdc8e6e50fd4120fece022"
+"presets/base/base_child_little_boy.json" = "14685abbd01329dd7f2e2d2381f37bdfe8aae359e1dd33d50a4dffd5f26f7022"
+"presets/base/base_child_little_girl.json" = "b763be9ee7eee9e75f5213ffa538b070ae9052d70aa0557450bb9a3ed6bf06ab"
+"presets/base/base_child_sleepy.json" = "b3b3b698b373fb11da816fc231d0eefcf964189cf89d71cbb5151c493f5f17a1"
+"presets/base/base_child_storyteller.json" = "194c3318d42a901e65b1176446ec0b99b95b786f05e13331849e6a724b097666"
+"presets/base/base_child_toddler.json" = "eb3eddee44134fa73bdcc9bfe36ccac5d91e5de88abed2f7e514b10038950506"
+"presets/base/base_elder_man_gravel.json" = "2b560287602af94824eee345d16fcabc7f3526d041ad008a35880768b5ade31b"
+"presets/base/base_elder_man_tremor.json" = "5493796e8a867076a95a07e29cb6be960b54bd350207b0850fda1e6dcd09bc7e"
+"presets/base/base_elder_man_wise.json" = "96fbf066926ddf00d75480e8f82a3a5910e82d4fb89f61b4b8236d220e09f7a8"
+"presets/base/base_elder_woman_gentle.json" = "c38bdc2317e9c804dd806af3012250c6378cdff83c1518d238b8d60b253cb69d"
+"presets/base/base_elder_woman_husky.json" = "cf2d895d1f518aeadc0df32d1da57979d9fe38bf52ff484443e0ade738ec5804"
+"presets/base/base_elder_woman_quaver.json" = "c997ac5d3fc5d1d1ad99c4699803872a33007d40d21fa320fbc88789639e29cc"
+"presets/base/base_girl_playful.json" = "369536ecf7dedb43e93fede560564c1396c5768f8e454fea98e03b354773e393"
+"presets/base/base_girl_soft.json" = "feade6f0fb16b229951011d735a6e1d6356f02de13ba94e4af2b6aae11d252c5"
+"presets/base/base_girl_teen.json" = "918e04c12a29f9ba10275020e72e57b8aab7139a61cfc272a04b2c1215b09cc9"
+"presets/base/base_man_crisp.json" = "9d8ad026202f687594daea30e0eb019c9700f9b82f5167aa03ea3fe10fa5d520"
+"presets/base/base_man_deep.json" = "e31e379af9014615db9c9897dc6a364a8e31818b3e8de35bdb41dd435eec830b"
+"presets/base/base_man_warm.json" = "522a49a298b51590f9df6eea0d28364e89c14b81e7ffa79f4dd5d1702b67590e"
+"presets/base/base_woman_bright.json" = "a9c94bac2275ceee970d1d3cc693ef2a856b38a6fbec50a4834e63bdec3d5a39"
+"presets/base/base_woman_velvet.json" = "bd984fbd030766b1ce596d25862d707c9271dcb499a6dadf3f61a3bdc7312526"
+"presets/base/base_woman_warm.json" = "cefe4a07548539f7ae01e50476d06f236d1a198de5f76729f3e3319f36afcae3"
+"presets/cinematic/cine_alien.json" = "670909983f4f292dcaef11306a37844d6adb074f4f28b17c6c7d1d7992ae8c36"
+"presets/cinematic/cine_android.json" = "a80bff6919fd921c405d2d486b2c85fb3578b0bd6b2755c6abff0b8c735d6235"
+"presets/cinematic/cine_angel.json" = "024efd261dac226a3d1c27432b3eaf45484cff47c492b9430cb926f47f939028"
+"presets/cinematic/cine_demon.json" = "519bb60e787a360b3e7fb208f6afa4ab51bd6da4c6dc9a88a55b8a19ae981a5a"
+"presets/cinematic/cine_dwarf.json" = "f951942fb8047257dc57d6d681a0dd6680a726a8da70440f14d707574236fdcb"
+"presets/cinematic/cine_elf.json" = "a029a5d2eb74815c871ffcf96edc60a4d36ab603d42bfe9126589462e9742fce"
+"presets/cinematic/cine_fairy.json" = "7b8c13ed963190cb4eca1e46b5af5067ed898cf225d85d778d435416bbe163ca"
+"presets/cinematic/cine_ghost.json" = "c9b18a3099cbe49fbd0a1fa5cad0629de8cbf7bc04fc17e8c67ca9da4631ad25"
+"presets/cinematic/cine_giant.json" = "245a8e8b45deb21585fa46a091be92b7a4bcd471edc5bf7e3e4c0d67402a3e12"
+"presets/cinematic/cine_goblin.json" = "0d84fb2f81f6142a31fecad755ed02c4c809fe2674c9067301bd7c60b0752194"
+"presets/cinematic/cine_narrator.json" = "40caabd2ab3be63c8a8bc3deeb34cc76b36a53f2d4685800747b494b1ad21097"
+"presets/cinematic/cine_ogre.json" = "54aceae4ec3f7946e90b3f546a46fe6ca73c508a999587e1105310491f5bd3ad"
+"presets/cinematic/cine_siren.json" = "2b808f1adfe6883649a28409561284fa5cb95b702b0aee91ff6ecfa4387b9a59"
+"presets/cinematic/cine_vampire.json" = "17d8ab2e73a64fe65089d8d08bbaf627531cc2c12feaaae0361dabdf5b4882a9"
+"presets/cinematic/cine_whisper.json" = "a9a98bfd4b9c2617cdf8399706d097aab57e3839396eb1bae15c6d4306e26c72"
+"presets/cinematic/cine_witch.json" = "4af73026d10fbb46a45aad93e3255765fde0d90b2ef99909d89a4001525305bd"
+"presets/generate_presets.py" = "6b88dc54fac68678e340a7ce9da23d45167b6bbb462b93752b1d1a2a8f84dc3e"
+"preview.png" = "f97e0d1f75cab436d68d0fd44d7071fa4ed7b2d144730f54bff185e77301028b"
+"preview_1.png" = "f97e0d1f75cab436d68d0fd44d7071fa4ed7b2d144730f54bff185e77301028b"
+"web/routes.py" = "6eba9aca8c8e3f7c763ed03b97c92f4cccfec400d213aa76e4d663602cb99f50"
+"web/static/css/voice_forge.css" = "7872575e56be73e70b2b189cda8344a36711933a190515abd509edb173f0408c"
+"web/static/js/vf_api.js" = "fda974a5e0d11917c26c509123550612c3a652e68dd6b245ec230562644e6800"
+"web/static/js/vf_core.js" = "1ef1960b6a0be12f6e53022c1c3495e5d99d99acd45045e6de6bd26942130be6"
+"web/static/js/vf_mixer.js" = "dfec8ef33cca47199f8afad1e9cca76e99980db3379f5e54c021c5065635a1d6"
+"web/static/js/vf_presets.js" = "fa2e0e79fdf53b7b4018bef5efee0314c8d5b2c0c6808f7008c3e24c382f7fdf"
+"web/static/js/vf_viz_formants.js" = "7ae39424ab1aeff2031a5fe721def29f9354e1589c30d0c40c5128c51369f568"
+"web/static/js/vf_viz_radar.js" = "b9cd1de92f3d93a8417d07a9ce038920ac9b925530cda99e18583989f14ca251"
+"web/static/js/vf_viz_spectro.js" = "424d368bda72a1bc52ac3f06fa7d592ce47bea845f000d48358daadafddcec15"
+"web/templates/config_voice_forge.html" = "31285c7fbcfdae4f507c3b5ff5f4b1add6872bde6f38c92a590829baeb121b12"

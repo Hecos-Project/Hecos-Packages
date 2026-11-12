@@ -1,0 +1,26 @@
+{
+  "id": "base_boy_energetic",
+  "name": "Boy 1 (Energetic & Quick)",
+  "description": "Youthful boy voice full of curiosity, agility, and enthusiasm.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Ascoltami bene: questo è un momento straordinario, e ogni dettaglio può fare davvero la differenza!",
+  "source_type": "synthetic_fish",
+  "source_seed": 301,
+  "pitch_semitones": 4.5,
+  "pitch_dynamics": 1.25,
+  "vocal_tract_ratio": 1.22,
+  "breathiness": 0.08,
+  "roughness": 0.05,
+  "tremolo": 0.0,
+  "body_gain_db": -2.0,
+  "warmth_gain_db": 0.5,
+  "presence_gain_db": 3.0,
+  "air_gain_db": 1.5,
+  "tags": [
+    "boy",
+    "youth",
+    "energetic",
+    "child"
+  ]
+}

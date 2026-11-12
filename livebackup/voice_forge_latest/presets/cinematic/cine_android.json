@@ -1,0 +1,26 @@
+{
+  "id": "cine_android",
+  "name": "Android (Automa Sintetico)",
+  "description": "Mechanical synthesized entity with completely flat monotone pitch dynamics and razor precision.",
+  "category": "cinematic",
+  "language": "it",
+  "reference_text": "Buongiorno! Ho preparato tutto per la giornata di oggi. Possiamo iniziare subito con il nostro lavoro.",
+  "source_type": "synthetic_fish",
+  "source_seed": 804,
+  "pitch_semitones": -1.0,
+  "pitch_dynamics": 0.0,
+  "vocal_tract_ratio": 1.0,
+  "breathiness": 0.0,
+  "roughness": 0.0,
+  "tremolo": 0.0,
+  "body_gain_db": 1.0,
+  "warmth_gain_db": -1.0,
+  "presence_gain_db": 4.0,
+  "air_gain_db": 1.5,
+  "tags": [
+    "android",
+    "robot",
+    "scifi",
+    "monotone"
+  ]
+}

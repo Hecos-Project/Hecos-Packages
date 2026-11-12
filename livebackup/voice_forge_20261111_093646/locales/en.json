@@ -1,0 +1,11 @@
+{
+  "ext_voice_forge_title": "Voice Forge",
+  "ext_voice_forge_desc": "Acoustic studio for sculpting and forging original vocal timbres for Fish Speech S2-Pro.",
+  "ext_vf_reference_audio": "Reference Audio & Text",
+  "ext_vf_presets": "Timbre Presets",
+  "ext_vf_source_synth": "Synthetic Source",
+  "ext_vf_source_real": "Real Voice / Recording",
+  "ext_vf_bake": "Bake & Register in Fish Speech",
+  "ext_vf_radar": "Voice DNA (Biometric Radar)",
+  "ext_vf_spectrogram": "Dynamic Spectral Envelope"
+}

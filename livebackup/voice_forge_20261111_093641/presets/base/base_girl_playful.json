@@ -1,0 +1,26 @@
+{
+  "id": "base_girl_playful",
+  "name": "Girl 1 (Playful & Sweet)",
+  "description": "Sweet, high-spirited young girl voice with delicate harmonics.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Ma la volpe col suo balzo ha raggiunto il quieto fante all'ombra del tiglio fiorito.",
+  "source_type": "synthetic_fish",
+  "source_seed": 401,
+  "pitch_semitones": 5.5,
+  "pitch_dynamics": 1.25,
+  "vocal_tract_ratio": 1.25,
+  "breathiness": 0.14,
+  "roughness": 0.02,
+  "tremolo": 0.0,
+  "body_gain_db": -3.0,
+  "warmth_gain_db": 0.0,
+  "presence_gain_db": 2.5,
+  "air_gain_db": 3.0,
+  "tags": [
+    "girl",
+    "playful",
+    "sweet",
+    "youth"
+  ]
+}

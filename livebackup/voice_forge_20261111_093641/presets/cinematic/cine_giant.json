@@ -1,0 +1,26 @@
+{
+  "id": "cine_giant",
+  "name": "Giant (Titano Colossale)",
+  "description": "Colossal vocal cavity resonating like cavernous granite slabs.",
+  "category": "cinematic",
+  "language": "it",
+  "reference_text": "Ascoltami bene: questo è un momento straordinario, e ogni dettaglio può fare davvero la differenza!",
+  "source_type": "synthetic_fish",
+  "source_seed": 803,
+  "pitch_semitones": -5.5,
+  "pitch_dynamics": 0.85,
+  "vocal_tract_ratio": 0.68,
+  "breathiness": 0.15,
+  "roughness": 0.45,
+  "tremolo": 0.0,
+  "body_gain_db": 8.0,
+  "warmth_gain_db": 4.0,
+  "presence_gain_db": -2.0,
+  "air_gain_db": -4.0,
+  "tags": [
+    "giant",
+    "titan",
+    "huge",
+    "earth"
+  ]
+}

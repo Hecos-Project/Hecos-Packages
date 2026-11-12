@@ -1,0 +1,26 @@
+{
+  "id": "base_elder_man_wise",
+  "name": "Elderly Man 3 (Wise Mentor)",
+  "description": "Noble elder mentor with calm, deliberate pacing and warm gravel.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Ascoltami bene: questo è un momento straordinario, e ogni dettaglio può fare davvero la differenza!",
+  "source_type": "synthetic_fish",
+  "source_seed": 603,
+  "pitch_semitones": -3.0,
+  "pitch_dynamics": 1.05,
+  "vocal_tract_ratio": 0.9,
+  "breathiness": 0.15,
+  "roughness": 0.25,
+  "tremolo": 0.1,
+  "body_gain_db": 3.5,
+  "warmth_gain_db": 3.0,
+  "presence_gain_db": 1.5,
+  "air_gain_db": 0.0,
+  "tags": [
+    "elder",
+    "male",
+    "wise",
+    "mentor"
+  ]
+}

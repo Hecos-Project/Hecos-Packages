@@ -90,23 +90,147 @@ window.builderSourcesData = [];
 window.builderActiveCategoryFilters = new Set();
 
 
+const _BUILDER_DEFAULT_REPOS = [
+    { id: 'repo-1', name: 'Hecos Packages', desc: 'Free / Core Packages', src: 'C:\\Hecos-Packages\\sources', dest: 'C:\\Hecos-Packages\\packages' },
+    { id: 'repo-2', name: 'Hecos Elite', desc: 'Premium Packages', src: 'C:\\Hecos-Elite\\sources', dest: 'C:\\Hecos-Elite\\packages' }
+];
+
+window.builderInitRepos = function() {
+    try {
+        const stored = localStorage.getItem('hpm-builder-repos');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                let mutated = false;
+                parsed.forEach((r, i) => {
+                    if (r && !r.id) {
+                        r.id = 'repo-' + (i + 1);
+                        mutated = true;
+                    }
+                });
+                window.builderRepos = parsed;
+                if (mutated) localStorage.setItem('hpm-builder-repos', JSON.stringify(window.builderRepos));
+                return window.builderRepos;
+            }
+        }
+    } catch (e) {
+        // Fall back to defaults if stored repositories JSON is invalid.
+    }
+    window.builderRepos = _BUILDER_DEFAULT_REPOS.map(r => Object.assign({}, r));
+    localStorage.setItem('hpm-builder-repos', JSON.stringify(window.builderRepos));
+    return window.builderRepos;
+};
+
+window.builderGetActiveRepo = function() {
+    if (!Array.isArray(window.builderRepos) || !window.builderRepos.length) {
+        window.builderInitRepos();
+    }
+    const repos = window.builderRepos || [];
+    if (!repos.length) return { idx: 0, repo: null };
+
+    const sel = document.getElementById('builder-repo-selector');
+    let idx = -1;
+
+    // Ignore placeholder <option value="0"> in static HTML until dropdown is synced with all repos.
+    if (sel && sel.dataset && sel.dataset.reposSynced === '1' && sel.options.length === repos.length) {
+        const parsedSel = parseInt(sel.value, 10);
+        if (!isNaN(parsedSel) && parsedSel >= 0 && parsedSel < repos.length) {
+            idx = parsedSel;
+        }
+    }
+
+    if (idx === -1) {
+        const savedId = localStorage.getItem('hpm-builder-active-repo-id');
+        if (savedId) {
+            idx = repos.findIndex(r => r && r.id === savedId);
+        }
+    }
+
+    if (idx === -1) {
+        const savedIdx = parseInt(localStorage.getItem('hpm-builder-active-repo-idx'), 10);
+        if (!isNaN(savedIdx)) {
+            idx = Math.max(0, Math.min(savedIdx, repos.length - 1));
+        }
+    }
+
+    if (idx < 0 || idx >= repos.length) idx = 0;
+    return { idx, repo: repos[idx] };
+};
+
+window.builderApplyActiveRepo = function(idxOverride) {
+    if (!Array.isArray(window.builderRepos) || !window.builderRepos.length) {
+        window.builderInitRepos();
+    }
+    const repos = window.builderRepos || [];
+    if (!repos.length) return { idx: 0, repo: null };
+
+    let idx;
+    let repo;
+    if (typeof idxOverride === 'number' && !isNaN(idxOverride) && idxOverride >= 0 && idxOverride < repos.length) {
+        idx = idxOverride;
+        repo = repos[idx];
+    } else {
+        const active = window.builderGetActiveRepo();
+        idx = active.idx;
+        repo = active.repo;
+    }
+    if (!repo) return { idx: 0, repo: null };
+
+    if (repo.id) localStorage.setItem('hpm-builder-active-repo-id', repo.id);
+    localStorage.setItem('hpm-builder-active-repo-idx', String(idx));
+    localStorage.setItem('hpm-builder-src', repo.src || '');
+    localStorage.setItem('hpm-builder-dest', repo.dest || '');
+
+    const srcEl = document.getElementById('builder-sources-root');
+    const destEl = document.getElementById('builder-dest-root');
+    const titleEl = document.getElementById('builder-active-repo-name');
+    const sel = document.getElementById('builder-repo-selector');
+
+    if (srcEl) srcEl.value = repo.src || '';
+    if (destEl) destEl.value = repo.dest || '';
+    if (titleEl) titleEl.innerText = (repo.name && repo.name.trim()) ? repo.name : ('Repo ' + (idx + 1));
+    if (sel && sel.dataset && sel.dataset.reposSynced === '1' && idx < sel.options.length) {
+        sel.value = String(idx);
+    }
+
+    return { idx, repo };
+};
+
+window.builderEnsureActiveRepo = function() {
+    window.builderInitRepos();
+    const sel = document.getElementById('builder-repo-selector');
+    if (sel && (sel.dataset.reposSynced !== '1' || sel.options.length !== window.builderRepos.length)) {
+        if (typeof window.builderSyncHeaderDropdown === 'function') {
+            window.builderSyncHeaderDropdown(true);
+        }
+    }
+    return window.builderApplyActiveRepo();
+};
+
 window.builderLoadSetup = function() {
-    const src = localStorage.getItem('hpm-builder-src') || 'C:\\\\Hecos-Packages\\\\sources';
-    const dest = localStorage.getItem('hpm-builder-dest') || 'C:\\\\Hecos-Packages\\\\packages';
-    const cli = localStorage.getItem('hpm-builder-cli') || 'C:\\\\Hecos-Packages\\\\Hecos_HPM_Builder';
-    const priv = localStorage.getItem('hpm-builder-priv') || 'C:\\\\Hecos\\\\data\\\\trusted_keys\\\\hpm_private.pem';
-    const pub = localStorage.getItem('hpm-builder-pub') || 'C:\\\\Hecos\\\\data\\\\trusted_keys';
-    const unpackDest = localStorage.getItem('hpm-builder-unpack') || src;
-    const hecos = localStorage.getItem('hpm-builder-hecos') || 'C:\\\\Hecos\\\\hecos';
-    
+    const active = (typeof window.builderGetActiveRepo === 'function') ? window.builderGetActiveRepo() : null;
     const srcEl = document.getElementById('builder-sources-root');
     const destEl = document.getElementById('builder-dest-root');
     const cliEl = document.getElementById('builder-cli-root');
-    
-    if (srcEl) srcEl.value = src;
-    if (destEl) destEl.value = dest;
+
+    const src = (active && active.repo)
+        ? (active.repo.src || '')
+        : ((srcEl && srcEl.value) || localStorage.getItem('hpm-builder-src') || 'C:\\Hecos-Packages\\sources');
+    const dest = (active && active.repo)
+        ? (active.repo.dest || '')
+        : ((destEl && destEl.value) || localStorage.getItem('hpm-builder-dest') || 'C:\\Hecos-Packages\\packages');
+    const cli = localStorage.getItem('hpm-builder-cli') || 'C:\\Hecos-Packages\\Hecos_HPM_Builder';
+    const priv = localStorage.getItem('hpm-builder-priv') || 'C:\\Hecos\\data\\trusted_keys\\hpm_private.pem';
+    const pub = localStorage.getItem('hpm-builder-pub') || 'C:\\Hecos\\data\\trusted_keys';
+    const unpackDest = localStorage.getItem('hpm-builder-unpack') || src;
+    const hecos = localStorage.getItem('hpm-builder-hecos') || 'C:\\Hecos\\hecos';
+
+    if (srcEl && active && active.repo) srcEl.value = src;
+    else if (srcEl && !srcEl.value) srcEl.value = src;
+    if (destEl && active && active.repo) destEl.value = dest;
+    else if (destEl && !destEl.value) destEl.value = dest;
     if (cliEl) cliEl.value = cli;
-    
+
     return {src, dest, cli, priv, pub, unpackDest, hecos};
 };
 
@@ -149,8 +273,11 @@ window.builderOpenSetup = function() {
     document.getElementById('hpm-builder-setup-modal').style.display='flex';
 };
 
-// Auto load on init
-setTimeout(window.builderLoadSetup, 500);
+// Auto load on init while preserving currently selected repository
+setTimeout(() => {
+    if (typeof window.builderEnsureActiveRepo === 'function') window.builderEnsureActiveRepo();
+    if (typeof window.builderLoadSetup === 'function') window.builderLoadSetup();
+}, 500);
 window.builderInitialLists = {
     author: ['Hecos Developer', 'Antonio Meloni'],
     type: ['plugin', 'persona', 'theme', 'app', 'widget', 'system_app', 'core_module', 'extension', 'skill_pack', 'library'],

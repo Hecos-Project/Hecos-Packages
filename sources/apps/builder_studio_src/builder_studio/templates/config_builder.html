@@ -332,6 +332,9 @@
   (function() {
       const checkAndRun = () => {
           if (typeof window.builderRefreshSources === 'function') {
+              if (typeof window.builderEnsureActiveRepo === 'function') {
+                  window.builderEnsureActiveRepo();
+              }
               window.builderRefreshSources();
           } else {
               setTimeout(checkAndRun, 100);
@@ -512,22 +515,14 @@ document.addEventListener('keydown', function(e) {
 
 <script>
 // â”€â”€ Repository Management Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-window.builderRepos = [];
-window.builderCurrentRepoIndex = 0;
+window.builderRepos = window.builderRepos || [];
+window.builderCurrentRepoIndex = window.builderCurrentRepoIndex || 0;
 
 function _initBuilderRepos() {
-    try {
-        const stored = localStorage.getItem('hpm-builder-repos');
-        if (stored) {
-            window.builderRepos = JSON.parse(stored);
-        } else {
-            window.builderRepos = [
-                { id: 'repo-1', name: 'Hecos Packages', desc: 'Free / Core Packages', src: 'C:\\Hecos-Packages\\sources', dest: 'C:\\Hecos-Packages\\packages' },
-                { id: 'repo-2', name: 'Hecos Elite', desc: 'Premium Packages', src: 'C:\\Hecos-Elite\\sources', dest: 'C:\\Hecos-Elite\\packages' }
-            ];
-            localStorage.setItem('hpm-builder-repos', JSON.stringify(window.builderRepos));
-        }
-    } catch(e) { window.builderRepos = []; }
+    if (typeof window.builderInitRepos === 'function') {
+        return window.builderInitRepos();
+    }
+    return window.builderRepos;
 }
 
 window.builderRenderSetupTabs = function() {
@@ -621,31 +616,47 @@ window.builderSaveAllSetup = function() {
 };
 
 window.builderSyncHeaderDropdown = function(skipTrigger) {
-    if (!window.builderRepos.length) _initBuilderRepos();
+    if (!window.builderRepos || !window.builderRepos.length) _initBuilderRepos();
     const sel = document.getElementById('builder-repo-selector');
     if (!sel) return;
-    const prev = sel.value;
-    let h = '';
+
+    const active = (typeof window.builderGetActiveRepo === 'function')
+        ? window.builderGetActiveRepo()
+        : { idx: 0, repo: window.builderRepos[0] };
+
+    sel.innerHTML = '';
     window.builderRepos.forEach((r, i) => {
         const name = (r.name && r.name.trim()) ? r.name : ('Repo ' + (i+1));
-        h += '<option value="' + i + '">' + name + '</option>';
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = name;
+        sel.appendChild(opt);
     });
-    sel.innerHTML = h;
-    if (prev && parseInt(prev) < window.builderRepos.length) sel.value = prev;
+    sel.dataset.reposSynced = '1';
+
+    const targetIdx = (active && typeof active.idx === 'number' && active.idx >= 0 && active.idx < window.builderRepos.length)
+        ? active.idx
+        : 0;
+    sel.value = String(targetIdx);
+
+    if (typeof window.builderApplyActiveRepo === 'function') {
+        window.builderApplyActiveRepo(targetIdx);
+    }
     if (!skipTrigger) window.builderChangeRepo();
 };
 
 window.builderChangeRepo = function() {
     const sel = document.getElementById('builder-repo-selector');
     if (!sel || !window.builderRepos || !window.builderRepos.length) return;
-    const idx = parseInt(sel.value) || 0;
-    const r = window.builderRepos[idx];
+    let idx = parseInt(sel.value, 10);
+    if (isNaN(idx) || idx < 0 || idx >= window.builderRepos.length) idx = 0;
+
+    const resolved = (typeof window.builderApplyActiveRepo === 'function')
+        ? window.builderApplyActiveRepo(idx)
+        : { idx, repo: window.builderRepos[idx] };
+    const r = resolved && resolved.repo;
     if (r) {
-        document.getElementById('builder-sources-root').value = r.src;
-        document.getElementById('builder-dest-root').value = r.dest;
-        const titleSpan = document.getElementById('builder-active-repo-name');
-        if (titleSpan) titleSpan.innerText = r.name || 'Unnamed Repository';
-        window.builderLog('Repository loaded: ' + r.name, 'info');
+        window.builderLog('Repository loaded: ' + (r.name || ('Repo ' + (idx + 1))), 'info');
         if (typeof window.builderRefreshSources === 'function') window.builderRefreshSources();
     }
 };
@@ -735,7 +746,9 @@ window.builderBackupPackage = async function() {
     }
 };
 
-setTimeout(() => { _initBuilderRepos(); window.builderSyncHeaderDropdown(true); }, 600);
+_initBuilderRepos();
+window.builderSyncHeaderDropdown(true);
+setTimeout(() => { _initBuilderRepos(); window.builderSyncHeaderDropdown(true); }, 100);
 </script>
 
 <div id="builder-info-modal" class="modal-bg" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center;">

@@ -1,0 +1,26 @@
+{
+  "id": "base_woman_warm",
+  "name": "Woman 2 (Warm & Melodic)",
+  "description": "Round, compassionate female voice with rich maternal and empathetic tones.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Buongiorno! Ho preparato tutto per la giornata di oggi. Possiamo iniziare subito con il nostro lavoro.",
+  "source_type": "synthetic_fish",
+  "source_seed": 202,
+  "pitch_semitones": 1.5,
+  "pitch_dynamics": 1.05,
+  "vocal_tract_ratio": 1.05,
+  "breathiness": 0.12,
+  "roughness": 0.03,
+  "tremolo": 0.0,
+  "body_gain_db": 1.5,
+  "warmth_gain_db": 3.5,
+  "presence_gain_db": 1.0,
+  "air_gain_db": 1.5,
+  "tags": [
+    "female",
+    "warm",
+    "melodic",
+    "soft"
+  ]
+}

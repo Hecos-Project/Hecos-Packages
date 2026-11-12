@@ -1,0 +1,26 @@
+{
+  "id": "base_boy_teen",
+  "name": "Boy 3 (Teenager Transition)",
+  "description": "Adolescent male voice with slight cracking and developing chest cavity.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Buongiorno! Ho preparato tutto per la giornata di oggi. Possiamo iniziare subito con il nostro lavoro.",
+  "source_type": "synthetic_fish",
+  "source_seed": 303,
+  "pitch_semitones": 1.5,
+  "pitch_dynamics": 1.1,
+  "vocal_tract_ratio": 1.08,
+  "breathiness": 0.15,
+  "roughness": 0.14,
+  "tremolo": 0.0,
+  "body_gain_db": 0.5,
+  "warmth_gain_db": 1.0,
+  "presence_gain_db": 2.0,
+  "air_gain_db": 1.0,
+  "tags": [
+    "boy",
+    "teen",
+    "adolescent",
+    "natural"
+  ]
+}

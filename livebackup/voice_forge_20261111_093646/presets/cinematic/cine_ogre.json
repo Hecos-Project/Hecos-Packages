@@ -1,0 +1,26 @@
+{
+  "id": "cine_ogre",
+  "name": "Ogre (Orco delle Caverne)",
+  "description": "Brutal, sluggish ogre with thick throat resonance and heavy glottal scraping.",
+  "category": "cinematic",
+  "language": "it",
+  "reference_text": "Ma la volpe col suo balzo ha raggiunto il quieto fante all'ombra del tiglio fiorito.",
+  "source_type": "synthetic_fish",
+  "source_seed": 807,
+  "pitch_semitones": -4.5,
+  "pitch_dynamics": 0.8,
+  "vocal_tract_ratio": 0.76,
+  "breathiness": 0.2,
+  "roughness": 0.7,
+  "tremolo": 0.0,
+  "body_gain_db": 6.0,
+  "warmth_gain_db": 2.5,
+  "presence_gain_db": 0.5,
+  "air_gain_db": -3.5,
+  "tags": [
+    "ogre",
+    "monster",
+    "heavy",
+    "cave"
+  ]
+}

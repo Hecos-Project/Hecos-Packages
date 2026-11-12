@@ -1,0 +1,26 @@
+{
+  "id": "cine_goblin",
+  "name": "Goblin (Gnomo / Folletto Malizioso)",
+  "description": "Shrill, pinched small-cavity voice with frantic jitter and sharp presence.",
+  "category": "cinematic",
+  "language": "it",
+  "reference_text": "Ascoltami bene: questo è un momento straordinario, e ogni dettaglio può fare davvero la differenza!",
+  "source_type": "synthetic_fish",
+  "source_seed": 808,
+  "pitch_semitones": 5.5,
+  "pitch_dynamics": 1.5,
+  "vocal_tract_ratio": 1.32,
+  "breathiness": 0.15,
+  "roughness": 0.55,
+  "tremolo": 0.2,
+  "body_gain_db": -4.0,
+  "warmth_gain_db": -1.5,
+  "presence_gain_db": 5.5,
+  "air_gain_db": 3.0,
+  "tags": [
+    "goblin",
+    "shrewd",
+    "mischief",
+    "high"
+  ]
+}

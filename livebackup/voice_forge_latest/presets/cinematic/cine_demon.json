@@ -1,0 +1,26 @@
+{
+  "id": "cine_demon",
+  "name": "Demon (Entità Infernale)",
+  "description": "Guttural abyss voice with massive vocal tract, sub-octave rumble, and sinister rasp.",
+  "category": "cinematic",
+  "language": "it",
+  "reference_text": "Ma la volpe col suo balzo ha raggiunto il quieto fante all'ombra del tiglio fiorito.",
+  "source_type": "synthetic_fish",
+  "source_seed": 802,
+  "pitch_semitones": -6.0,
+  "pitch_dynamics": 0.9,
+  "vocal_tract_ratio": 0.72,
+  "breathiness": 0.25,
+  "roughness": 0.85,
+  "tremolo": 0.0,
+  "body_gain_db": 7.0,
+  "warmth_gain_db": 3.0,
+  "presence_gain_db": -1.0,
+  "air_gain_db": -3.0,
+  "tags": [
+    "demon",
+    "dark",
+    "infernal",
+    "guttural"
+  ]
+}

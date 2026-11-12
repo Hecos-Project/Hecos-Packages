@@ -1,0 +1,26 @@
+{
+  "id": "base_child_toddler",
+  "name": "Child 1 (Toddler High)",
+  "description": "Very young child / toddler voice with tiny vocal tract and high pitch.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Ma la volpe col suo balzo ha raggiunto il quieto fante all'ombra del tiglio fiorito.",
+  "source_type": "synthetic_fish",
+  "source_seed": 501,
+  "pitch_semitones": 7.0,
+  "pitch_dynamics": 1.35,
+  "vocal_tract_ratio": 1.35,
+  "breathiness": 0.2,
+  "roughness": 0.06,
+  "tremolo": 0.0,
+  "body_gain_db": -4.0,
+  "warmth_gain_db": -1.0,
+  "presence_gain_db": 2.0,
+  "air_gain_db": 2.0,
+  "tags": [
+    "child",
+    "toddler",
+    "cute",
+    "high"
+  ]
+}

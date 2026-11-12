@@ -1,0 +1,26 @@
+{
+  "id": "cine_fairy",
+  "name": "Fairy (Fata / Pixie)",
+  "description": "Ultra-light miniature fairy voice with shimmering airy sheen and sweet cadence.",
+  "category": "cinematic",
+  "language": "it",
+  "reference_text": "Buongiorno! Ho preparato tutto per la giornata di oggi. Possiamo iniziare subito con il nostro lavoro.",
+  "source_type": "synthetic_fish",
+  "source_seed": 810,
+  "pitch_semitones": 7.5,
+  "pitch_dynamics": 1.35,
+  "vocal_tract_ratio": 1.4,
+  "breathiness": 0.35,
+  "roughness": 0.02,
+  "tremolo": 0.15,
+  "body_gain_db": -5.0,
+  "warmth_gain_db": -1.0,
+  "presence_gain_db": 3.0,
+  "air_gain_db": 5.5,
+  "tags": [
+    "fairy",
+    "pixie",
+    "tiny",
+    "shimmer"
+  ]
+}

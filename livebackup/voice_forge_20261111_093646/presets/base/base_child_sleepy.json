@@ -1,0 +1,26 @@
+{
+  "id": "base_child_sleepy",
+  "name": "Child 5 (Sleepy & Murmured)",
+  "description": "Sleepy bedtime child murmur with gentle, quiet airflow.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Buongiorno! Ho preparato tutto per la giornata di oggi. Possiamo iniziare subito con il nostro lavoro.",
+  "source_type": "synthetic_fish",
+  "source_seed": 505,
+  "pitch_semitones": 4.0,
+  "pitch_dynamics": 0.85,
+  "vocal_tract_ratio": 1.22,
+  "breathiness": 0.38,
+  "roughness": 0.03,
+  "tremolo": 0.0,
+  "body_gain_db": -1.5,
+  "warmth_gain_db": 2.0,
+  "presence_gain_db": -0.5,
+  "air_gain_db": 1.0,
+  "tags": [
+    "child",
+    "sleepy",
+    "quiet",
+    "bedtime"
+  ]
+}

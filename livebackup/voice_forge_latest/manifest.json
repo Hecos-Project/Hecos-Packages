@@ -1,0 +1,35 @@
+{
+    "tag": "VOICE_FORGE",
+    "name": "Voice Forge",
+    "version": "1.0.1",
+    "type": "app",
+    "category": "MULTIMEDIA",
+    "description": "Vocal Timbre Sculpting & Forging Studio for Fish Speech S2-Pro. Crafts custom, original acoustic voice profiles via WORLD vocoder analysis-synthesis, pitch, formant warping, aperiodicity and spectral morphing without using existing human voices.",
+    "icon": "<i class=\"fas fa-wave-square\"></i>",
+    "lazy_load": true,
+    "is_class_based": true,
+    "commands": {},
+    "tool_schema": [],
+    "slash_commands": [],
+    "config_panel": {
+        "tab_id": "voice-forge",
+        "tab_label": "Voice Forge",
+        "tab_icon": "<i class=\"fas fa-wave-square\"></i>",
+        "template_file": "web/templates/config_voice_forge.html",
+        "js_file": "web/static/js/vf_core.js",
+        "js_files": [
+            "web/static/js/vf_api.js",
+            "web/static/js/vf_presets.js",
+            "web/static/js/vf_viz_radar.js",
+            "web/static/js/vf_viz_spectro.js",
+            "web/static/js/vf_viz_formants.js",
+            "web/static/js/vf_mixer.js",
+            "web/static/js/vf_core.js"
+        ],
+        "css_file": "web/static/css/voice_forge.css",
+        "category": "MULTIMEDIA",
+        "api_routes_file": "web/routes.py",
+        "config_api_get": "/hecos/api/plugins/voice_forge/presets",
+        "config_api_post": "/hecos/api/plugins/voice_forge/recipe"
+    }
+}

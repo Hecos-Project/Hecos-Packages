@@ -1,0 +1,26 @@
+{
+  "id": "base_child_cheery",
+  "name": "Child 6 (Cheery Bell)",
+  "description": "Bright, bell-like clarity in a ringing child vocal tract.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Ascoltami bene: questo è un momento straordinario, e ogni dettaglio può fare davvero la differenza!",
+  "source_type": "synthetic_fish",
+  "source_seed": 506,
+  "pitch_semitones": 6.5,
+  "pitch_dynamics": 1.25,
+  "vocal_tract_ratio": 1.32,
+  "breathiness": 0.1,
+  "roughness": 0.02,
+  "tremolo": 0.0,
+  "body_gain_db": -3.0,
+  "warmth_gain_db": 0.0,
+  "presence_gain_db": 3.5,
+  "air_gain_db": 3.5,
+  "tags": [
+    "child",
+    "cheery",
+    "bell",
+    "bright"
+  ]
+}

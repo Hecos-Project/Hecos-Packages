@@ -1,0 +1,26 @@
+{
+  "id": "cine_alien",
+  "name": "Alien (Entità Extraterrestre)",
+  "description": "Uncanny vocal tract scaling with micro-tremor and alien formant resonance.",
+  "category": "cinematic",
+  "language": "it",
+  "reference_text": "Buongiorno! Ho preparato tutto per la giornata di oggi. Possiamo iniziare subito con il nostro lavoro.",
+  "source_type": "synthetic_fish",
+  "source_seed": 813,
+  "pitch_semitones": 2.5,
+  "pitch_dynamics": 0.75,
+  "vocal_tract_ratio": 0.84,
+  "breathiness": 0.25,
+  "roughness": 0.35,
+  "tremolo": 0.5,
+  "body_gain_db": 1.0,
+  "warmth_gain_db": -2.0,
+  "presence_gain_db": 4.0,
+  "air_gain_db": 3.0,
+  "tags": [
+    "alien",
+    "entity",
+    "scifi",
+    "strange"
+  ]
+}

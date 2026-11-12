@@ -1,0 +1,26 @@
+{
+  "id": "base_elder_man_tremor",
+  "name": "Elderly Man 2 (Frail & Quavering)",
+  "description": "Vulnerable octogenarian voice with characteristic physiological tremor.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Buongiorno! Ho preparato tutto per la giornata di oggi. Possiamo iniziare subito con il nostro lavoro.",
+  "source_type": "synthetic_fish",
+  "source_seed": 602,
+  "pitch_semitones": -1.0,
+  "pitch_dynamics": 0.85,
+  "vocal_tract_ratio": 0.95,
+  "breathiness": 0.35,
+  "roughness": 0.3,
+  "tremolo": 0.65,
+  "body_gain_db": 1.0,
+  "warmth_gain_db": 1.0,
+  "presence_gain_db": 0.0,
+  "air_gain_db": 1.0,
+  "tags": [
+    "elder",
+    "male",
+    "frail",
+    "tremor"
+  ]
+}

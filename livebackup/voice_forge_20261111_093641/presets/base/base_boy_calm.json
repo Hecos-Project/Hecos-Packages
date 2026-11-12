@@ -1,0 +1,26 @@
+{
+  "id": "base_boy_calm",
+  "name": "Boy 2 (Thoughtful & Soft)",
+  "description": "Gentle pre-teen boy timbre with balanced inflection.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Ma la volpe col suo balzo ha raggiunto il quieto fante all'ombra del tiglio fiorito.",
+  "source_type": "synthetic_fish",
+  "source_seed": 302,
+  "pitch_semitones": 3.5,
+  "pitch_dynamics": 0.95,
+  "vocal_tract_ratio": 1.18,
+  "breathiness": 0.12,
+  "roughness": 0.03,
+  "tremolo": 0.0,
+  "body_gain_db": -1.5,
+  "warmth_gain_db": 1.5,
+  "presence_gain_db": 1.5,
+  "air_gain_db": 1.0,
+  "tags": [
+    "boy",
+    "calm",
+    "soft",
+    "gentle"
+  ]
+}

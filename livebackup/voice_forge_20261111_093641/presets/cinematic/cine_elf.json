@@ -1,0 +1,26 @@
+{
+  "id": "cine_elf",
+  "name": "Elf (Elfo Nobile)",
+  "description": "Noble high-elven voice with silky harmonic purity, flawless articulation and crystal air.",
+  "category": "cinematic",
+  "language": "it",
+  "reference_text": "Ma la volpe col suo balzo ha raggiunto il quieto fante all'ombra del tiglio fiorito.",
+  "source_type": "synthetic_fish",
+  "source_seed": 809,
+  "pitch_semitones": 1.5,
+  "pitch_dynamics": 1.15,
+  "vocal_tract_ratio": 1.08,
+  "breathiness": 0.08,
+  "roughness": 0.0,
+  "tremolo": 0.0,
+  "body_gain_db": 0.0,
+  "warmth_gain_db": 1.5,
+  "presence_gain_db": 2.5,
+  "air_gain_db": 4.5,
+  "tags": [
+    "elf",
+    "noble",
+    "pure",
+    "fantasy"
+  ]
+}

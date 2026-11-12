@@ -1,0 +1,26 @@
+{
+  "id": "base_woman_velvet",
+  "name": "Woman 3 (Velvet Contralto)",
+  "description": "Deeper female contralto with sultry, velvety throat resonance.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Ascoltami bene: questo è un momento straordinario, e ogni dettaglio può fare davvero la differenza!",
+  "source_type": "synthetic_fish",
+  "source_seed": 203,
+  "pitch_semitones": -0.5,
+  "pitch_dynamics": 0.95,
+  "vocal_tract_ratio": 0.96,
+  "breathiness": 0.22,
+  "roughness": 0.08,
+  "tremolo": 0.0,
+  "body_gain_db": 2.5,
+  "warmth_gain_db": 2.5,
+  "presence_gain_db": 0.5,
+  "air_gain_db": 2.0,
+  "tags": [
+    "female",
+    "contralto",
+    "velvet",
+    "sultry"
+  ]
+}

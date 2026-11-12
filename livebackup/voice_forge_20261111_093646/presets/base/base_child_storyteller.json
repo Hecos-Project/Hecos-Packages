@@ -1,0 +1,26 @@
+{
+  "id": "base_child_storyteller",
+  "name": "Child 4 (Storybook Kid)",
+  "description": "Animated child narrator voice with vivid highs and lows.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Ma la volpe col suo balzo ha raggiunto il quieto fante all'ombra del tiglio fiorito.",
+  "source_type": "synthetic_fish",
+  "source_seed": 504,
+  "pitch_semitones": 5.5,
+  "pitch_dynamics": 1.45,
+  "vocal_tract_ratio": 1.26,
+  "breathiness": 0.12,
+  "roughness": 0.05,
+  "tremolo": 0.0,
+  "body_gain_db": -2.5,
+  "warmth_gain_db": 1.0,
+  "presence_gain_db": 3.0,
+  "air_gain_db": 2.0,
+  "tags": [
+    "child",
+    "storyteller",
+    "animated",
+    "expressive"
+  ]
+}

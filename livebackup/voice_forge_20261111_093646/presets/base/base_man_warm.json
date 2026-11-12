@@ -1,0 +1,26 @@
+{
+  "id": "base_man_warm",
+  "name": "Man 2 (Warm & Conversational)",
+  "description": "Natural, welcoming mid-tone male voice with smooth vocal chord closure.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Buongiorno! Ho preparato tutto per la giornata di oggi. Possiamo iniziare subito con il nostro lavoro.",
+  "source_type": "synthetic_fish",
+  "source_seed": 102,
+  "pitch_semitones": -0.5,
+  "pitch_dynamics": 1.0,
+  "vocal_tract_ratio": 0.98,
+  "breathiness": 0.08,
+  "roughness": 0.04,
+  "tremolo": 0.0,
+  "body_gain_db": 1.5,
+  "warmth_gain_db": 3.0,
+  "presence_gain_db": 1.5,
+  "air_gain_db": 0.5,
+  "tags": [
+    "male",
+    "warm",
+    "conversational",
+    "natural"
+  ]
+}

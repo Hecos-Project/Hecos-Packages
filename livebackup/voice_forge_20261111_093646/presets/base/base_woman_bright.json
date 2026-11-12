@@ -1,0 +1,26 @@
+{
+  "id": "base_woman_bright",
+  "name": "Woman 1 (Bright & Radiant)",
+  "description": "Luminous female timbre with crystal-clear presence and buoyant energy.",
+  "category": "base",
+  "language": "it",
+  "reference_text": "Ma la volpe col suo balzo ha raggiunto il quieto fante all'ombra del tiglio fiorito.",
+  "source_type": "synthetic_fish",
+  "source_seed": 201,
+  "pitch_semitones": 3.0,
+  "pitch_dynamics": 1.1,
+  "vocal_tract_ratio": 1.12,
+  "breathiness": 0.1,
+  "roughness": 0.02,
+  "tremolo": 0.0,
+  "body_gain_db": -1.0,
+  "warmth_gain_db": 1.0,
+  "presence_gain_db": 2.5,
+  "air_gain_db": 3.0,
+  "tags": [
+    "female",
+    "bright",
+    "radiant",
+    "clear"
+  ]
+}

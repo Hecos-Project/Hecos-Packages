@@ -5,6 +5,9 @@ window.builderCollapsedCategories = new Set();
 window.builderActiveCategoryFilters = new Set();
 
 window.builderRefreshSources = async function() {
+    if (typeof window.builderEnsureActiveRepo === 'function') {
+        window.builderEnsureActiveRepo();
+    }
     const grid = document.getElementById('builder-sources-grid');
     if (!grid) return;
     grid.innerHTML = '<div style="color:var(--muted); padding:16px; text-align:center;"><i class="fas fa-circle-notch fa-spin"></i> Scanning local sources...</div>';

@@ -1,0 +1,26 @@
+{
+  "id": "cine_vampire",
+  "name": "Vampire (Aristocratico Immortale)",
+  "description": "Dark aristocrat with seductive velvet warmth, subdued dynamics and predatory coolness.",
+  "category": "cinematic",
+  "language": "it",
+  "reference_text": "Ascoltami bene: questo è un momento straordinario, e ogni dettaglio può fare davvero la differenza!",
+  "source_type": "synthetic_fish",
+  "source_seed": 811,
+  "pitch_semitones": -2.0,
+  "pitch_dynamics": 0.85,
+  "vocal_tract_ratio": 0.94,
+  "breathiness": 0.22,
+  "roughness": 0.15,
+  "tremolo": 0.0,
+  "body_gain_db": 3.0,
+  "warmth_gain_db": 3.5,
+  "presence_gain_db": 1.5,
+  "air_gain_db": 2.5,
+  "tags": [
+    "vampire",
+    "aristocrat",
+    "dark",
+    "seductive"
+  ]
+}
