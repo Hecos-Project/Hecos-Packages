@@ -96,6 +96,9 @@ function initSearchMain() {
 
   // ── Initial Subsystems Boot ────────────────────────────────────────────────
   if (filters) {
+    if (filters.syncAllOptionToggles) {
+      filters.syncAllOptionToggles();
+    }
     filters.updateViewModeButtons();
     filters.initInfiniteScroll();
   }
@@ -109,11 +112,25 @@ function initSearchMain() {
     modals.refreshTorStatus();
   }
 
-  // Load initial settings (e.g. privacy shield local_only default)
+  // Load backend fallback settings for option toggles when localStorage has no explicit choice yet
   fetch('/api/hsearch/config').then(r => r.json()).then(data => {
     if (data && data.ok && data.config) {
-      if (data.config.local_only && filters && filters.toggleLocalOnly) {
-        filters.toggleLocalOnly(true);
+      const cfg = data.config;
+      const mappings = [
+        { stateKey: 'safeSearch', cfgKey: 'safe_search', storageKey: 'hecos_netsearch_safe_search' },
+        { stateKey: 'darkBypass', cfgKey: 'dark_bypass', storageKey: 'hecos_netsearch_dark_bypass' },
+        { stateKey: 'localOnly', cfgKey: 'local_only', storageKey: 'hecos_netsearch_local_only' }
+      ];
+      let changed = false;
+      mappings.forEach(m => {
+        const hasLocal = typeof localStorage !== 'undefined' && localStorage.getItem(m.storageKey) !== null;
+        if (!hasLocal && typeof cfg[m.cfgKey] === 'boolean' && state[m.stateKey] !== cfg[m.cfgKey]) {
+          state[m.stateKey] = cfg[m.cfgKey];
+          changed = true;
+        }
+      });
+      if (changed && filters && filters.syncAllOptionToggles) {
+        filters.syncAllOptionToggles();
       }
     }
   }).catch(() => { });
@@ -155,6 +172,9 @@ function startNewSearch(focusTarget = 'search') {
 
   if (copilot && typeof copilot.resetChat === 'function') {
     copilot.resetChat();
+  }
+  if (window.SearchHistory && typeof window.SearchHistory.clearLiveSession === 'function') {
+    window.SearchHistory.clearLiveSession();
   }
 
   if (state) {

@@ -35,7 +35,7 @@ def _is_local_host(url: str) -> bool:
 
 
 def _extract_json_results(
-    data: Any, eng_name: str, base_url: str, limit: int, category: str = "general", prefix: str = "clear"
+    data: Any, eng_name: str, base_url: str, limit: int, category: str = "general", prefix: str = "clear", network: str = "clearnet"
 ) -> List[SearchResult]:
     results: List[SearchResult] = []
     eng_id = f"{prefix}_{eng_name.lower().replace(' ', '_')}"
@@ -48,13 +48,18 @@ def _extract_json_results(
             if isinstance(href, str) and href.startswith(("http://", "https://")):
                 title = str(titles[idx]) if idx < len(titles) else href
                 snippet = str(descs[idx]) if idx < len(descs) else ""
+                meta = {}
+                ext = infer_extension(href, fallback="")
+                if ext:
+                    meta["extension"] = ext
                 results.append(SearchResult(
                     url=href,
                     title=title,
                     snippet=snippet,
                     engine=eng_id,
                     category=category,
-                    network="clearnet",
+                    network=network,
+                    metadata=meta,
                 ))
         return results
 
@@ -113,14 +118,14 @@ def _extract_json_results(
             snippet=snippet[:400],
             engine=eng_id,
             category=category,
-            network="clearnet",
+            network=network,
             metadata=meta,
         ))
     return results
 
 
 def _extract_rss_atom_results(
-    xml_text: str, eng_name: str, base_url: str, limit: int, category: str = "general", prefix: str = "clear"
+    xml_text: str, eng_name: str, base_url: str, limit: int, category: str = "general", prefix: str = "clear", network: str = "clearnet"
 ) -> List[SearchResult]:
     """Parses RSS 2.0 (<item>) or Atom (<entry>) XML search feeds."""
     results: List[SearchResult] = []
@@ -160,19 +165,24 @@ def _extract_rss_atom_results(
         if not full_url.startswith(("http://", "https://")):
             continue
         clean_desc = _html.unescape(BeautifulSoup(desc, "lxml").get_text(" ", strip=True)) if desc else ""
+        meta_rss = {}
+        ext_rss = infer_extension(full_url, fallback="")
+        if ext_rss:
+            meta_rss["extension"] = ext_rss
         results.append(SearchResult(
             url=full_url,
             title=(_html.unescape(title) or full_url)[:200],
             snippet=clean_desc[:400],
             engine=eng_id,
             category=category,
-            network="clearnet",
+            network=network,
+            metadata=meta_rss,
         ))
     return results
 
 
 def _extract_html_results(
-    html_text: str, eng_name: str, base_url: str, limit: int, category: str = "general", prefix: str = "clear"
+    html_text: str, eng_name: str, base_url: str, limit: int, category: str = "general", prefix: str = "clear", network: str = "clearnet"
 ) -> List[SearchResult]:
     results: List[SearchResult] = []
     seen: set[str] = set()
@@ -197,32 +207,45 @@ def _extract_html_results(
         p_tag = box.find(["p", "div", "span"], class_=lambda c: c and any(k in str(c).lower() for k in ["snippet", "desc", "searchresult", "summary"]))
         snippet = p_tag.get_text(" ", strip=True) if p_tag else ""
         seen.add(href)
+        meta_box = {}
+        ext_box = infer_extension(href, fallback="")
+        if ext_box:
+            meta_box["extension"] = ext_box
         results.append(SearchResult(
             url=href,
             title=title[:200],
             snippet=snippet[:400],
             engine=eng_id,
             category=category,
-            network="clearnet",
+            network=network,
+            metadata=meta_box,
         ))
         if len(results) >= limit:
             return results
 
-    # 2. Fallback to meaningful external or article links inside <main>/<article>/body
+    # 2. Fallback to meaningful external, article, or Apache/Nginx Open Directory links
     root = soup.find("main") or soup.find("article") or soup.body or soup
     base_host = (urllib.parse.urlsplit(base_url).hostname or "").lower()
+    dir_skip_labels = {"parent directory", "name", "last modified", "size", "description", "..", "../"}
     for a in root.find_all("a", href=True):
-        href = urllib.parse.urljoin(base_url, str(a["href"]).strip())
+        raw_href = str(a["href"]).strip()
+        if not raw_href or raw_href.startswith(("#", "?", "javascript:", "mailto:")):
+            continue
+        href = urllib.parse.urljoin(base_url, raw_href)
         if not href.startswith(("http://", "https://")) or href in seen:
             continue
         parsed = urllib.parse.urlsplit(href)
         if not parsed.path or parsed.path in ("/", "/search"):
             continue
         txt = a.get_text(" ", strip=True)
-        if len(txt) < 6:
+        if txt.lower() in dir_skip_labels:
             continue
-        # Avoid navigation boilerplate links without query relevance
-        if parsed.hostname and parsed.hostname.lower() == base_host and len(parsed.path) < 4:
+        ext_link = infer_extension(href, fallback="")
+        min_len = 2 if ext_link else 6
+        if len(txt) < min_len:
+            continue
+        # Avoid navigation boilerplate links without query relevance (unless it is a direct file link)
+        if not ext_link and parsed.hostname and parsed.hostname.lower() == base_host and len(parsed.path) < 4:
             continue
         seen.add(href)
         results.append(SearchResult(
@@ -231,7 +254,8 @@ def _extract_html_results(
             snippet="",
             engine=eng_id,
             category=category,
-            network="clearnet",
+            network=network,
+            metadata={"extension": ext_link} if ext_link else {},
         ))
         if len(results) >= limit:
             break

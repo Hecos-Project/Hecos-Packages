@@ -153,9 +153,14 @@
       desc: 'Targeted file & document dorking (PDF, DOCX, XLSX, ZIP, EPUB)'
     },
     'osint_sherlock': {
-      name: 'OSINT Hunt',
+      name: 'Sherlock OSINT',
       icon: 'fas fa-id-badge',
-      desc: 'Targeted identity discovery across 400+ online platforms'
+      desc: 'Targeted username & variant discovery across 480+ platforms'
+    },
+    'osint_sources': {
+      name: 'OSINT APIs & Dorks',
+      icon: 'fas fa-fingerprint',
+      desc: 'People & Social Dorks, GitHub, GitLab, Reddit, HN, Wiki, Keybase, Archive, crt.sh'
     },
     'dark_ahmia': { name: 'Ahmia (Tor)', icon: 'fas fa-user-secret', desc: 'Tor onion search directory' },
     'dark_torch': { name: 'Torch (Tor)', icon: 'fas fa-fire', desc: 'Tor hidden services index' },
@@ -178,12 +183,21 @@
   function executeSearch(queryStr, mode = 'clear') {
     if (!queryStr || !queryStr.trim()) return;
     queryStr = queryStr.trim();
+
+    if (state.activeEventSource) {
+      try { state.activeEventSource.close(); } catch (_e) {}
+      state.activeEventSource = null;
+    }
+
     state.currentQuery = queryStr;
     state.currentMode = mode;
+    state.activeSessionId = null;
+    state.currentSessionId = null;
 
     const filters = window.SearchFilters;
     const resultsRenderer = window.SearchResults;
     const copilot = window.SearchCopilot;
+    const historyCtrl = window.SearchHistory;
 
     // Ensure contextual subtabs match the active mode
     if (filters && filters.renderFilterTabsForMode) {
@@ -194,6 +208,23 @@
     if (filters) {
       if (filters.syncRefineToolbarUI) filters.syncRefineToolbarUI();
       if (filters.updateFilterCounts) filters.updateFilterCounts();
+    }
+
+    // Parse query operators upfront so the instant sidebar tab displays clean title & mode
+    const parsedOps = parseQueryOperators(queryStr);
+    const cleanQuery = parsedOps.cleanQuery;
+    const parsedExcluded = parsedOps.excluded;   // from -provider tokens
+    const parsedSite = parsedOps.site;           // from site:domain
+    const parsedLang = parsedOps.lang;           // from lang:XX
+    const parsedAfter = parsedOps.after;         // from after:YYYY
+    const parsedBefore = parsedOps.before;       // from before:YYYY
+    const parsedMode = parsedOps.mode || mode;   // from mode:M
+    const parsedLimit = parsedOps.limit || state.searchLimit;
+
+    // Immediately create and highlight a brand-new active tab in Search History before streaming starts
+    const pendingSessionId = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    if (historyCtrl && typeof historyCtrl.createPendingTab === 'function') {
+      historyCtrl.createPendingTab(cleanQuery || queryStr, parsedMode, pendingSessionId);
     }
 
     const resultsCountEl = document.getElementById('results-count');
@@ -234,19 +265,6 @@
     if (btnStop) {
       btnStop.style.display = 'inline-flex';
     }
-
-    // ── Query Operator Parser ─────────────────────────────────────────────────
-    // Parse inline operators from query string before sending to backend.
-    // Supported: -provider, site:domain, lang:XX, after:YYYY, before:YYYY, mode:M, limit:N
-    const parsedOps = parseQueryOperators(queryStr);
-    const cleanQuery = parsedOps.cleanQuery;
-    const parsedExcluded = parsedOps.excluded;   // from -provider tokens
-    const parsedSite = parsedOps.site;           // from site:domain
-    const parsedLang = parsedOps.lang;           // from lang:XX
-    const parsedAfter = parsedOps.after;         // from after:YYYY
-    const parsedBefore = parsedOps.before;       // from before:YYYY
-    const parsedMode = parsedOps.mode || mode;   // from mode:M
-    const parsedLimit = parsedOps.limit || state.searchLimit;
 
     // Merge state.excludedProviders with parsed -provider tokens
     const allExcluded = [...new Set([...(state.excludedProviders || []), ...parsedExcluded])];
@@ -300,6 +318,9 @@
           if (evt.session_id) {
             state.activeSessionId = evt.session_id;
             state.currentSessionId = evt.session_id;
+            if (historyCtrl && typeof historyCtrl.bindLiveSessionId === 'function') {
+              historyCtrl.bindLiveSessionId(pendingSessionId, evt.session_id, evt.created_at);
+            }
           }
           if (streamBadges && evt.engines) {
             streamBadges.innerHTML = evt.engines.map(e => {
@@ -408,6 +429,9 @@
           }
 
           if (evt.new_results && evt.new_results.length > 0) {
+            if (historyCtrl && typeof historyCtrl.updateLiveTabProgress === 'function') {
+              historyCtrl.updateLiveTabProgress(state.activeSessionId || pendingSessionId, state.results.length, false);
+            }
             if (filters) {
               filters.updateFilterCounts();
               if (filters.renderGranularProviderChips) {
@@ -416,7 +440,7 @@
               filters.renderCurrentView();
             }
             if (copilot && copilot.update) {
-              copilot.update(state.results, queryStr, mode);
+              copilot.update(state.results, queryStr, mode, false);
             }
           }
         } else if (evt.type === 'fallback') {
@@ -512,14 +536,20 @@
         if (copilot && copilot.update) {
           copilot.update(state.results, queryStr, mode);
         }
-        if (window.SearchHistory && window.SearchHistory.loadHistory) {
-          window.SearchHistory.loadHistory();
+        if (historyCtrl && typeof historyCtrl.updateLiveTabProgress === 'function') {
+          historyCtrl.updateLiveTabProgress(state.activeSessionId || pendingSessionId, state.results.length, true);
+        }
+        if (historyCtrl && historyCtrl.loadHistory) {
+          historyCtrl.loadHistory(true);
         }
       },
       // On Error
       (err) => {
         state.activeEventSource = null;
         if (btnStop) btnStop.style.display = 'none';
+        if (historyCtrl && typeof historyCtrl.updateLiveTabProgress === 'function') {
+          historyCtrl.updateLiveTabProgress(state.activeSessionId || pendingSessionId, state.results.length, true);
+        }
         console.error('[SearchStream] Stream error:', err);
         if (filters) filters.renderCurrentView();
       }
@@ -547,6 +577,10 @@
 
     const filters = window.SearchFilters;
     const copilot = window.SearchCopilot;
+    const historyCtrl = window.SearchHistory;
+    if (historyCtrl && typeof historyCtrl.updateLiveTabProgress === 'function') {
+      historyCtrl.updateLiveTabProgress(state.activeSessionId || state.currentSessionId, state.results.length, true);
+    }
     if (filters) {
       filters.updateFilterCounts();
       filters.renderCurrentView();
@@ -640,7 +674,7 @@
                 filters.renderCurrentView();
               }
               if (copilot && copilot.update) {
-                copilot.update(state.results, queryStr, mode);
+                copilot.update(state.results, queryStr, mode, false);
               }
             }
           }
@@ -700,6 +734,9 @@
           filters.updateFilterCounts();
           if (filters.renderGranularProviderChips) filters.renderGranularProviderChips();
           filters.renderCurrentView();
+        }
+        if (copilot && copilot.update) {
+          copilot.update(state.results, queryStr, mode, false);
         }
       },
       (err) => {

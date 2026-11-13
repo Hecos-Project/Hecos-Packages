@@ -11,6 +11,7 @@ import urllib.parse
 from typing import List, Set
 
 from .base import BaseEngine
+from .osint_apis import classify_osint_group
 from ..models import SearchQuery, SearchResult
 from .. import http_client
 
@@ -42,7 +43,20 @@ class ClearDdgsEngine(BaseEngine):
         seen_urls: Set[str] = set()
         is_unlimited = (query.limit is not None and query.limit <= 0)
         target_limit = 100000 if is_unlimited else max(query.limit, 40)
-        hecos_logger.info(f"[SEARCH:DDGS] Starting multi-backend clear search: '{query.query}' (target={target_limit}, safe={query.safe_search})")
+        is_files_mode = (getattr(query, "mode", "") or "").lower() == "files"
+        is_osint_mode = (getattr(query, "mode", "") or "").lower() == "osint"
+        res_category = "files" if is_files_mode else ("osint" if is_osint_mode else "general")
+        raw_q = (query.query or "").strip()
+        ddg_search_q = raw_q
+        if is_files_mode and raw_q and "filetype:" not in raw_q.lower() and "ext:" not in raw_q.lower():
+            file_types = [str(ft).strip().lstrip(".").lower() for ft in (getattr(query, "file_types", None) or []) if str(ft).strip()]
+            if file_types:
+                ext_clause = " OR ".join(f"filetype:{ft}" for ft in file_types[:6])
+            else:
+                ext_clause = "filetype:pdf OR filetype:zip OR filetype:csv OR filetype:sql OR filetype:docx OR filetype:py"
+            ddg_search_q = f"{raw_q} ({ext_clause})"
+
+        hecos_logger.info(f"[SEARCH:DDGS] Starting multi-backend clear search ({'files' if is_files_mode else 'general'}): '{ddg_search_q}' (target={target_limit}, safe={query.safe_search})")
         safesearch_val = "off" if not query.safe_search else "moderate"
         per_timeout = min(query.timeout, 6.0)
 
@@ -52,14 +66,14 @@ class ClearDdgsEngine(BaseEngine):
             ddg = DDGS(timeout=per_timeout)
             start_page = max(1, getattr(query, "page", 1))
             pages_to_fetch = 5 if start_page == 1 else 3
-            hecos_logger.info(f"[SEARCH:DDGS] Querying via ddgs multi-page (start={start_page}, pages={pages_to_fetch}, timeout={per_timeout}s): '{query.query}'...")
+            hecos_logger.info(f"[SEARCH:DDGS] Querying via ddgs multi-page (start={start_page}, pages={pages_to_fetch}, timeout={per_timeout}s): '{ddg_search_q}'...")
 
             for page_num in range(start_page, start_page + pages_to_fetch):
                 if len(results) >= target_limit or (time.time() - t0 > 15.0):
                     break
                 try:
                     raw = ddg.text(
-                        query.query,
+                        ddg_search_q,
                         page=page_num,
                         max_results=50,
                         safesearch=safesearch_val,
@@ -79,8 +93,9 @@ class ClearDdgsEngine(BaseEngine):
                                 url=href,
                                 snippet=body,
                                 engine="ddgs",
-                                category="general",
-                                network="clearnet"
+                                category=res_category,
+                                network="clearnet",
+                                metadata={"osint_group": classify_osint_group(href, "ddgs", title)} if is_osint_mode else {}
                             ))
                             page_added += 1
                             if len(results) >= target_limit:
@@ -102,9 +117,9 @@ class ClearDdgsEngine(BaseEngine):
 
         # 2. Autonomous HTTP Fallback with multi-page loop
         try:
-            hecos_logger.info(f"[SEARCH:DDGS] Querying via direct HTTP scraper: '{query.query}'...")
+            hecos_logger.info(f"[SEARCH:DDGS] Querying via direct HTTP scraper: '{ddg_search_q}'...")
             url = "https://html.duckduckgo.com/html/"
-            data = {"q": query.query, "b": ""}
+            data = {"q": ddg_search_q, "b": ""}
             if not query.safe_search:
                 data["kp"] = "-2"  # SafeSearch off
 
@@ -155,8 +170,9 @@ class ClearDdgsEngine(BaseEngine):
                                 url=final_url,
                                 snippet=snippet,
                                 engine="clearnet_http",
-                                category="general",
-                                network="clearnet"
+                                category=res_category,
+                                network="clearnet",
+                                metadata={"osint_group": classify_osint_group(final_url, "ddgs", title)} if is_osint_mode else {}
                             ))
                             page_added += 1
 

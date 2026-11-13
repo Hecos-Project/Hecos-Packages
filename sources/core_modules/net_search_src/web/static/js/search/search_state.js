@@ -2,6 +2,17 @@
  * search_state.js
  * Central state store for Deep Search UI.
  */
+function _readBoolPref(key, fallback) {
+  try {
+    if (typeof localStorage === 'undefined') return fallback;
+    const v = localStorage.getItem(key);
+    if (v === null) return fallback;
+    return v === 'true';
+  } catch (e) {
+    return fallback;
+  }
+}
+
 window.SearchState = {
   currentQuery: '',
   currentMode: 'clear',
@@ -15,9 +26,9 @@ window.SearchState = {
   torOnline: false,
   torIp: '',
   torPort: null,
-  safeSearch: false,
-  darkBypass: true,
-  localOnly: false,
+  safeSearch: _readBoolPref('hecos_netsearch_safe_search', false),
+  darkBypass: _readBoolPref('hecos_netsearch_dark_bypass', true),
+  localOnly: _readBoolPref('hecos_netsearch_local_only', true),
   searchLimit: (function () {
     try {
       const v = typeof localStorage !== 'undefined' && localStorage.getItem('hecos_netsearch_depth');

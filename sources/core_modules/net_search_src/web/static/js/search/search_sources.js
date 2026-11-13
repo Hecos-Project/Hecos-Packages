@@ -36,6 +36,14 @@ window.SearchSources = (function () {
       addTitle: 'Add / Import .onion Engine List',
       emptyMsg: 'No .onion source lists configured. Use a preset above or click "+ Add / Import .onion List".'
     },
+    files: {
+      pools: ['custom_clear_engines', 'custom_onion_engines'],
+      defaultPool: 'custom_clear_engines',
+      defaultFormat: 'auto',
+      hint: 'File Hunter Sources & Custom File Repos',
+      addTitle: 'Add / Import Custom File Repository',
+      emptyMsg: 'Add custom Clearnet or .onion file repositories from the Web and Dark Web tabs.'
+    },
     domains: {
       pools: ['domain_directory', 'domain_blocklist', 'domain_allowlist'],
       defaultPool: 'domain_directory',

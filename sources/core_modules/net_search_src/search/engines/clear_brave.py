@@ -166,13 +166,16 @@ class ClearBraveEngine(BaseEngine):
                         }
                         if ext:
                             meta["extension"] = ext
+                        if query.mode == "osint":
+                            from .osint_apis import classify_osint_group
+                            meta["osint_group"] = classify_osint_group(url, "brave", title)
                         results.append(SearchResult(
                             title=title,
                             url=url,
                             snippet=snippet,
                             engine="brave_api",
                             engine_id="clear_brave",
-                            category="files" if query.mode == "files" else "general",
+                            category="files" if query.mode == "files" else ("osint" if query.mode == "osint" else "general"),
                             network="clearnet",
                             score=1.5,  # High base score — Brave results are reliable
                             metadata=meta

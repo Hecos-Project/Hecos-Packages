@@ -10,6 +10,7 @@ import urllib.parse
 from typing import List
 
 from .base import BaseEngine, effective_tor_timeout
+from .files_apis import infer_extension
 from ..models import SearchQuery, SearchResult
 from .. import http_client
 
@@ -59,8 +60,10 @@ class DarkTorchEngine(BaseEngine):
         ddg_onion, torch_onion = _get_torch_urls()
         tor_timeout = effective_tor_timeout(query.timeout, minimum=15.0)
         seen_urls = set()
+        mode_lower = (getattr(query, "mode", "") or "").lower()
+        is_files_mode = mode_lower == "files"
 
-        # 1. Torch Hidden Service (.onion index first so Dark Web returns pure .onion hits)
+        # 1. Torch Hidden Service (.onion index first so both Dark Web and File Hunter get real .onion results)
         try:
             hecos_logger.info(f"[SEARCH:TORCH] Querying Torch Onion service: '{query.query}' (timeout={tor_timeout}s)...")
             params = {"P": query.query}
@@ -77,23 +80,36 @@ class DarkTorchEngine(BaseEngine):
                     if not title or len(title) < 2:
                         continue
                     seen_urls.add(href)
+                    ext = infer_extension(href)
+                    meta = {"extension": ext} if ext else {}
                     results.append(SearchResult(
                         title=title,
                         url=href,
                         snippet="Tor hidden service from Torch directory",
                         engine="torch:tor",
-                        category="onion",
-                        network="tor"
+                        category="files" if (is_files_mode or ext) else "onion",
+                        network="tor",
+                        metadata=meta,
                     ))
                     if len(results) >= query.limit:
                         break
         except Exception as e:
             hecos_logger.debug(f"[DarkTorch] Torch onion query error: {e}")
 
-        # 2. DuckDuckGo Onion service as supplementary unlogged Tor search
+        # 2. DuckDuckGo Onion service as supplementary unlogged Tor search (clearnet gateway via Tor)
         if len(results) < query.limit:
             try:
-                hecos_logger.info(f"[SEARCH:TORCH] Querying DDG Onion service: '{query.query}'...")
+                raw_q = (query.query or "").strip()
+                ddg_q = raw_q
+                if is_files_mode and raw_q and "filetype:" not in raw_q.lower() and "ext:" not in raw_q.lower():
+                    file_types = [str(ft).strip().lstrip(".").lower() for ft in (getattr(query, "file_types", None) or []) if str(ft).strip()]
+                    if file_types:
+                        ext_clause = " OR ".join(f"filetype:{ft}" for ft in file_types[:6])
+                    else:
+                        ext_clause = "filetype:pdf OR filetype:zip OR filetype:csv OR filetype:sql OR filetype:7z OR filetype:txt"
+                    ddg_q = f"{raw_q} ({ext_clause})"
+
+                hecos_logger.info(f"[SEARCH:TORCH] Querying DDG Onion service ({'files' if is_files_mode else 'onion'}): '{ddg_q}'...")
                 ddg_origin = ddg_onion.rstrip("/")
                 if "/html" in ddg_origin:
                     ddg_origin = ddg_origin.split("/html")[0]
@@ -104,13 +120,23 @@ class DarkTorchEngine(BaseEngine):
                     "Content-Type": "application/x-www-form-urlencoded"
                 }
                 # kp="-2" disables SafeSearch content moderation
-                data = {"q": query.query, "b": "", "kp": "-2" if not query.safe_search else "1"}
+                data = {"q": ddg_q, "b": "", "kp": "-2" if not query.safe_search else "1"}
 
                 resp = http_client.post(ddg_onion, network="tor", data=data, headers=headers, timeout=tor_timeout)
-                if resp.status_code == 200:
+                if resp.status_code != 200:
+                    hecos_logger.warning(
+                        f"[DarkTorch] DDG Onion returned HTTP {resp.status_code} (anti-bot/rate-limit); "
+                        f"Torch directory results={len(results)}"
+                    )
+                else:
                     from bs4 import BeautifulSoup
                     soup = BeautifulSoup(resp.text, "lxml")
                     nodes = soup.find_all("div", class_="result")
+                    if not nodes:
+                        hecos_logger.info(
+                            f"[DarkTorch] DDG Onion HTTP 200 yielded 0 result nodes (likely challenge page); "
+                            f"Torch directory results={len(results)}"
+                        )
                     for node in nodes:
                         if len(results) >= query.limit:
                             break
@@ -130,13 +156,16 @@ class DarkTorchEngine(BaseEngine):
                             snippet = snip_tag.get_text(strip=True) if snip_tag else ""
                             if title and final_url and final_url not in seen_urls:
                                 seen_urls.add(final_url)
+                                ext = infer_extension(final_url)
+                                meta = {"extension": ext} if ext else {}
                                 results.append(SearchResult(
                                     title=title,
                                     url=final_url,
                                     snippet=snippet,
                                     engine="ddg:tor",
-                                    category="onion",
-                                    network="tor"
+                                    category="files" if (is_files_mode or ext) else "onion",
+                                    network="tor",
+                                    metadata=meta,
                                 ))
             except Exception as e:
                 hecos_logger.debug(f"[DarkTorch] DDG Onion query note: {e}")

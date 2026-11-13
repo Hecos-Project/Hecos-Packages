@@ -96,7 +96,7 @@ def register_copilot_routes(app, logger=None):
             req_limit = 100
         req_safe_search = bool(data.get("safe_search", False))
         req_dark_bypass = data.get("dark_bypass", True) is not False
-        req_local_only = bool(data.get("local_only", False))
+        req_local_only = data.get("local_only", True) is not False
         want_stream = data.get("stream", True) is not False
 
         # Resolve active soul (preset) — reads system config if payload says "default"

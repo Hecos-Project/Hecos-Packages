@@ -68,6 +68,13 @@
 
       if (res.ok) {
         _notify('Net Search setting saved', 'success');
+        if (keyPath === 'local_only') {
+          try {
+            if (typeof localStorage !== 'undefined') {
+              localStorage.setItem('hecos_netsearch_local_only', value ? 'true' : 'false');
+            }
+          } catch (e) { }
+        }
         if (keyPath === 'tor.onion_action') {
           const a = document.getElementById('search-tor-onion-action');
           const b = document.getElementById('endp-tor-onion-action');
@@ -131,6 +138,52 @@
       // Brave API key
       const braveKeyInput = document.getElementById('search-brave-api-key');
       if (braveKeyInput) braveKeyInput.value = cfg.brave_api_key || '';
+
+      // File Hunter config (scope switches + 11 built-in source toggles)
+      const fh = cfg.file_hunter || {};
+      const fhSrc = fh.sources || {};
+      const swClear = document.getElementById('fh-sw-include-clear');
+      if (swClear) swClear.checked = fh.include_all_clear !== false;
+      const swDark = document.getElementById('fh-sw-include-dark');
+      if (swDark) swDark.checked = fh.include_all_dark !== false;
+      const swDir = document.getElementById('fh-sw-include-directory');
+      if (swDir) swDir.checked = fh.include_domain_directory !== false;
+
+      const fhSourceKeys = [
+        'dorks_web', 'arxiv', 'openalex', 'zenodo', 'openlibrary',
+        'doaj', 'huggingface', 'github', 'npm', 'archive_org', 'wikimedia'
+      ];
+      fhSourceKeys.forEach(k => {
+        const el = document.getElementById(`fh-src-${k}`);
+        if (el) el.checked = fhSrc[k] !== false;
+      });
+      if (typeof window.refreshFileHunterCountBadge === 'function') {
+        window.refreshFileHunterCountBadge();
+      }
+
+      // OSINT config (scope switches + 11 built-in source toggles)
+      const os = cfg.osint || {};
+      const osSrc = os.sources || {};
+      const osClear = document.getElementById('osint-sw-include-clear');
+      if (osClear) osClear.checked = os.include_all_clear !== false;
+      const osDark = document.getElementById('osint-sw-include-dark');
+      if (osDark) osDark.checked = os.include_all_dark !== false;
+      const osDir = document.getElementById('osint-sw-include-directory');
+      if (osDir) osDir.checked = os.include_domain_directory !== false;
+      const osSherlockDb = document.getElementById('osint-sw-sherlock-db');
+      if (osSherlockDb) osSherlockDb.checked = os.use_sherlock_db !== false;
+
+      const osSourceKeys = [
+        'people_dorks', 'github', 'gitlab', 'reddit', 'hackernews',
+        'wikipedia', 'wikidata', 'gravatar', 'keybase', 'archive_org', 'crtsh'
+      ];
+      osSourceKeys.forEach(k => {
+        const el = document.getElementById(`osint-src-${k}`);
+        if (el) el.checked = osSrc[k] !== false;
+      });
+      if (typeof window.refreshOsintCountBadge === 'function') {
+        window.refreshOsintCountBadge();
+      }
 
       // Defaults
       const timeoutInput = document.getElementById('search-timeout');
@@ -286,8 +339,48 @@
     }
   };
 
+  function _refreshSourceCountBadge(keys, prefix, tabBadgeId, secBadgeId) {
+    let activeApis = 0;
+    let totalFound = 0;
+    keys.forEach(k => {
+      const el = document.getElementById(`${prefix}-${k}`);
+      if (el) {
+        totalFound++;
+        if (el.checked) activeApis++;
+      }
+    });
+    const tabBadge = document.getElementById(tabBadgeId);
+    if (tabBadge) tabBadge.textContent = String(totalFound ? activeApis : keys.length);
+    const secBadge = document.getElementById(secBadgeId);
+    if (secBadge) secBadge.textContent = `${totalFound ? activeApis : keys.length}/${totalFound || keys.length} Active`;
+  }
+
+  window.refreshFileHunterCountBadge = function () {
+    _refreshSourceCountBadge([
+      'dorks_web', 'arxiv', 'openalex', 'zenodo', 'openlibrary',
+      'doaj', 'huggingface', 'github', 'npm', 'archive_org', 'wikimedia'
+    ], 'fh-src', 'badge-tab-files-count', 'badge-fh-sources-active');
+  };
+
+  window.refreshOsintCountBadge = function () {
+    _refreshSourceCountBadge([
+      'people_dorks', 'github', 'gitlab', 'reddit', 'hackernews',
+      'wikipedia', 'wikidata', 'gravatar', 'keybase', 'archive_org', 'crtsh'
+    ], 'osint-src', 'badge-tab-osint-count', 'badge-osint-sources-active');
+  };
+
+  window.updateFileHunterSource = function (srcKey, enabled) {
+    window.refreshFileHunterCountBadge();
+    return window.updateNetSearchConfig(`file_hunter.sources.${srcKey}`, !!enabled);
+  };
+
+  window.updateOsintSource = function (srcKey, enabled) {
+    window.refreshOsintCountBadge();
+    return window.updateNetSearchConfig(`osint.sources.${srcKey}`, !!enabled);
+  };
+
   window.switchNetSearchEndpointTab = function (tabName) {
-    const valid = ['searxng', 'web', 'dark', 'domains'];
+    const valid = ['searxng', 'web', 'dark', 'files', 'osint', 'domains'];
     const target = valid.includes(tabName) ? tabName : 'searxng';
     document.querySelectorAll('#netsearch-endpoints-manager-container .ns-tab-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.nsTab === target);

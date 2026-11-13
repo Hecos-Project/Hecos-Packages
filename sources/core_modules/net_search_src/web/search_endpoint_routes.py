@@ -8,7 +8,7 @@ import json
 import logging
 import time
 import urllib.parse
-from flask import request, jsonify, Response
+from flask import request, jsonify, Response, stream_with_context
 from flask_login import login_required
 
 try:
@@ -119,9 +119,9 @@ def register_endpoint_routes(app, logger=None):
                 try:
                     timeout_val = 35.0 if attempt == 1 else 45.0
                     if req_method == "POST":
-                        resp = http_client.post(target_url, network="tor", timeout=timeout_val, allow_redirects=True, **post_kwargs)
+                        resp = http_client.post(target_url, network="tor", timeout=timeout_val, allow_redirects=True, stream=True, **post_kwargs)
                     else:
-                        resp = http_client.get(target_url, network="tor", timeout=timeout_val, allow_redirects=True)
+                        resp = http_client.get(target_url, network="tor", timeout=timeout_val, allow_redirects=True, stream=True)
                     break
                 except Exception as ex:
                     last_err = ex
@@ -139,7 +139,13 @@ def register_endpoint_routes(app, logger=None):
             content_type = resp.headers.get("Content-Type", "text/html; charset=utf-8")
 
             if "text/html" in content_type.lower() or "xhtml" in content_type.lower():
-                raw_html = resp.text
+                try:
+                    raw_html = resp.text
+                finally:
+                    try:
+                        resp.close()
+                    except Exception:
+                        pass
                 from bs4 import BeautifulSoup
                 import re as _re
                 soup = BeautifulSoup(raw_html, "html.parser")
@@ -296,7 +302,21 @@ def register_endpoint_routes(app, logger=None):
                 flask_resp.headers["Content-Security-Policy"] = "frame-ancestors 'self'"
                 return flask_resp
             else:
-                flask_resp = Response(resp.content, status=resp.status_code, content_type=content_type)
+                def _stream_chunks():
+                    try:
+                        for chunk in resp.iter_content(chunk_size=65536):
+                            if chunk:
+                                yield chunk
+                    finally:
+                        try:
+                            resp.close()
+                        except Exception:
+                            pass
+
+                flask_resp = Response(stream_with_context(_stream_chunks()), status=resp.status_code, content_type=content_type)
+                for hdr in ("Content-Length", "Content-Disposition"):
+                    if resp.headers.get(hdr):
+                        flask_resp.headers[hdr] = resp.headers[hdr]
                 flask_resp.headers["X-Frame-Options"] = "SAMEORIGIN"
                 return flask_resp
         except Exception as e:

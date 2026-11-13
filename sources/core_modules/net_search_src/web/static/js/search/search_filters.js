@@ -31,6 +31,7 @@
       { id: 'dark_directories', label: 'Wiki & Directory', icon: 'fa-compass' },
       { id: 'dark_forums', label: 'Forum & Board', icon: 'fa-comments' },
       { id: 'dark_leaks', label: 'Leaks & Dumps', icon: 'fa-shield-halved' },
+      { id: 'dark_files', label: 'Files & Archives', icon: 'fa-file-shield' },
       { id: 'dark_market', label: 'Markets & Services', icon: 'fa-store' }
     ],
     files: [
@@ -38,13 +39,16 @@
       { id: 'files_docs', label: 'Documents (PDF/DOC)', icon: 'fa-file-pdf' },
       { id: 'files_data', label: 'Data & Sheets (XLS/CSV)', icon: 'fa-file-excel' },
       { id: 'files_archives', label: 'Archives (ZIP/ISO)', icon: 'fa-file-zipper' },
-      { id: 'files_code', label: 'Code & Config', icon: 'fa-file-code' }
+      { id: 'files_code', label: 'Code & Config', icon: 'fa-file-code' },
+      { id: 'files_onion', label: 'Dark Web (.onion)', icon: 'fa-user-secret' }
     ],
     osint: [
       { id: 'all', label: 'All Profiles', icon: 'fa-id-badge' },
-      { id: 'osint_social', label: 'Social Networks', icon: 'fa-users' },
+      { id: 'osint_social', label: 'Social & People', icon: 'fa-users' },
       { id: 'osint_dev', label: 'Dev & Tech', icon: 'fa-code-branch' },
-      { id: 'osint_media', label: 'Gaming & Media', icon: 'fa-gamepad' }
+      { id: 'osint_media', label: 'Media & Creator', icon: 'fa-gamepad' },
+      { id: 'osint_records', label: 'Bio & Records', icon: 'fa-address-card' },
+      { id: 'osint_onion', label: 'Dark Web (.onion)', icon: 'fa-user-secret' }
     ],
     deep: [
       { id: 'all', label: 'All Aggregated', icon: 'fa-layer-group' },
@@ -137,59 +141,85 @@
   const resetPostSearchFilters = (sr) => refine().resetPostSearchFilters?.(sr);
   const initRefineToolbar = () => refine().initRefineToolbar?.();
 
-  function toggleContentFilter() {
-    state.safeSearch = !state.safeSearch;
-    const badge = document.getElementById('badge-content-filter');
-    const btn = document.getElementById('btn-content-filter');
+  const _OPTION_TOGGLES = {
+    safeSearch: {
+      storageKey: 'hecos_netsearch_safe_search',
+      configKey: 'safe_search',
+      btnId: 'btn-content-filter',
+      badgeId: 'badge-content-filter',
+      on: { text: 'ON', tone: 'warn', title: 'Content Filter: ON (SafeSearch Moderate active)' },
+      off: { text: 'OFF', tone: 'ok', title: 'Content Filter: OFF (Unfiltered / Raw Search)' }
+    },
+    darkBypass: {
+      storageKey: 'hecos_netsearch_dark_bypass',
+      configKey: 'dark_bypass',
+      btnId: 'btn-dark-filter',
+      badgeId: 'badge-dark-filter',
+      on: { text: 'BYPASSED', tone: 'ok', title: 'DarkWeb Filters: BYPASSED (100% Uncensored / Blacklists disabled)' },
+      off: { text: 'FILTERED', tone: 'neutral', title: 'DarkWeb Filters: ACTIVE (Ahmia standard moderation)' }
+    },
+    localOnly: {
+      storageKey: 'hecos_netsearch_local_only',
+      configKey: 'local_only',
+      btnId: 'btn-local-only',
+      badgeId: 'badge-local-only',
+      on: { text: 'LOCAL ONLY', tone: 'ok', title: 'Privacy Shield: LOCAL ONLY (Strictly querying local private SearXNG and Tor onion circuits)' },
+      off: { text: 'ALL ENGINES', tone: 'warn', title: 'Privacy Shield: ALL ENGINES (Querying all active local and cloud search engines)' }
+    }
+  };
+
+  function syncOptionToggleVisual(stateKey) {
+    const def = _OPTION_TOGGLES[stateKey];
+    if (!def) return;
+    const cfg = state[stateKey] ? def.on : def.off;
+    const badge = document.getElementById(def.badgeId);
+    const btn = document.getElementById(def.btnId);
     if (badge) {
-      if (state.safeSearch) {
-        badge.innerText = 'ON';
-        badge.className = 'badge-pill badge-warn';
-        if (btn) btn.title = 'Content Filter: ON (SafeSearch Moderate active)';
-      } else {
-        badge.innerText = 'OFF';
-        badge.className = 'badge-pill badge-neutral';
-        if (btn) btn.title = 'Content Filter: OFF (Unfiltered / Raw Search)';
-      }
+      badge.innerText = cfg.text;
+      badge.className = `badge-pill badge-${cfg.tone}`;
+    }
+    if (btn) {
+      btn.classList.toggle('is-state-ok', cfg.tone === 'ok');
+      btn.classList.toggle('is-state-warn', cfg.tone === 'warn');
+      if (cfg.title) btn.title = cfg.title;
     }
   }
 
-  function toggleDarkFilter() {
-    state.darkBypass = !state.darkBypass;
-    const badge = document.getElementById('badge-dark-filter');
-    const btn = document.getElementById('btn-dark-filter');
-    if (badge) {
-      if (state.darkBypass) {
-        badge.innerText = 'BYPASSED';
-        badge.className = 'badge-pill badge-ok';
-        if (btn) btn.title = 'DarkWeb Filters: BYPASSED (100% Uncensored / Blacklists disabled)';
-      } else {
-        badge.innerText = 'FILTERED';
-        badge.className = 'badge-pill badge-neutral';
-        if (btn) btn.title = 'DarkWeb Filters: ACTIVE (Ahmia standard moderation)';
+  function syncAllOptionToggles() {
+    Object.keys(_OPTION_TOGGLES).forEach(syncOptionToggleVisual);
+  }
+
+  function setOptionToggle(stateKey, explicitVal, persist = true) {
+    const def = _OPTION_TOGGLES[stateKey];
+    if (!def) return;
+    const nextVal = (typeof explicitVal === 'boolean') ? explicitVal : !state[stateKey];
+    state[stateKey] = nextVal;
+    syncOptionToggleVisual(stateKey);
+    if (!persist) return;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(def.storageKey, nextVal ? 'true' : 'false');
       }
+    } catch (e) { }
+    if (typeof fetch === 'function') {
+      fetch('/api/hsearch/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [def.configKey]: nextVal })
+      }).catch(() => { });
     }
+  }
+
+  function toggleContentFilter(explicitVal) {
+    setOptionToggle('safeSearch', explicitVal, true);
+  }
+
+  function toggleDarkFilter(explicitVal) {
+    setOptionToggle('darkBypass', explicitVal, true);
   }
 
   function toggleLocalOnly(explicitVal) {
-    if (typeof explicitVal === 'boolean') {
-      state.localOnly = explicitVal;
-    } else {
-      state.localOnly = !state.localOnly;
-    }
-    const badge = document.getElementById('badge-local-only');
-    const btn = document.getElementById('btn-local-only');
-    if (badge) {
-      if (state.localOnly) {
-        badge.innerText = 'LOCAL ONLY';
-        badge.className = 'badge-pill badge-ok';
-        if (btn) btn.title = 'Privacy Shield: LOCAL ONLY (Strictly querying local private SearXNG and Tor onion circuits)';
-      } else {
-        badge.innerText = 'ALL ENGINES';
-        badge.className = 'badge-pill badge-neutral';
-        if (btn) btn.title = 'Privacy Shield: ALL ENGINES (Querying all active local and cloud search engines)';
-      }
-    }
+    setOptionToggle('localOnly', explicitVal, true);
   }
 
   function setSearchDepth(val) {
@@ -362,6 +392,15 @@
       const text = `${item.title || ''} ${item.snippet || ''} ${item.url || ''}`.toLowerCase();
       return /leak|dump|whistle|paste|archive|breach|database|vault|hack|exfiltrat|secret|expose/.test(text);
     }
+    if (filterId === 'dark_files') {
+      const extVal = (item.metadata?.extension || (item.url ? item.url.split('.').pop().split(/[?#]/)[0] : '') || '').toLowerCase();
+      const knownExts = ['pdf', 'docx', 'doc', 'epub', 'txt', 'csv', 'xlsx', 'sql', 'json', 'jsonl', 'sqlite', 'db', 'zip', 'rar', '7z', 'tar', 'gz', 'tgz', 'iso', 'py', 'sh', 'yaml', 'yml'];
+      const hasFileMetaExt = Boolean(item.metadata && item.metadata.extension && !['html', 'htm', 'php', 'asp', 'aspx', 'jsp'].includes(String(item.metadata.extension).toLowerCase()));
+      return item.category === 'files'
+        || hasFileMetaExt
+        || knownExts.includes(extVal)
+        || /\[(pdf|doc|docx|epub|zip|rar|7z|iso|csv|sql|tar|gz|txt|json)\]/i.test(item.title || '');
+    }
     if (filterId === 'dark_market') {
       const text = `${item.title || ''} ${item.snippet || ''} ${item.url || ''}`.toLowerCase();
       return /market|shop|store|vendor|service|escrow|crypto|exchange|wallet|drug|carding|counterfeit|buy|sell/.test(text);
@@ -373,7 +412,7 @@
     if (filterId === 'files_docs') {
       return ['pdf', 'docx', 'doc', 'epub', 'odt', 'txt', 'rtf', 'djvu', 'mobi', 'md'].includes(ext)
         || /\[(pdf|doc|docx|epub|odt|djvu|txt|md)\]/i.test(item.title || '')
-        || /openalex|arxiv|annas|zlibrary/.test(engLower);
+        || /openalex|arxiv|zenodo|openlibrary|doaj|annas|zlibrary/.test(engLower);
     }
     if (filterId === 'files_data') {
       return ['xlsx', 'xls', 'csv', 'sql', 'json', 'jsonl', 'xml', 'sqlite', 'db', 'tsv', 'parquet'].includes(ext)
@@ -391,17 +430,32 @@
         || /\[(py|js|ts|sh|yaml|rs|go|c|cpp|php)\]/i.test(item.title || '')
         || /github|npm|pypi/.test(engLower);
     }
+    if (filterId === 'files_onion') {
+      return isTorItem(item)
+        || (item.engine_id && item.engine_id.startsWith('dark_'))
+        || engLower.includes(':tor');
+    }
 
     // 4. OSINT subtabs
-    const platform = (item.metadata?.platform || item.title || '').toLowerCase();
-    if (filterId === 'osint_social') {
-      return /reddit|telegram|medium|pinterest|producthunt|twitter|instagram|facebook|tiktok|threads/.test(platform);
+    const osintGroup = (item.metadata?.osint_group || '').toLowerCase();
+    const osintBlob = `${item.metadata?.platform || ''} ${item.title || ''} ${item.url || ''} ${item.engine || ''}`.toLowerCase();
+    if (filterId === 'osint_onion') {
+      return isTorItem(item)
+        || (item.engine_id && item.engine_id.startsWith('dark_'))
+        || engLower.includes(':tor');
     }
     if (filterId === 'osint_dev') {
-      return /github|gitlab|dev\.to|hackernews|keybase|bitbucket|stackoverflow/.test(platform);
+      return osintGroup === 'dev' || /github\.com|gitlab\.com|dev\.to|hackernews|news\.ycombinator|keybase\.io|bitbucket|stackoverflow|pypi\.org|huggingface\.co|codepen\.io|kaggle\.com|docker|crt\.sh/.test(osintBlob);
     }
     if (filterId === 'osint_media') {
-      return /steam|twitch|spotify|soundcloud|flickr|vimeo|youtube/.test(platform);
+      return osintGroup === 'media' || /steam|twitch|spotify|soundcloud|flickr|vimeo|youtube|youtu\.be|medium\.com|substack\.com|patreon\.com|bandcamp|deviantart|roblox/.test(osintBlob);
+    }
+    if (filterId === 'osint_records') {
+      return osintGroup === 'records' || /wikipedia\.org|wikidata\.org|archive\.org|gravatar\.com|imdb\.com|orcid\.org|scholar\.google|news/.test(osintBlob);
+    }
+    if (filterId === 'osint_social') {
+      if (isTorItem(item)) return false;
+      return osintGroup === 'social' || /linkedin\.com|facebook\.com|instagram\.com|x\.com|twitter\.com|tiktok\.com|threads\.net|bsky\.app|mastodon|reddit\.com|telegram|t\.me\/|pinterest|producthunt|linktr\.ee|about\.me|vk\.com/.test(osintBlob);
     }
 
     // 5. Global Sweep (Deep) subtabs
@@ -711,6 +765,7 @@
     toggleContentFilter,
     toggleDarkFilter,
     toggleLocalOnly,
+    syncAllOptionToggles,
     setSearchDepth,
     setSearchDepthPreset,
     setViewMode,
@@ -790,10 +845,12 @@
   // Restore initial collapse state and bind post-search refine/sort toolbar
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
+      syncAllOptionToggles();
       if (state.isStreamCollapsed) toggleStreamBarCollapse(null, true);
       initRefineToolbar();
     });
   } else {
+    syncAllOptionToggles();
     if (state.isStreamCollapsed) toggleStreamBarCollapse(null, true);
     initRefineToolbar();
   }

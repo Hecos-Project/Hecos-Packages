@@ -20,11 +20,14 @@ from .files_apis import (
     DOC_EXTS,
     fetch_archive_org_files,
     fetch_arxiv_pdfs,
+    fetch_doaj_pdfs,
     fetch_github_repos,
     fetch_huggingface_datasets,
     fetch_npm_packages,
     fetch_openalex_pdfs,
+    fetch_openlibrary_files,
     fetch_wikimedia_files,
+    fetch_zenodo_files,
     infer_extension,
 )
 from .. import http_client
@@ -176,21 +179,39 @@ class FilesDorksEngine(BaseEngine):
                 items = _extract_ddg_html_dork(dork_q, fallback_ext, limit=min(dork_max, 20), timeout=query.timeout)
             return items
 
-        # Build concurrent tasks: always include dork batches + relevant open APIs
-        tasks = [lambda fb=fb, ex=ex: _fetch_dork_batch(fb, ex) for fb, ex in batches]
-        tasks.append(lambda: fetch_archive_org_files(query.query, rows=api_rows, timeout=query.timeout, file_types=req_exts))
+        # Build concurrent tasks respecting individual file_hunter.sources toggles
+        src_flags = cfg.get("file_hunter", {}).get("sources", {}) or {}
+        src_on = lambda k: src_flags.get(k, True) is not False
+
+        tasks = []
+        if src_on("dorks_web"):
+            tasks.extend(lambda fb=fb, ex=ex: _fetch_dork_batch(fb, ex) for fb, ex in batches)
+        if src_on("archive_org"):
+            tasks.append(lambda: fetch_archive_org_files(query.query, rows=api_rows, timeout=query.timeout, file_types=req_exts))
+        if src_on("zenodo"):
+            tasks.append(lambda: fetch_zenodo_files(query.query, rows=min(api_rows, 20), timeout=query.timeout))
 
         req_set = set(req_exts)
         if not req_set or (req_set & DOC_EXTS):
-            tasks.append(lambda: fetch_openalex_pdfs(query.query, rows=api_rows, timeout=query.timeout))
-            tasks.append(lambda: fetch_arxiv_pdfs(query.query, rows=min(api_rows, 20), timeout=query.timeout))
-            tasks.append(lambda: fetch_wikimedia_files(query.query, rows=min(api_rows, 20), timeout=query.timeout))
-        if not req_set or (req_set & DATA_EXTS):
+            if src_on("openalex"):
+                tasks.append(lambda: fetch_openalex_pdfs(query.query, rows=api_rows, timeout=query.timeout))
+            if src_on("arxiv"):
+                tasks.append(lambda: fetch_arxiv_pdfs(query.query, rows=min(api_rows, 20), timeout=query.timeout))
+            if src_on("doaj"):
+                tasks.append(lambda: fetch_doaj_pdfs(query.query, rows=min(api_rows, 15), timeout=query.timeout))
+            if src_on("openlibrary"):
+                tasks.append(lambda: fetch_openlibrary_files(query.query, rows=min(api_rows, 15), timeout=query.timeout))
+            if src_on("wikimedia"):
+                tasks.append(lambda: fetch_wikimedia_files(query.query, rows=min(api_rows, 20), timeout=query.timeout))
+        if (not req_set or (req_set & DATA_EXTS)) and src_on("huggingface"):
             tasks.append(lambda: fetch_huggingface_datasets(query.query, rows=min(api_rows, 20), timeout=query.timeout))
-        if not req_set or (req_set & (CODE_EXTS | ARCHIVE_EXTS)):
+        if (not req_set or (req_set & (CODE_EXTS | ARCHIVE_EXTS))) and src_on("github"):
             tasks.append(lambda: fetch_github_repos(query.query, rows=min(api_rows, 20), timeout=query.timeout))
-        if not req_set or (req_set & CODE_EXTS):
+        if (not req_set or (req_set & CODE_EXTS)) and src_on("npm"):
             tasks.append(lambda: fetch_npm_packages(query.query, rows=min(api_rows, 15), timeout=query.timeout))
+
+        if not tasks:
+            return []
 
         try:
             with ThreadPoolExecutor(max_workers=min(len(tasks), 10)) as executor:

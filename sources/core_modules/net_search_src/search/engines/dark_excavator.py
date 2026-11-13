@@ -73,14 +73,27 @@ class DarkExcavatorEngine(BaseEngine):
                 soup = BeautifulSoup(resp.text, "lxml")
 
                 added_this_page = 0
+                is_files_mode = (getattr(query, "mode", "") or "").lower() == "files"
                 for a in soup.find_all("a", href=True):
                     href = a["href"].strip()
+                    href_lower = href.lower()
                     if not href or href in seen_urls:
                         continue
-                    # Exclude self-references and non-onion navigation
-                    if "2fd6cemt4g" in href or "2fd6uvfdwh" in href:
+                    # Exclude self-references, sponsored ad trackers, and non-onion navigation
+                    if "2fd6cemt4g" in href_lower or "2fd6uvfdwh" in href_lower:
                         continue
-                    if ".onion" not in href.lower():
+                    if "clickid=" in href_lower or "aff_id=" in href_lower or "/ad/" in href_lower or "utm_source=excavator" in href_lower:
+                        continue
+                    if ".onion" not in href_lower:
+                        continue
+
+                    ad_ancestor = a.find_parent(
+                        lambda tag: any(
+                            tok in (" ".join(tag.get("class") or []) + " " + str(tag.get("id") or "")).lower()
+                            for tok in ("sponsor", "ad-box", "adbox", "banner", "promo", "ads")
+                        )
+                    )
+                    if ad_ancestor:
                         continue
 
                     title = a.get_text(strip=True)
@@ -101,7 +114,7 @@ class DarkExcavatorEngine(BaseEngine):
                         title=title,
                         snippet=snippet,
                         engine=self.id,
-                        category="onion",
+                        category="files" if is_files_mode else "onion",
                         network="tor"
                     ))
                     added_this_page += 1

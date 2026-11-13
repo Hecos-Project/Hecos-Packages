@@ -21,7 +21,7 @@ MODE_VALID_FILTERS = {
     "clear": {"all", "web", "images", "videos", "audio", "files"},
     "dark": {"all", "dark_directories", "dark_forums", "dark_leaks", "dark_market"},
     "files": {"all", "files_docs", "files_data", "files_archives", "files_code"},
-    "osint": {"all", "osint_social", "osint_dev", "osint_media"},
+    "osint": {"all", "osint_social", "osint_dev", "osint_media", "osint_records", "osint_onion"},
     "deep": {"all", "deep_clear", "deep_dark", "deep_media", "deep_files"},
 }
 

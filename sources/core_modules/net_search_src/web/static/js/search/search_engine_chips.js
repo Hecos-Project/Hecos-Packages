@@ -89,6 +89,19 @@ window.SearchEngineChips = (function () {
     { id: 'bandcamp', name: 'Bandcamp', icon: 'fab fa-bandcamp', test: /bandcamp/i },
     { id: 'deezer', name: 'Deezer', icon: 'fas fa-music', test: /deezer/i },
     { id: 'radio_browser', name: 'Radio Browser', icon: 'fas fa-radio', test: /radio.*browser/i },
+    // OSINT & Identity Providers
+    { id: 'linkedin', name: 'LinkedIn', icon: 'fab fa-linkedin', test: /linkedin/i },
+    { id: 'twitter', name: 'X / Twitter', icon: 'fab fa-x-twitter', test: /(twitter|x\.com)/i },
+    { id: 'instagram', name: 'Instagram', icon: 'fab fa-instagram', test: /instagram/i },
+    { id: 'facebook', name: 'Facebook', icon: 'fab fa-facebook', test: /facebook/i },
+    { id: 'tiktok', name: 'TikTok', icon: 'fab fa-tiktok', test: /tiktok/i },
+    { id: 'telegram', name: 'Telegram', icon: 'fab fa-telegram', test: /telegram/i },
+    { id: 'gitlab', name: 'GitLab', icon: 'fab fa-gitlab', test: /gitlab/i },
+    { id: 'keybase', name: 'Keybase', icon: 'fab fa-keybase', test: /keybase/i },
+    { id: 'gravatar', name: 'Gravatar', icon: 'fas fa-user-check', test: /gravatar/i },
+    { id: 'medium', name: 'Medium', icon: 'fab fa-medium', test: /medium/i },
+    { id: 'crtsh', name: 'crt.sh', icon: 'fas fa-certificate', test: /crtsh/i },
+    { id: 'osint_dork', name: 'OSINT Dorks', icon: 'fas fa-fingerprint', test: /(osint:dork|sherlock)/i },
     // References & Maps
     { id: 'imdb', name: 'IMDB', icon: 'fab fa-imdb', test: /imdb/i },
     { id: 'openstreetmap', name: 'OpenStreetMap', icon: 'fas fa-map-location-dot', test: /(openstreetmap|osm|photon)/i },
@@ -188,6 +201,20 @@ window.SearchEngineChips = (function () {
     // Files / Dorks
     'file_dork': { name: 'Dorks Hunter', icon: 'fas fa-file-shield' },
     'files_dorks': { name: 'Dorks Hunter', icon: 'fas fa-file-shield' },
+    // OSINT
+    'osint:sherlock': { name: 'Sherlock', icon: 'fas fa-id-badge' },
+    'osint:dork': { name: 'OSINT Dorks', icon: 'fas fa-fingerprint' },
+    'osint:dork_html': { name: 'OSINT Dorks', icon: 'fas fa-fingerprint' },
+    'osint:github': { name: 'GitHub OSINT', icon: 'fab fa-github' },
+    'osint:gitlab': { name: 'GitLab OSINT', icon: 'fab fa-gitlab' },
+    'osint:reddit': { name: 'Reddit OSINT', icon: 'fab fa-reddit' },
+    'osint:hackernews': { name: 'HN OSINT', icon: 'fab fa-y-combinator' },
+    'osint:wikipedia': { name: 'Wikipedia', icon: 'fab fa-wikipedia-w' },
+    'osint:wikidata': { name: 'Wikidata', icon: 'fas fa-barcode' },
+    'osint:gravatar': { name: 'Gravatar', icon: 'fas fa-user-check' },
+    'osint:keybase': { name: 'Keybase', icon: 'fab fa-keybase' },
+    'osint:archive_org': { name: 'Archive.org', icon: 'fas fa-landmark' },
+    'osint:crtsh': { name: 'crt.sh', icon: 'fas fa-certificate' },
     // News
     'clear_news': { name: 'News Aggregator', icon: 'fas fa-newspaper' },
     'searxng:google news': { name: 'Google News (SXG)', icon: 'fab fa-google' },
@@ -576,7 +603,8 @@ window.SearchEngineChips = (function () {
     if (target === 'media_audio' && (cat === 'audio' || eng.includes('audio') || eng.includes('podcast') || eng.includes('archive_org:audio'))) return true;
     if (target === 'files_dorks' && (cat === 'files' || eng.includes('dork') || eng.includes('file') || eng.includes('archive_org:texts'))) return true;
     if (target === 'clear_searxng' && (eng.includes('searx') || eng.includes('searxng') || engId.includes('searx') || engId.includes('searxng'))) return true;
-    if (target === 'osint_sherlock' && (cat === 'osint' || eng.includes('sherlock'))) return true;
+    if (target === 'osint_sherlock' && (engId === 'osint_sherlock' || eng.includes('sherlock'))) return true;
+    if (target === 'osint_sources' && (engId === 'osint_sources' || (eng.startsWith('osint:') && !eng.includes('sherlock')))) return true;
     if (target.startsWith('dark_')) {
       const darkName = target.replace(/^dark_/, '');
       if (engId === target || eng === darkName || eng.includes(darkName) || engId.includes(darkName)) return true;

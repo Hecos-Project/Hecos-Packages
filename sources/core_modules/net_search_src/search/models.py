@@ -53,7 +53,7 @@ class SearchQuery:
     auto_fallback_tor: bool = True     # If clearweb yields zero, fallback to Tor
     target_username: Optional[str] = None  # for OSINT mode
     page: int = 1
-    local_only: bool = False
+    local_only: bool = True
     excluded_providers: List[str] = field(default_factory=list)
     language: Optional[str] = None
     domain_filter: Optional[str] = None

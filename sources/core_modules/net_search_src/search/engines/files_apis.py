@@ -419,3 +419,135 @@ def fetch_wikimedia_files(query_str: str, rows: int = 15, timeout: float = 6.0) 
         hecos_logger.debug(f"[SEARCH:FILES_APIS] Wikimedia files note: {exc}")
     return items
 
+
+def fetch_zenodo_files(query_str: str, rows: int = 15, timeout: float = 7.0) -> List[SearchResult]:
+    """Searches CERN Zenodo open repository for downloadable PDFs, datasets (CSV/ZIP/JSON), and code archives."""
+    items: List[SearchResult] = []
+    try:
+        resp = http_client.get(
+            "https://zenodo.org/api/records",
+            network="clearnet",
+            params={"q": query_str, "size": min(max(rows, 5), 25)},
+            headers={"User-Agent": "HecosDeepSearch/1.0"},
+            timeout=min(timeout, 7.0),
+        )
+        if resp.status_code != 200:
+            return items
+        hits = resp.json().get("hits", {}).get("hits", [])
+        for rec in hits:
+            meta = rec.get("metadata") or {}
+            title = str(meta.get("title") or "").strip()
+            files_list = rec.get("files") or []
+            rec_url = (rec.get("links") or {}).get("html") or ""
+            dl_url = ""
+            ext = ""
+            if files_list and isinstance(files_list[0], dict):
+                f0 = files_list[0]
+                dl_url = (f0.get("links") or {}).get("self") or rec_url
+                ext = infer_extension(str(f0.get("key") or dl_url), fallback="")
+            target_url = dl_url or rec_url
+            if not (title and target_url):
+                continue
+            ext = ext or infer_extension(target_url, fallback="zip")
+            raw_desc = re.sub(r"<[^>]+>", "", str(meta.get("description") or "")).strip()
+            items.append(SearchResult(
+                title=f"[{ext.upper()}] {title}",
+                url=target_url,
+                snippet=raw_desc[:170] or "Zenodo Open File & Dataset Repository",
+                engine="zenodo:files",
+                category="files",
+                network="clearnet",
+                score=1.22,
+                metadata={"extension": ext},
+            ))
+    except Exception as exc:
+        hecos_logger.debug(f"[SEARCH:FILES_APIS] Zenodo note: {exc}")
+    return items
+
+
+def fetch_openlibrary_files(query_str: str, rows: int = 15, timeout: float = 6.0) -> List[SearchResult]:
+    """Searches OpenLibrary for books & Archive.org downloadable texts/PDF/EPUB editions."""
+    items: List[SearchResult] = []
+    try:
+        resp = http_client.get(
+            "https://openlibrary.org/search.json",
+            network="clearnet",
+            params={"q": query_str, "limit": min(max(rows, 5), 25), "fields": "key,title,author_name,first_publish_year,ia"},
+            headers={"User-Agent": "HecosDeepSearch/1.0"},
+            timeout=min(timeout, 6.0),
+        )
+        if resp.status_code != 200:
+            return items
+        for doc in resp.json().get("docs", []):
+            title = str(doc.get("title") or "").strip()
+            key = str(doc.get("key") or "").strip()
+            ia_list = doc.get("ia") or []
+            if not title:
+                continue
+            if ia_list and isinstance(ia_list, list):
+                url = f"https://archive.org/details/{urllib.parse.quote(str(ia_list[0]))}"
+                ext = "pdf"
+            elif key:
+                url = f"https://openlibrary.org{key}"
+                ext = "epub"
+            else:
+                continue
+            authors = ", ".join(doc.get("author_name") or [])[:80]
+            yr = doc.get("first_publish_year") or ""
+            items.append(SearchResult(
+                title=f"[{ext.upper()}] {title}",
+                url=url,
+                snippet=f"{authors} ({yr})".strip(" ()") or "OpenLibrary Ebook / Digital Edition",
+                engine="openlibrary:docs",
+                category="files",
+                network="clearnet",
+                score=1.1,
+                metadata={"extension": ext},
+            ))
+    except Exception as exc:
+        hecos_logger.debug(f"[SEARCH:FILES_APIS] OpenLibrary note: {exc}")
+    return items
+
+
+def fetch_doaj_pdfs(query_str: str, rows: int = 15, timeout: float = 6.0) -> List[SearchResult]:
+    """Searches Directory of Open Access Journals (DOAJ) for free full-text PDF articles."""
+    items: List[SearchResult] = []
+    try:
+        q_enc = urllib.parse.quote(query_str, safe="")
+        resp = http_client.get(
+            f"https://doaj.org/api/search/articles/{q_enc}",
+            network="clearnet",
+            params={"pageSize": min(max(rows, 5), 25)},
+            headers={"User-Agent": "HecosDeepSearch/1.0"},
+            timeout=min(timeout, 6.0),
+        )
+        if resp.status_code != 200:
+            return items
+        for hit in resp.json().get("results", []):
+            bib = hit.get("bibjson") or {}
+            title = str(bib.get("title") or "").strip()
+            links = bib.get("link") or []
+            full_url = ""
+            for ln in links:
+                if isinstance(ln, dict) and ln.get("url"):
+                    full_url = str(ln["url"]).strip()
+                    if str(ln.get("content_type") or "").lower() == "pdf" or ".pdf" in full_url.lower():
+                        break
+            if not (title and full_url.startswith(("http://", "https://"))):
+                continue
+            ext = infer_extension(full_url, fallback="pdf")
+            items.append(SearchResult(
+                title=f"[{ext.upper()}] {title}",
+                url=full_url,
+                snippet=str(bib.get("abstract") or "DOAJ Open Access Article")[:170],
+                engine="doaj:pdf",
+                category="files",
+                network="clearnet",
+                score=1.15,
+                metadata={"extension": ext},
+            ))
+    except Exception as exc:
+        hecos_logger.debug(f"[SEARCH:FILES_APIS] DOAJ note: {exc}")
+    return items
+
+

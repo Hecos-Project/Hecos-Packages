@@ -21,6 +21,7 @@ from typing import List, Set, Dict, Any
 
 from .base import BaseEngine
 from .files_apis import infer_extension
+from .osint_apis import classify_osint_group
 from ..models import SearchQuery, SearchResult
 from ..config import get_search_config
 from .. import http_client
@@ -51,6 +52,7 @@ MODE_TO_CATEGORIES = {
     "news":   "news",
     "music":  "music",
     "files":  "files",
+    "osint":  "general",
     "it":     "it",
     "science": "science",
 }
@@ -236,7 +238,10 @@ class ClearSearxngEngine(BaseEngine):
                             "source_engine": engine_source,
                             "publisher": item.get("author") or engine_source
                         }
-                        if search_cat == "files" or cat == "files":
+                        if query.mode == "osint":
+                            cat = "osint"
+                            meta["osint_group"] = classify_osint_group(url, engine_source, title)
+                        elif search_cat == "files" or cat == "files":
                             cat = "files"
                             inferred_ext = infer_extension(url, fallback="")
                             if not inferred_ext:

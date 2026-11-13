@@ -138,11 +138,23 @@ window.SearchCopilot = (function () {
     return msgEl;
   }
 
-  function appendSystemNotice(text) {
+  function appendSystemNotice(text, upsertKey = null) {
     const container = document.getElementById('copilot-chat-messages');
     if (!container) return;
+    if (upsertKey) {
+      const existing = Array.from(container.querySelectorAll('.copilot-sys-notice')).find(
+        n => n.dataset && n.dataset.upsertKey === upsertKey
+      );
+      if (existing) {
+        existing.innerHTML = text;
+        return;
+      }
+    }
     const el = document.createElement('div');
     el.className = 'copilot-sys-notice';
+    if (upsertKey) {
+      el.dataset.upsertKey = upsertKey;
+    }
     el.innerHTML = text;
     container.appendChild(el);
     container.scrollTop = container.scrollHeight;
@@ -526,11 +538,15 @@ window.SearchCopilot = (function () {
       </div>
     `;
 
-    // Prompt greeting in assistant chat
+    // Prompt greeting in assistant chat (1 deduplicated notice per search session/query)
     if (showNotice) {
       const curPreset = getCurrentPreset();
       const charName = curPreset ? (curPreset.soul_name || curPreset.name || 'AI') : 'AI';
-      appendSystemNotice(`🔍 Search completed for <strong>"${escapeHtml(query)}"</strong> (${total} sources). Ask ${escapeHtml(charName)} to analyze or summarize the findings!`);
+      const noticeKey = `search-complete:${window.SearchState?.activeSessionId || window.SearchState?.currentSessionId || query || ''}`;
+      appendSystemNotice(
+        `🔍 Search completed for <strong>"${escapeHtml(query)}"</strong> (${total} sources). Ask ${escapeHtml(charName)} to analyze or summarize the findings!`,
+        noticeKey
+      );
     }
   }
 

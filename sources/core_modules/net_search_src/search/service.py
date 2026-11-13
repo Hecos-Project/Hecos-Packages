@@ -19,6 +19,7 @@ except ImportError:
 
 from .models import SearchQuery, SearchResult, SearchSession
 from .engines import get_engines_for_mode, get_all_engines
+from .engines.files_apis import infer_extension
 from .sessions import get_session_store
 from .config import get_search_config
 
@@ -100,13 +101,18 @@ class HecosSearchService:
             f"across {len(engines)} engines: {new_engine_ids}"
         )
 
+        # Persist initial session immediately on start so Search History tab exists right away
+        if not is_pagination and existing_session is None:
+            self.session_store.save_session(session)
+
         if stream_cb:
             stream_cb({
                 "type": "start",
                 "session_id": session.id,
                 "engines": new_engine_ids,
                 "query": query.query,
-                "mode": query.mode
+                "mode": query.mode,
+                "created_at": session.created_at
             })
 
         accumulated_results: List[SearchResult] = []
@@ -143,6 +149,12 @@ class HecosSearchService:
                         if item.metadata is None:
                             item.metadata = {}
                         item.metadata["engine_id"] = engine_id
+                        if not item.metadata.get("extension") and item.url:
+                            inferred_ext = infer_extension(item.url)
+                            if inferred_ext and (
+                                item.category == "files" or inferred_ext not in ("html", "htm", "php", "asp", "aspx", "jsp")
+                            ):
+                                item.metadata["extension"] = inferred_ext
 
                         norm = _normalize_url(item.url)
                         if norm in seen_urls:
@@ -229,7 +241,9 @@ class HecosSearchService:
             )
             if is_rich_media:
                 max_dom = 60 if is_unlimited else (40 if is_media_mode else 25)
-            elif query.mode in ("files", "osint"):
+            elif query.mode == "osint":
+                max_dom = 12 if is_unlimited else 8
+            elif query.mode == "files":
                 max_dom = 6
             else:
                 max_dom = 3

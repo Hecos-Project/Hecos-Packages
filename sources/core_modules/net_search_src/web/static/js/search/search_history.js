@@ -11,6 +11,8 @@
   let _isLoading = false;
   let _editingSessionId = null;
   let _sessionsById = {};
+  let _cachedSessions = [];
+  let _liveSession = null;
   const _groupOpenState = {};
 
   function escapeHtml(str) {
@@ -87,19 +89,56 @@
     }
   }
 
+  function formatNowLocalDateTime() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+  }
+
+  function mergeWithLiveSession(serverSessions) {
+    const list = Array.isArray(serverSessions) ? serverSessions.map(s => Object.assign({}, s)) : [];
+    if (!_liveSession) return list;
+
+    const liveIds = new Set([_liveSession.id, _liveSession.tempId].filter(Boolean));
+    let matched = false;
+    const merged = list.map(s => {
+      if (liveIds.has(s.id)) {
+        matched = true;
+        return Object.assign({}, s, {
+          total_results: Math.max(Number(s.total_results || 0), Number(_liveSession.total_results || 0)),
+          is_live: Boolean(_liveSession.is_live)
+        });
+      }
+      return s;
+    });
+    if (!matched) {
+      merged.unshift(Object.assign({}, _liveSession));
+    }
+    return merged;
+  }
+
   function renderHistoryItemHtml(s, isNew) {
     const safeId = escapeHtml(s.id);
     const displayTitle = (s.title && s.title.trim()) ? s.title.trim() : s.query;
     const tooltipText = (s.title && s.title.trim() && s.title.trim() !== s.query)
       ? `${s.title.trim()} (Original query: ${s.query})`
       : s.query;
+    const isLive = Boolean(_liveSession && (_liveSession.id === s.id || _liveSession.tempId === s.id) && _liveSession.is_live);
+    const liveCount = isLive ? Math.max(Number(s.total_results || 0), Number(_liveSession.total_results || 0)) : (s.total_results || 0);
 
     return `
-      <div class="history-item ${s.id === state.activeSessionId ? 'active' : ''} ${isNew ? 'history-item-new' : ''}"
+      <div class="history-item ${s.id === state.activeSessionId ? 'active' : ''} ${isNew ? 'history-item-new' : ''} ${isLive ? 'is-live-searching' : ''}"
            data-session-id="${safeId}"
            onclick="window.loadSession('${safeId}')">
         <div class="history-item-top">
-          <div class="history-query" title="${escapeHtml(tooltipText)}">${escapeHtml(displayTitle)}</div>
+          <div class="history-query" title="${escapeHtml(tooltipText)}">
+            ${isLive ? '<i class="fas fa-circle-notch fa-spin history-live-spinner" aria-hidden="true"></i> ' : ''}${escapeHtml(displayTitle)}
+          </div>
           <div class="history-item-actions" onclick="event.stopPropagation()">
             <button type="button" class="btn-history-action btn-history-rename"
                     title="Rename search tab"
@@ -118,9 +157,9 @@
         <div class="history-meta">
           <span class="history-mode-pill">${escapeHtml((s.mode || 'web').toUpperCase())}</span>
           <span>&bull;</span>
-          <span>${s.total_results} res.</span>
+          <span class="history-count-label">${liveCount} res.</span>
           <span>&bull;</span>
-          <span>${escapeHtml((s.created_at || '').split(' ')[1] || '')}</span>
+          <span class="history-time-label">${isLive ? 'searching...' : escapeHtml((s.created_at || '').split(' ')[1] || '')}</span>
         </div>
       </div>
     `;
@@ -288,6 +327,9 @@
           _editingSessionId = null;
         }
         delete _sessionsById[sessionId];
+        if (_liveSession && (_liveSession.id === sessionId || _liveSession.tempId === sessionId)) {
+          _liveSession = null;
+        }
         if (state.activeSessionId === sessionId && typeof window.startNewSearch === 'function') {
           window.startNewSearch('search');
         }
@@ -312,12 +354,16 @@
       if (res.ok && res.sessions) {
         if (_editingSessionId && !force) return;
 
+        _cachedSessions = res.sessions;
+        const combined = mergeWithLiveSession(res.sessions);
+
         const nextMap = {};
-        res.sessions.forEach(s => { nextMap[s.id] = s; });
+        combined.forEach(s => { nextMap[s.id] = s; });
         _sessionsById = nextMap;
 
         const todayKey = getLocalDateKey(new Date());
-        const digest = `${todayKey}|` + res.sessions.map(s => `${s.id}:${s.total_results}:${s.title || ''}`).join('|');
+        const liveFlag = _liveSession && _liveSession.is_live ? `|LIVE:${_liveSession.id}:${_liveSession.total_results}` : '';
+        const digest = `${todayKey}${liveFlag}|` + combined.map(s => `${s.id}:${s.total_results}:${s.title || ''}`).join('|');
         
         // If nothing changed in the sessions list, only update active highlight
         if (!force && digest === _lastSessionsDigest) {
@@ -328,7 +374,7 @@
           return;
         }
 
-        renderHistoryList(res.sessions);
+        renderHistoryList(combined);
         _lastSessionsDigest = digest;
       }
     } catch (e) {
@@ -339,7 +385,7 @@
   }
 
   async function loadSession(sessionId, preferredFilter = null, updateCopilot = true) {
-    if (!api || !api.getSessionDetail) return;
+    if (!sessionId || String(sessionId).startsWith('pending_') || !api || !api.getSessionDetail) return;
     try {
       const res = await api.getSessionDetail(sessionId);
       if (res.ok && res.session) {
@@ -571,9 +617,107 @@
     initHistorySidebarResizer();
   }
 
+  function createPendingTab(queryStr, mode, tempId) {
+    const cleanQ = String(queryStr || '').trim();
+    if (!cleanQ) return;
+    const todayKey = getLocalDateKey(new Date());
+    _groupOpenState[todayKey] = true;
+
+    _liveSession = {
+      id: tempId,
+      tempId: tempId,
+      query: cleanQ,
+      title: '',
+      mode: mode || 'clear',
+      total_results: 0,
+      created_at: formatNowLocalDateTime(),
+      is_live: true
+    };
+    state.activeSessionId = tempId;
+    state.currentSessionId = tempId;
+
+    const combined = mergeWithLiveSession(_cachedSessions);
+    const nextMap = {};
+    combined.forEach(s => { nextMap[s.id] = s; });
+    _sessionsById = nextMap;
+    _lastSessionsDigest = '';
+    renderHistoryList(combined);
+  }
+
+  function bindLiveSessionId(tempId, realId, createdAt) {
+    if (!realId) return;
+    state.activeSessionId = realId;
+    state.currentSessionId = realId;
+    if (_liveSession && (_liveSession.tempId === tempId || _liveSession.id === tempId)) {
+      _liveSession.id = realId;
+      if (createdAt) _liveSession.created_at = createdAt;
+    } else {
+      _liveSession = {
+        id: realId,
+        tempId: tempId,
+        query: state.currentQuery || '',
+        title: '',
+        mode: state.currentMode || 'clear',
+        total_results: (state.results && state.results.length) || 0,
+        created_at: createdAt || formatNowLocalDateTime(),
+        is_live: true
+      };
+    }
+
+    const oldEl = tempId
+      ? document.querySelector(`.history-item[data-session-id="${CSS.escape(tempId)}"]`)
+      : null;
+    if (oldEl) {
+      oldEl.setAttribute('data-session-id', realId);
+      oldEl.setAttribute('onclick', `window.loadSession('${realId}')`);
+      const renameBtn = oldEl.querySelector('.btn-history-rename');
+      if (renameBtn) renameBtn.setAttribute('onclick', `event.stopPropagation(); window.startRenameHistoryTab('${realId}')`);
+      const delBtn = oldEl.querySelector('.btn-history-delete');
+      if (delBtn) delBtn.setAttribute('onclick', `event.stopPropagation(); window.deleteHistoryTab('${realId}')`);
+    }
+    if (_sessionsById[tempId]) {
+      _sessionsById[realId] = Object.assign({}, _sessionsById[tempId], { id: realId });
+      delete _sessionsById[tempId];
+    }
+  }
+
+  function updateLiveTabProgress(sessionId, count, isDone = false) {
+    if (_liveSession && (!sessionId || _liveSession.id === sessionId || _liveSession.tempId === sessionId)) {
+      _liveSession.total_results = Number(count || 0);
+      if (isDone) {
+        _liveSession.is_live = false;
+      }
+    }
+    const targetId = sessionId || (_liveSession && _liveSession.id);
+    if (targetId) {
+      const el = document.querySelector(`.history-item[data-session-id="${CSS.escape(targetId)}"]`);
+      if (el) {
+        const cntEl = el.querySelector('.history-count-label');
+        if (cntEl) cntEl.textContent = `${Number(count || 0)} res.`;
+        if (isDone) {
+          el.classList.remove('is-live-searching');
+          const spin = el.querySelector('.history-live-spinner');
+          if (spin) spin.remove();
+          const tEl = el.querySelector('.history-time-label');
+          if (tEl) {
+            const hhmm = (_liveSession && _liveSession.created_at ? _liveSession.created_at.split(' ')[1] : '') || '';
+            tEl.textContent = hhmm;
+          }
+        }
+      }
+    }
+    if (isDone) {
+      _liveSession = null;
+    }
+  }
+
   window.SearchHistory = {
     loadHistory,
     loadSession,
+    createPendingTab,
+    bindLiveSessionId,
+    updateLiveTabProgress,
+    clearLiveSession: () => { _liveSession = null; },
     initHistorySidebarResizer,
     startRenameHistoryTab,
     deleteHistoryTab,
@@ -583,6 +727,9 @@
   // Global window alias
   window.loadHistory = loadHistory;
   window.loadSession = loadSession;
+  window.createPendingTab = createPendingTab;
+  window.bindLiveSessionId = bindLiveSessionId;
+  window.updateLiveTabProgress = updateLiveTabProgress;
   window.startRenameHistoryTab = startRenameHistoryTab;
   window.deleteHistoryTab = deleteHistoryTab;
   window.toggleHistoryDateGroup = toggleDateGroup;

@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/assets/css/core/components.css?v={{ version }}">
 
   <link rel="stylesheet"
-    href="/netsearch_static/css/search_base.css?v={{ version }}&t=20261113_responsive_filters_v1">
+    href="/netsearch_static/css/search_base.css?v={{ version }}&t=20261113_toggle_colors_v1">
 
   <link rel="stylesheet" href="/netsearch_static/css/search_filters.css?v={{ version }}&t=20261113_responsive_filters_v1">
 
@@ -329,21 +329,21 @@
 
             <!-- -- 1. Content Moderation / SafeSearch Toggle (Explicit ON / OFF) -- -->
 
-            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn" id="btn-content-filter"
-              onclick="window.toggleContentFilter()" title="Toggle SafeSearch content moderation">
+            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn is-state-ok" id="btn-content-filter"
+              onclick="window.toggleContentFilter()" title="Content Filter: OFF (Unfiltered / Raw Search)">
 
               <i class="fas fa-shield-alt"></i>
 
               <span>Content Filter:</span>
 
-              <span class="badge-pill badge-neutral" id="badge-content-filter"
+              <span class="badge-pill badge-ok" id="badge-content-filter"
                 style="font-weight:700; padding:2px 8px;">OFF</span>
 
             </button>
 
             <!-- -- 2. DarkWeb Censorship & Blacklist Bypass Toggle -- -->
 
-            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn" id="btn-dark-filter"
+            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn is-state-ok" id="btn-dark-filter"
               onclick="window.toggleDarkFilter()"
               title="Bypass Tor/Ahmia blacklists and censorship for 100% uncensored discovery">
 
@@ -358,16 +358,15 @@
 
             <!-- -- 2b. Privacy Shield / Local-Only Mode Toggle -- -->
 
-            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn" id="btn-local-only"
+            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn is-state-ok" id="btn-local-only"
               onclick="window.toggleLocalOnly()"
-              title="Toggle Privacy Shield: restrict to local private daemons (SearXNG 127.0.0.1) and Tor onion circuits">
+              title="Privacy Shield: LOCAL ONLY (Strictly querying local private SearXNG and Tor onion circuits)">
 
               <i class="fas fa-user-shield"></i>
 
               <span>Privacy Shield:</span>
 
-              <span class="badge-pill badge-neutral" id="badge-local-only" style="font-weight:700; padding:2px 8px;">ALL
-                ENGINES</span>
+              <span class="badge-pill badge-ok" id="badge-local-only" style="font-weight:700; padding:2px 8px;">LOCAL ONLY</span>
 
             </button>
 
@@ -997,9 +996,17 @@
 
         <div style="display:flex; align-items:center; gap:8px;">
 
+          <a href="/hecos/config/ui?tab=files#netsearch" target="_blank" class="btn btn-sm btn-secondary"
+            style="font-size:11px; text-decoration:none; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:5px;"
+            title="Configure File Hunter sources (Open APIs, Clearnet &amp; Tor .onion engines)">
+
+            <i class="fas fa-file-shield" style="color:#38bdf8;"></i> File Hunter Sources
+
+          </a>
+
           <a href="/hecos/config/ui#netsearch" target="_blank" class="btn btn-sm btn-secondary"
             style="font-size:11px; text-decoration:none; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:5px;"
-            title="Open Endpoints & Nodes in Central Hub">
+            title="Open Endpoints &amp; Nodes in Central Hub">
 
             <i class="fas fa-sliders-h" style="color:var(--accent-cyan);"></i> Configure Endpoints in Hub <i
               class="fas fa-external-link-alt" style="font-size:9px;"></i>
@@ -1186,7 +1193,7 @@
 
   <script src="/netsearch_static/js/search/search_api.js?v={{ version }}&t=20261113_history_tabs_v1"></script>
 
-  <script src="/netsearch_static/js/search/search_state.js?v={{ version }}&t=20261113_refine_sort_v1"></script>
+  <script src="/netsearch_static/js/search/search_state.js?v={{ version }}&t=20261113_toggle_persist_v1"></script>
 
   <script src="/netsearch_static/js/search/search_bookmarks.js?v={{ version }}&t=20261113_noread"></script>
 
@@ -1207,21 +1214,21 @@
   <script src="/netsearch_static/js/search/copilot_voice.js?v={{ version }}&t=20261113_modular_v1"></script>
   <script src="/netsearch_static/js/search/copilot_mic.js?v={{ version }}&t=20261113_modular_v1"></script>
   <script src="/netsearch_static/js/search/copilot_presets.js?v={{ version }}&t=20261113_modular_v1"></script>
-  <script src="/netsearch_static/js/search/search_copilot.js?v={{ version }}&t=20261113_modular_v1"></script>
+  <script src="/netsearch_static/js/search/search_copilot.js?v={{ version }}&t=20261113_copilot_clean_v1"></script>
 
-  <script src="/netsearch_static/js/search/search_endpoints.js?v={{ version }}&t=20261113_modular_v1"></script>
+  <script src="/netsearch_static/js/search/search_endpoints.js?v={{ version }}&t=20261113_dark_files_v1"></script>
 
-  <script src="/netsearch_static/js/search/search_engine_chips.js?v={{ version }}&t=20261113_modular_v1"></script>
+  <script src="/netsearch_static/js/search/search_engine_chips.js?v={{ version }}&t=20261113_osint_opt_v1"></script>
   <script src="/netsearch_static/js/search/search_refine.js?v={{ version }}&t=20261113_modular_v1"></script>
-  <script src="/netsearch_static/js/search/search_filters.js?v={{ version }}&t=20261113_file_hunter_v1"></script>
+  <script src="/netsearch_static/js/search/search_filters.js?v={{ version }}&t=20261113_osint_opt_v1"></script>
 
-  <script src="/netsearch_static/js/search/search_stream.js?v={{ version }}&t=20261113_refine_sort_v1"></script>
+  <script src="/netsearch_static/js/search/search_stream.js?v={{ version }}&t=20261113_osint_opt_v1"></script>
 
-  <script src="/netsearch_static/js/search/search_history.js?v={{ version }}&t=20261113_history_dates_v1"></script>
+  <script src="/netsearch_static/js/search/search_history.js?v={{ version }}&t=20261113_instant_tab_v1"></script>
 
-  <script src="/netsearch_static/js/search/search_modals.js?v={{ version }}&t=20261113_modular_v1"></script>
+  <script src="/netsearch_static/js/search/search_modals.js?v={{ version }}&t=20261113_file_hunter_v2"></script>
 
-  <script src="/netsearch_static/js/search/search_main.js?v={{ version }}&t=20261113_new_search_v1"></script>
+  <script src="/netsearch_static/js/search/search_main.js?v={{ version }}&t=20261113_toggle_persist_v1"></script>
 
 </body>
 

@@ -110,6 +110,7 @@ window.SearchEndpoints = (function () {
         onchange="window.SearchEndpoints.onCategoryChange('${id}', this)"
         style="padding:3px 7px; border-radius:6px; border:1px solid var(--border); background:var(--bg0); color:var(--text); font-size:10px; font-weight:600;">
         <option value="general" ${curCat === 'general' ? 'selected' : ''}>Web</option>
+        ${(options.key === 'custom_tor' || options.category === 'onion' || curCat === 'onion') ? `<option value="onion" ${curCat === 'onion' ? 'selected' : ''}>Onion (All)</option>` : ''}
         <option value="videos" ${curCat === 'videos' ? 'selected' : ''}>Videos</option>
         <option value="images" ${curCat === 'images' ? 'selected' : ''}>Images</option>
         <option value="audio" ${curCat === 'audio' || curCat === 'music' ? 'selected' : ''}>Audio</option>
@@ -569,7 +570,8 @@ window.SearchEndpoints = (function () {
         typeBadge: 'CUSTOM TOR',
         isDeletable: true,
         key: 'custom_tor',
-        category: 'tor'
+        category: cte.category || 'onion',
+        showCategory: true
       });
     });
   }
@@ -582,8 +584,8 @@ window.SearchEndpoints = (function () {
     },
     custom_tor: {
       containerId: 'endp-tor-engines-wrap',
-      defaults: { name: 'Custom Onion Engine', protocol: 'http', host: '', port: '', path: '/search?q={q}', enabled: true },
-      options: { typeBadge: 'CUSTOM TOR', isDeletable: true, key: 'custom_tor', category: 'tor' }
+      defaults: { name: 'Custom Onion Engine', category: 'onion', protocol: 'http', host: '', port: '', path: '/search?q={q}', enabled: true },
+      options: { typeBadge: 'CUSTOM TOR', isDeletable: true, key: 'custom_tor', category: 'onion', showCategory: true }
     },
     custom_node: {
       containerId: 'endp-custom-nodes-wrap',
@@ -656,6 +658,7 @@ window.SearchEndpoints = (function () {
         const entry = {
           id: item.id,
           name: item.name || 'Custom Onion',
+          category: item.category || 'onion',
           onion_url: item.url,
           protocol: item.protocol,
           host: item.host,
