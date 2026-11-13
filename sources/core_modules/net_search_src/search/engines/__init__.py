@@ -11,6 +11,9 @@ from .base import BaseEngine
 from .clear_ddgs import ClearDdgsEngine
 from .clear_news import ClearNewsEngine
 from .clear_searxng import ClearSearxngEngine
+from .clear_brave import ClearBraveEngine
+from .clear_custom import ClearCustomEngine
+from .domain_directory import DomainDirectoryEngine
 from .dark_ahmia import DarkAhmiaEngine
 from .dark_torch import DarkTorchEngine
 from .dark_haystak import DarkHaystakEngine
@@ -40,6 +43,9 @@ def _register_all():
         ClearDdgsEngine(),
         ClearNewsEngine(),
         ClearSearxngEngine(),
+        ClearBraveEngine(),
+        ClearCustomEngine(),
+        DomainDirectoryEngine(),
         DarkAhmiaEngine(),
         DarkTorchEngine(),
         DarkHaystakEngine(),
@@ -75,19 +81,22 @@ def get_engines_for_mode(mode: str, requested_engines: Optional[List[str]] = Non
     cfg = get_search_config().get("engines", {})
 
     mode_map = {
-        "clear": ["clear_ddgs", "clear_news", "media_images", "media_videos", "media_audio", "files_dorks", "clear_searxng"],
+        "clear": ["clear_brave", "clear_ddgs", "clear_news", "media_images", "media_videos", "media_audio", "files_dorks", "clear_searxng", "clear_custom", "domain_directory"],
         "dark": [
             "dark_ahmia", "dark_torch", "dark_haystak", "dark_onionland",
             "dark_excavator", "dark_phobos", "dark_tor66", "dark_danieltore", "dark_custom"
         ],
         "deep": [
-            "clear_ddgs", "clear_news", "media_images", "media_videos", "media_audio", "files_dorks",
+            "clear_brave", "clear_ddgs", "clear_news", "media_images", "media_videos", "media_audio", "files_dorks",
             "dark_ahmia", "dark_torch", "dark_haystak", "dark_onionland",
             "dark_excavator", "dark_phobos", "dark_tor66", "dark_danieltore", "dark_custom",
-            "clear_searxng"
+            "clear_searxng", "clear_custom", "domain_directory"
         ],
-        "media": ["media_images", "media_videos", "media_audio"],
-        "files": ["files_dorks", "clear_ddgs"],
+        "media": ["media_images", "media_videos", "media_audio", "domain_directory"],
+        "videos": ["media_videos", "domain_directory"],
+        "images": ["media_images", "domain_directory"],
+        "audio": ["media_audio"],
+        "files": ["files_dorks", "clear_searxng", "clear_brave", "clear_custom"],
         "osint": ["osint_sherlock", "clear_ddgs"],
     }
 

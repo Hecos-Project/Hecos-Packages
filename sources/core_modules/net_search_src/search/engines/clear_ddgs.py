@@ -42,25 +42,26 @@ class ClearDdgsEngine(BaseEngine):
         seen_urls: Set[str] = set()
         is_unlimited = (query.limit is not None and query.limit <= 0)
         target_limit = 100000 if is_unlimited else max(query.limit, 40)
+        hecos_logger.info(f"[SEARCH:DDGS] Starting multi-backend clear search: '{query.query}' (target={target_limit}, safe={query.safe_search})")
         safesearch_val = "off" if not query.safe_search else "moderate"
-        per_timeout = min(query.timeout, 4.0)
+        per_timeout = min(query.timeout, 6.0)
 
         # 1. Multi-Page querying via ddgs library (bounded to max 3 pages / 8s to prevent UI freeze)
         try:
             from ddgs import DDGS
             ddg = DDGS(timeout=per_timeout)
             start_page = max(1, getattr(query, "page", 1))
-            pages_to_fetch = 3 if start_page == 1 else 2
+            pages_to_fetch = 5 if start_page == 1 else 3
             hecos_logger.info(f"[SEARCH:DDGS] Querying via ddgs multi-page (start={start_page}, pages={pages_to_fetch}, timeout={per_timeout}s): '{query.query}'...")
 
             for page_num in range(start_page, start_page + pages_to_fetch):
-                if len(results) >= target_limit or (time.time() - t0 > 8.0):
+                if len(results) >= target_limit or (time.time() - t0 > 15.0):
                     break
                 try:
                     raw = ddg.text(
                         query.query,
                         page=page_num,
-                        max_results=30,
+                        max_results=50,
                         safesearch=safesearch_val,
                         timelimit=query.time_range
                     )
@@ -115,7 +116,7 @@ class ClearDdgsEngine(BaseEngine):
             }
 
             if results: return results
-            for _page in range(1, 2):
+            for _page in range(1, 4):
                 if len(results) >= target_limit:
                     break
                 resp = http_client.post(url, network="clearnet", data=data, headers=headers, timeout=min(query.timeout, 3.5))
@@ -175,4 +176,5 @@ class ClearDdgsEngine(BaseEngine):
         except Exception as e:
             hecos_logger.error(f"[SEARCH:DDGS] HTTP fallback failed: {e}")
 
+        hecos_logger.info(f"[SEARCH:DDGS] Completed: {len(results)} results for '{query.query}'")
         return results

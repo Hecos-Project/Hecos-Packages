@@ -32,6 +32,23 @@
     }
   }
 
+  function _ensureSearchSources(cb) {
+    if (window.SearchSources) {
+      return cb(window.SearchSources);
+    }
+    let script = document.querySelector('script[src*="search_sources.js"]');
+    if (!script) {
+      script = document.createElement('script');
+      script.src = '/hpm_plugin/net_search/web/static/js/search/search_sources.js';
+      script.onload = () => {
+        if (window.SearchSources) cb(window.SearchSources);
+      };
+      document.head.appendChild(script);
+    } else {
+      setTimeout(() => _ensureSearchSources(cb), 100);
+    }
+  }
+
   window.updateNetSearchConfig = async function (keyPath, value) {
     try {
       const parts = keyPath.split('.');
@@ -109,7 +126,11 @@
       const sxSw = document.getElementById('search-searxng-enabled');
       if (sxSw) sxSw.checked = sx.enabled !== false;
       const sxUrl = document.getElementById('search-searxng-url');
-      if (sxUrl) sxUrl.value = sx.url || 'http://127.0.0.1:8888';
+      if (sxUrl) sxUrl.value = sx.url || 'http://127.0.0.1:8889';
+
+      // Brave API key
+      const braveKeyInput = document.getElementById('search-brave-api-key');
+      if (braveKeyInput) braveKeyInput.value = cfg.brave_api_key || '';
 
       // Defaults
       const timeoutInput = document.getElementById('search-timeout');
@@ -127,6 +148,11 @@
           window.renderNetSearchEndpointsUI(epRes.endpoints, tor);
         });
       }
+
+      // 3. Load automated/manual source compilations list
+      _ensureSearchSources((SS) => {
+        SS.load();
+      });
     } catch (err) {
       console.warn('[NetSearchPanel] load error:', err);
     } finally {
@@ -137,143 +163,58 @@
   window.renderNetSearchEndpointsUI = function (ep, torCfg = {}) {
     _ensureSearchEndpoints((SE) => {
       const sx = ep.searxng || {};
-      const ahmia = ep.dark_ahmia || {};
-      const torch = ep.dark_torch || {};
-      const haystak = ep.dark_haystak || {};
-      const onionland = ep.dark_onionland || {};
-      const excavator = ep.dark_excavator || {};
-      const phobos = ep.dark_phobos || {};
-      const tor66 = ep.dark_tor66 || {};
-      const daniel = ep.dark_danieltore || {};
       const archives = ep.archives || {};
       const customTorEngines = Array.isArray(ep.custom_onion_engines) ? ep.custom_onion_engines : [];
+      const customClearEngines = Array.isArray(ep.custom_clear_engines) ? ep.custom_clear_engines : [];
       const customNodes = Array.isArray(ep.custom_nodes) ? ep.custom_nodes : [];
       const fallbacks = Array.isArray(sx.fallbacks) ? sx.fallbacks : [];
 
-      // 1. Populate SearXNG local daemon
-      const localWrap = document.getElementById('endp-searxng-local-wrap');
-      if (localWrap) {
-        const localInst = sx.local_instance || SE.decomposeUrl(sx.local_url || 'http://127.0.0.1:8888', 'SearXNG Local Daemon', 'http');
-        localInst.id = 'endp_sx_local';
-        localWrap.innerHTML = SE.renderCard(localInst, {
-          typeBadge: 'LOCAL DAEMON',
+      SE.populateSearxngLocal('endp-searxng-local-wrap', sx);
+      const sxEngines = SE.populateSearxngEngines('endp-searxng-engines-wrap', sx);
+      SE.populateFallbacks('endp-searxng-fallbacks-wrap', fallbacks, customNodes);
+      SE.populateTorEngines('endp-tor-engines-wrap', ep, true);
+
+      // 4. Open Archives & Repositories (structured built-in + custom archives)
+      const customArchives = Array.isArray(archives.custom_archives) ? archives.custom_archives : [];
+      const archWrap = document.getElementById('endp-archives-wrap');
+      if (archWrap) {
+        archWrap.innerHTML = '';
+        const aoNode = (archives.archive_org_node && typeof archives.archive_org_node === 'object')
+          ? archives.archive_org_node
+          : SE.decomposeUrl(archives.archive_org || 'https://archive.org/advancedsearch.php', 'Internet Archive', 'https');
+        aoNode.id = 'endp_archive_org';
+        aoNode.enabled = archives.archive_org_enabled !== false && aoNode.enabled !== false;
+        archWrap.insertAdjacentHTML('beforeend', SE.renderCard(aoNode, {
+          typeBadge: 'ARCHIVE ADAPTER',
           isDeletable: false,
-          key: 'searxng_local',
-          category: 'searxng'
-        });
-      }
+          key: 'archive_org',
+          category: 'files'
+        }));
 
-      // 1b. Populate SearXNG Aggregated Engines
-      const enginesWrap = document.getElementById('endp-searxng-engines-wrap');
-      const sxEngines = Array.isArray(sx.engines) ? sx.engines : [];
-      if (enginesWrap) {
-        enginesWrap.innerHTML = '';
-        sxEngines.forEach(eng => {
-          SE.addSearxngEngine('endp-searxng-engines-wrap', eng);
-        });
-        window.updateSearxngEnginesCount();
-      }
+        const wmNode = (archives.wikimedia_node && typeof archives.wikimedia_node === 'object')
+          ? archives.wikimedia_node
+          : SE.decomposeUrl(archives.wikimedia_commons || 'https://commons.wikimedia.org/w/api.php', 'Wikimedia Commons', 'https');
+        wmNode.id = 'endp_wikimedia_commons';
+        wmNode.enabled = archives.wikimedia_enabled !== false && wmNode.enabled !== false;
+        archWrap.insertAdjacentHTML('beforeend', SE.renderCard(wmNode, {
+          typeBadge: 'ARCHIVE ADAPTER',
+          isDeletable: false,
+          key: 'wikimedia_commons',
+          category: 'images'
+        }));
 
-      // 2. Populate SearXNG fallbacks
-      const fbWrap = document.getElementById('endp-searxng-fallbacks-wrap');
-      if (fbWrap) {
-        fbWrap.innerHTML = '';
-        fallbacks.forEach(f => {
-          const item = (typeof f === 'string') ? SE.decomposeUrl(f, '', 'https') : f;
-          SE.addEndpoint('endp-searxng-fallbacks-wrap', item, {
-            typeBadge: 'SEARXNG MIRROR',
+        customArchives.forEach(ca => {
+          SE.addEndpoint('endp-archives-wrap', ca, {
+            typeBadge: 'CUSTOM ARCHIVE',
             isDeletable: true,
-            key: 'searxng_fallback',
-            category: 'searxng'
+            key: 'custom_archive',
+            showCategory: true,
+            category: ca.category || 'general'
           });
         });
       }
 
-      // 3. Populate Dark Web Built-in Engines
-      const torWrap = document.getElementById('endp-tor-engines-wrap');
-      if (torWrap) {
-        torWrap.innerHTML = '';
-        const torEnginesDef = [
-          {
-            key: 'ahmia_onion',
-            badge: 'TOR ONION',
-            data: ahmia.onion || SE.decomposeUrl(ahmia.onion_url || 'http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion', 'Ahmia (.onion)', 'http')
-          },
-          {
-            key: 'ahmia_clear',
-            badge: 'CLEARNET GATEWAY',
-            data: ahmia.clearnet || SE.decomposeUrl(ahmia.clearnet_url || 'https://ahmia.fi', 'Ahmia Clearnet Gateway', 'https')
-          },
-          {
-            key: 'ddg_onion',
-            badge: 'TOR ONION',
-            data: torch.ddg || SE.decomposeUrl(torch.ddg_onion || 'https://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion/html/', 'DuckDuckGo (.onion)', 'https')
-          },
-          {
-            key: 'torch_onion',
-            badge: 'TOR ONION',
-            data: torch.torch || SE.decomposeUrl(torch.torch_onion || 'http://xmh57jrknzkhv6y3ls3ubitzfqnkrwxhopf5aygthi7d6rplyvk3noyd.onion/cgi-bin/omega/omega', 'Torch (.onion)', 'http')
-          },
-          {
-            key: 'haystak_onion',
-            badge: 'TOR ONION',
-            data: haystak.onion || SE.decomposeUrl(haystak.onion_url || 'http://haystak5njsmn2hqkewecpaxetahtwhsbsa64jom2k22z5afxhnpxfid.onion', 'Haystak (.onion)', 'http')
-          },
-          {
-            key: 'onionland_clear',
-            badge: 'CLEARNET GATEWAY',
-            data: onionland.clearnet || SE.decomposeUrl(onionland.clearnet_url || 'https://onionsearchengine.com/search.php', 'Onion Search Engine', 'https')
-          },
-          {
-            key: 'excavator_onion',
-            badge: 'TOR ONION',
-            data: excavator.onion || SE.decomposeUrl(excavator.onion_url || 'http://2fd6cemt4gmccflhm6imvdfvli3nf7zn6rfrwpsy7uhxrgbypvwf5fad.onion/search', 'Excavator (.onion)', 'http')
-          },
-          {
-            key: 'phobos_onion',
-            badge: 'TOR ONION',
-            data: phobos.onion || SE.decomposeUrl(phobos.onion_url || 'http://phobosxilamwcg75xt22id7aywkzol6q6rfl2flipcqoc4e4ahima5id.onion/search', 'Phobos (.onion)', 'http')
-          },
-          {
-            key: 'tor66_onion',
-            badge: 'TOR ONION',
-            data: tor66.onion || SE.decomposeUrl(tor66.onion_url || 'http://tor66sewebgixwhcqfnp5inzp5x5uohhdy3kvtnyfxc2e5mxiuh34iid.onion/search', 'Tor66 (.onion)', 'http')
-          },
-          {
-            key: 'daniel_onion',
-            badge: 'TOR ONION',
-            data: daniel.onion || SE.decomposeUrl(daniel.onion_url || 'http://tordexu73joywapk2txdr54jed4imqledpcvcuf75qsas2gwdgksvnyd.onion/search', 'TorDex Directory (.onion)', 'http')
-          }
-        ];
-
-        torEnginesDef.forEach(ted => {
-          ted.data.id = 'endp_' + ted.key;
-          torWrap.insertAdjacentHTML('beforeend', SE.renderCard(ted.data, {
-            typeBadge: ted.badge,
-            isDeletable: false,
-            key: ted.key,
-            category: 'tor'
-          }));
-        });
-
-        // Add custom tor engines
-        customTorEngines.forEach(cte => {
-          SE.addEndpoint('endp-tor-engines-wrap', cte, {
-            typeBadge: 'CUSTOM TOR',
-            isDeletable: true,
-            key: 'custom_tor',
-            category: 'tor'
-          });
-        });
-      }
-
-      // 4. Archives
-      const archInput = document.getElementById('endp-archive-org');
-      if (archInput) archInput.value = archives.archive_org || 'https://archive.org/advancedsearch.php';
-      const wikiInput = document.getElementById('endp-wikimedia');
-      if (wikiInput) wikiInput.value = archives.wikimedia_commons || 'https://commons.wikimedia.org/w/api.php';
-
-      // 5. Populate Custom Nodes
+      // 5. Legacy Custom Nodes wrapper support (merged into SearXNG fallback list in 4-Tab UI)
       const customWrap = document.getElementById('endp-custom-nodes-wrap');
       if (customWrap) {
         customWrap.innerHTML = '';
@@ -287,19 +228,76 @@
         });
       }
 
-      // 6. Update counts on section badges
+      // 5b. Populate Custom Clearnet / OpenSearch Engines
+      const customClearWrap = document.getElementById('endp-custom-clear-wrap');
+      if (customClearWrap) {
+        customClearWrap.innerHTML = '';
+        customClearEngines.forEach(cce => {
+          SE.addEndpoint('endp-custom-clear-wrap', cce, {
+            typeBadge: 'OPENSEARCH / WEB',
+            isDeletable: true,
+            key: 'custom_clear',
+            showCategory: true,
+            category: cce.category || 'general'
+          });
+        });
+      }
+
+      // 6. Update counts on section badges & tab headers
       const fbCount = document.getElementById('badge-searxng-fallbacks-count');
-      if (fbCount) fbCount.textContent = `${fallbacks.length} Mirrors`;
+      const totalFallbackNodes = fallbacks.length + customNodes.length;
+      if (fbCount) fbCount.textContent = `${totalFallbackNodes} Nodes`;
 
       const torCount = document.getElementById('badge-tor-engines-count');
-      if (torCount) {
-        const totalTor = 10 + customTorEngines.length;
-        torCount.textContent = `${totalTor} Engines`;
-      }
+      const totalTor = 10 + customTorEngines.length;
+      if (torCount) torCount.textContent = `${totalTor} Engines`;
 
       const customCount = document.getElementById('badge-custom-nodes-count');
       if (customCount) customCount.textContent = `${customNodes.length} Nodes`;
+
+      const customClearCount = document.getElementById('badge-custom-clear-count');
+      if (customClearCount) customClearCount.textContent = `${customClearEngines.length} Engines`;
+
+      const archivesCount = document.getElementById('badge-archives-count');
+      const totalArchives = 2 + customArchives.length;
+      if (archivesCount) archivesCount.textContent = `${totalArchives} Archives`;
+
+      window.updateNetSearchTabCounts && window.updateNetSearchTabCounts({
+        searxng: sxEngines.length + totalFallbackNodes,
+        web: customClearEngines.length + totalArchives,
+        dark: totalTor
+      });
     });
+  };
+
+  window.updateNetSearchTabCounts = function (epCounts) {
+    const counts = epCounts || {};
+    if (typeof counts.searxng === 'number') {
+      const el = document.getElementById('badge-tab-searxng-count');
+      if (el) el.textContent = String(counts.searxng);
+    }
+    if (typeof counts.web === 'number') {
+      const el = document.getElementById('badge-tab-web-count');
+      if (el) el.textContent = String(counts.web);
+    }
+    if (typeof counts.dark === 'number') {
+      const el = document.getElementById('badge-tab-dark-count');
+      if (el) el.textContent = String(counts.dark);
+    }
+  };
+
+  window.switchNetSearchEndpointTab = function (tabName) {
+    const valid = ['searxng', 'web', 'dark', 'domains'];
+    const target = valid.includes(tabName) ? tabName : 'searxng';
+    document.querySelectorAll('#netsearch-endpoints-manager-container .ns-tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.nsTab === target);
+    });
+    document.querySelectorAll('#netsearch-endpoints-manager-container .ns-tab-pane').forEach(pane => {
+      pane.classList.toggle('active', pane.id === `ns-tab-pane-${target}`);
+    });
+    if (window.SearchSources && typeof window.SearchSources.setActiveTab === 'function') {
+      window.SearchSources.setActiveTab(target);
+    }
   };
 
   window.toggleEndpointSection = function (triggerEl, bodyId, forceExpand) {
@@ -321,7 +319,10 @@
   };
 
   window.toggleAllEndpointSections = function (expand = true) {
-    const groups = document.querySelectorAll('#netsearch-endpoints-manager-container .endpoint-group');
+    const activePane = document.querySelector('#netsearch-endpoints-manager-container .ns-tab-pane.active');
+    const root = activePane || document.getElementById('netsearch-endpoints-manager-container');
+    if (!root) return;
+    const groups = root.querySelectorAll('.endpoint-group');
     groups.forEach(g => {
       const body = g.querySelector('.endpoint-group-body');
       const btn = g.querySelector('.btn-group-toggle');
@@ -405,60 +406,33 @@
   window.autoDetectTorBrowser = window.detectTorBrowserPath;
 
   window.addSearxngFallbackNode = function () {
+    window.switchNetSearchEndpointTab && window.switchNetSearchEndpointTab('searxng');
     window.toggleEndpointSection(null, 'endp-searxng-fallbacks-body', true);
-    _ensureSearchEndpoints((SE) => {
-      SE.addEndpoint('endp-searxng-fallbacks-wrap', {
-        name: 'Custom Fallback Node',
-        protocol: 'https',
-        host: '',
-        port: '',
-        path: '',
-        enabled: true
-      }, {
-        typeBadge: 'SEARXNG MIRROR',
-        isDeletable: true,
-        key: 'searxng_fallback',
-        category: 'searxng'
-      });
-    });
+    _ensureSearchEndpoints((SE) => SE.addPresetEndpoint('searxng_fallback'));
   };
 
   window.addCustomTorEngineNode = function () {
+    window.switchNetSearchEndpointTab && window.switchNetSearchEndpointTab('dark');
     window.toggleEndpointSection(null, 'endp-tor-engines-body', true);
-    _ensureSearchEndpoints((SE) => {
-      SE.addEndpoint('endp-tor-engines-wrap', {
-        name: 'Custom Onion Engine',
-        protocol: 'http',
-        host: '',
-        port: '',
-        path: '/search?q={q}',
-        enabled: true
-      }, {
-        typeBadge: 'CUSTOM TOR',
-        isDeletable: true,
-        key: 'custom_tor',
-        category: 'tor'
-      });
-    });
+    _ensureSearchEndpoints((SE) => SE.addPresetEndpoint('custom_tor'));
   };
 
   window.addCustomSearchNode = function () {
-    window.toggleEndpointSection(null, 'endp-custom-nodes-body', true);
-    _ensureSearchEndpoints((SE) => {
-      SE.addEndpoint('endp-custom-nodes-wrap', {
-        name: 'Custom Search Node',
-        protocol: 'https',
-        host: '',
-        port: '',
-        path: '',
-        enabled: true
-      }, {
-        typeBadge: 'CUSTOM NODE',
-        isDeletable: true,
-        key: 'custom_node',
-        category: 'custom'
-      });
-    });
+    window.switchNetSearchEndpointTab && window.switchNetSearchEndpointTab('searxng');
+    window.toggleEndpointSection(null, 'endp-searxng-fallbacks-body', true);
+    _ensureSearchEndpoints((SE) => SE.addPresetEndpoint('custom_node', 'endp-searxng-fallbacks-wrap'));
+  };
+
+  window.addCustomClearEngineNode = function () {
+    window.switchNetSearchEndpointTab && window.switchNetSearchEndpointTab('web');
+    window.toggleEndpointSection(null, 'endp-custom-clear-body', true);
+    _ensureSearchEndpoints((SE) => SE.addPresetEndpoint('custom_clear'));
+  };
+
+  window.addCustomArchiveNode = function () {
+    window.switchNetSearchEndpointTab && window.switchNetSearchEndpointTab('web');
+    window.toggleEndpointSection(null, 'endp-archives-body', true);
+    _ensureSearchEndpoints((SE) => SE.addPresetEndpoint('custom_archive'));
   };
 
   window.updateSearxngEnginesCount = function () {
@@ -473,6 +447,7 @@
   };
 
   window.addSearxngEngineNode = function (presetData) {
+    window.switchNetSearchEndpointTab && window.switchNetSearchEndpointTab('searxng');
     window.toggleEndpointSection(null, 'endp-searxng-engines-body', true);
     _ensureSearchEndpoints((SE) => {
       SE.addSearxngEngine('endp-searxng-engines-wrap', presetData || {
@@ -507,126 +482,49 @@
 
   window.saveEndpointsFromUI = async function () {
     _ensureSearchEndpoints(async (SE) => {
-      // 1. SearXNG local
-      const localCard = document.querySelector('#endp-searxng-local-wrap .endpoint-card');
-      const localItem = SE.collectCard(localCard);
+      const { localItem, payload } = SE.collectTorAndSearxngPayload();
 
-      // 1b. SearXNG aggregated engines
-      const engineCards = document.querySelectorAll('#endp-searxng-engines-wrap .searxng-engine-card');
-      const sxEngines = [];
-      engineCards.forEach(c => {
-        const item = SE.collectSearxngEngineCard(c);
-        if (item && item.name) sxEngines.push(item);
-      });
-
-      // 2. SearXNG fallbacks
-      const fallbackCards = document.querySelectorAll('#endp-searxng-fallbacks-wrap .endpoint-card');
-      const fallbacks = [];
-      fallbackCards.forEach(c => {
-        const item = SE.collectCard(c);
-        if (item && (item.host || item.url)) fallbacks.push(item);
-      });
-
-      // 3. Built-in Tor engines by key
-      function getTorItem(key) {
-        const card = document.querySelector(`#endp-tor-engines-wrap .endpoint-card[data-key="${key}"]`);
-        return SE.collectCard(card);
-      }
-
-      const ahmiaOnion = getTorItem('ahmia_onion');
-      const ahmiaClear = getTorItem('ahmia_clear');
-      const ddgOnion = getTorItem('ddg_onion');
-      const torchOnion = getTorItem('torch_onion');
-      const haystakOnion = getTorItem('haystak_onion');
-      const onionlandClear = getTorItem('onionland_clear');
-      const excavatorOnion = getTorItem('excavator_onion');
-      const phobosOnion = getTorItem('phobos_onion');
-      const tor66Onion = getTorItem('tor66_onion');
-      const danielOnion = getTorItem('daniel_onion');
-
-      // Custom Tor engines
-      const customTorCards = document.querySelectorAll('#endp-tor-engines-wrap .endpoint-card[data-key="custom_tor"]');
-      const customTorEngines = [];
-      customTorCards.forEach(c => {
+      // Custom Clearnet / OpenSearch Engines
+      const customClearEngines = [];
+      document.querySelectorAll('#endp-custom-clear-wrap .endpoint-card').forEach(c => {
         const item = SE.collectCard(c);
         if (item && (item.host || item.url)) {
-          customTorEngines.push({
-            name: item.name || 'Custom Onion',
-            onion_url: item.url,
-            protocol: item.protocol,
-            host: item.host,
-            port: item.port,
-            path: item.path,
-            search_template: item.path || '/search?q={q}',
-            enabled: item.enabled,
-            use_api_key: item.use_api_key,
-            api_key: item.api_key
-          });
+          if (!item.search_template) {
+            item.search_template = (item.url && item.url.includes('{q}')) ? item.url : ((item.url || '').replace(/\/$/, '') + '/search?q={q}');
+          }
+          customClearEngines.push(item);
         }
       });
 
-      // 4. Custom Nodes
-      const customNodeCards = document.querySelectorAll('#endp-custom-nodes-wrap .endpoint-card');
-      const customNodes = [];
-      customNodeCards.forEach(c => {
+      // Open Archives & Repositories (built-in cards + custom archives)
+      let archiveOrgNode = null;
+      let wikimediaNode = null;
+      const customArchives = [];
+      document.querySelectorAll('#endp-archives-wrap .endpoint-card').forEach(c => {
         const item = SE.collectCard(c);
-        if (item && (item.host || item.url)) customNodes.push(item);
+        if (!item) return;
+        if (item.key === 'archive_org') {
+          archiveOrgNode = item;
+        } else if (item.key === 'wikimedia_commons') {
+          wikimediaNode = item;
+        } else if (item.host || item.url) {
+          if (!item.search_template) {
+            item.search_template = (item.url && item.url.includes('{q}')) ? item.url : ((item.url || '').replace(/\/$/, '') + '?q={q}');
+          }
+          customArchives.push(item);
+        }
       });
 
-      // 5. Archives
-      const archiveOrg = (document.getElementById('endp-archive-org')?.value || '').trim();
-      const wikimedia = (document.getElementById('endp-wikimedia')?.value || '').trim();
-
-      const payload = {
-        searxng: {
-          local_instance: localItem,
-          local_url: localItem?.url || 'http://127.0.0.1:8888',
-          fallbacks: fallbacks,
-          engines: sxEngines
-        },
-        dark_ahmia: {
-          onion: ahmiaOnion,
-          onion_url: ahmiaOnion?.url || '',
-          clearnet: ahmiaClear,
-          clearnet_url: ahmiaClear?.url || ''
-        },
-        dark_torch: {
-          torch: torchOnion,
-          torch_onion: torchOnion?.url || '',
-          ddg: ddgOnion,
-          ddg_onion: ddgOnion?.url || ''
-        },
-        dark_haystak: {
-          onion: haystakOnion,
-          onion_url: haystakOnion?.url || ''
-        },
-        dark_onionland: {
-          clearnet: onionlandClear,
-          clearnet_url: onionlandClear?.url || ''
-        },
-        dark_excavator: {
-          onion: excavatorOnion,
-          onion_url: excavatorOnion?.url || ''
-        },
-        dark_phobos: {
-          onion: phobosOnion,
-          onion_url: phobosOnion?.url || ''
-        },
-        dark_tor66: {
-          onion: tor66Onion,
-          onion_url: tor66Onion?.url || ''
-        },
-        dark_danieltore: {
-          onion: danielOnion,
-          onion_url: danielOnion?.url || ''
-        },
-        archives: {
-          archive_org: archiveOrg || 'https://archive.org/advancedsearch.php',
-          wikimedia_commons: wikimedia || 'https://commons.wikimedia.org/w/api.php'
-        },
-        custom_nodes: customNodes,
-        custom_onion_engines: customTorEngines
+      payload.archives = {
+        archive_org: archiveOrgNode?.url || 'https://archive.org/advancedsearch.php',
+        archive_org_enabled: archiveOrgNode ? archiveOrgNode.enabled !== false : true,
+        archive_org_node: archiveOrgNode,
+        wikimedia_commons: wikimediaNode?.url || 'https://commons.wikimedia.org/w/api.php',
+        wikimedia_enabled: wikimediaNode ? wikimediaNode.enabled !== false : true,
+        wikimedia_node: wikimediaNode,
+        custom_archives: customArchives
       };
+      payload.custom_clear_engines = customClearEngines;
 
       try {
         const res = await fetch('/api/hsearch/endpoints', {

@@ -9,21 +9,315 @@
 
   let _lastSessionsDigest = '';
   let _isLoading = false;
+  let _editingSessionId = null;
+  let _sessionsById = {};
+  const _groupOpenState = {};
 
   function escapeHtml(str) {
     if (!str) return '';
-    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function getLocalDateKey(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function extractSessionDateKey(createdAt) {
+    const m = String(createdAt || '').trim().match(/^(\d{4}-\d{2}-\d{2})/);
+    return m ? m[1] : 'unknown';
+  }
+
+  function formatDateGroupLabel(dateKey) {
+    if (dateKey === 'unknown') return 'Other Dates';
+    const now = new Date();
+    const todayKey = getLocalDateKey(now);
+    if (dateKey === todayKey) return 'Today';
+
+    const yest = new Date(now);
+    yest.setDate(yest.getDate() - 1);
+    if (dateKey === getLocalDateKey(yest)) return 'Yesterday';
+
+    const parts = dateKey.split('-').map(Number);
+    if (parts.length === 3 && !parts.some(isNaN)) {
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      try {
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      } catch (_e) { /* fallback below */ }
+    }
+    return dateKey;
+  }
+
+  function isDateGroupOpen(dateKey) {
+    if (Object.prototype.hasOwnProperty.call(_groupOpenState, dateKey)) {
+      return Boolean(_groupOpenState[dateKey]);
+    }
+    return dateKey === getLocalDateKey(new Date());
+  }
+
+  function toggleDateGroup(dateKey) {
+    if (!dateKey) return;
+    const nextOpen = !isDateGroupOpen(dateKey);
+    _groupOpenState[dateKey] = nextOpen;
+
+    const groupEl = document.querySelector(`.history-date-group[data-date-key="${CSS.escape(dateKey)}"]`);
+    if (groupEl) {
+      groupEl.classList.toggle('is-collapsed', !nextOpen);
+      const headerBtn = groupEl.querySelector('.history-date-header');
+      if (headerBtn) {
+        headerBtn.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+      }
+    }
+  }
+
+  function notifySessionsUpdated() {
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        const bc = new BroadcastChannel('hecos_netsearch_channel');
+        bc.postMessage({ type: 'session_updated' });
+        bc.close();
+      } catch (_e) { /* ignore */ }
+    }
+  }
+
+  function renderHistoryItemHtml(s, isNew) {
+    const safeId = escapeHtml(s.id);
+    const displayTitle = (s.title && s.title.trim()) ? s.title.trim() : s.query;
+    const tooltipText = (s.title && s.title.trim() && s.title.trim() !== s.query)
+      ? `${s.title.trim()} (Original query: ${s.query})`
+      : s.query;
+
+    return `
+      <div class="history-item ${s.id === state.activeSessionId ? 'active' : ''} ${isNew ? 'history-item-new' : ''}"
+           data-session-id="${safeId}"
+           onclick="window.loadSession('${safeId}')">
+        <div class="history-item-top">
+          <div class="history-query" title="${escapeHtml(tooltipText)}">${escapeHtml(displayTitle)}</div>
+          <div class="history-item-actions" onclick="event.stopPropagation()">
+            <button type="button" class="btn-history-action btn-history-rename"
+                    title="Rename search tab"
+                    aria-label="Rename search tab"
+                    onclick="event.stopPropagation(); window.startRenameHistoryTab('${safeId}')">
+              <i class="fas fa-pen"></i>
+            </button>
+            <button type="button" class="btn-history-action btn-history-delete"
+                    title="Delete search tab"
+                    aria-label="Delete search tab"
+                    onclick="event.stopPropagation(); window.deleteHistoryTab('${safeId}')">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+        </div>
+        <div class="history-meta">
+          <span class="history-mode-pill">${escapeHtml((s.mode || 'web').toUpperCase())}</span>
+          <span>&bull;</span>
+          <span>${s.total_results} res.</span>
+          <span>&bull;</span>
+          <span>${escapeHtml((s.created_at || '').split(' ')[1] || '')}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderHistoryList(sessions) {
+    const historyListEl = document.getElementById('history-list');
+    if (!historyListEl) return;
+
+    const isInitial = !_lastSessionsDigest;
+    const prevScrollTop = historyListEl.scrollTop;
+
+    if (!sessions || sessions.length === 0) {
+      historyListEl.innerHTML = '<div class="history-empty-hint">No saved searches yet</div>';
+      historyListEl.scrollTop = 0;
+      return;
+    }
+
+    const todayKey = getLocalDateKey(new Date());
+    const groupedOrder = [];
+    const groupsByDate = {};
+
+    sessions.forEach((s, idx) => {
+      const dateKey = extractSessionDateKey(s.created_at);
+      if (!groupsByDate[dateKey]) {
+        groupsByDate[dateKey] = [];
+        groupedOrder.push(dateKey);
+      }
+      groupsByDate[dateKey].push({ session: s, globalIdx: idx });
+    });
+
+    historyListEl.innerHTML = groupedOrder.map(dateKey => {
+      const items = groupsByDate[dateKey];
+      const safeKey = escapeHtml(dateKey);
+      const label = formatDateGroupLabel(dateKey);
+      const isOpen = isDateGroupOpen(dateKey);
+      const isToday = dateKey === todayKey;
+
+      return `
+        <div class="history-date-group ${isOpen ? '' : 'is-collapsed'}" data-date-key="${safeKey}">
+          <button type="button"
+                  class="history-date-header ${isToday ? 'is-today' : ''}"
+                  aria-expanded="${isOpen ? 'true' : 'false'}"
+                  title="${escapeHtml(dateKey === 'unknown' ? 'Other Dates' : dateKey)}"
+                  onclick="window.toggleHistoryDateGroup('${safeKey}')">
+            <span class="history-date-header-left">
+              <i class="fas fa-chevron-down history-date-chevron" aria-hidden="true"></i>
+              <span class="history-date-label">${escapeHtml(label)}</span>
+            </span>
+            <span class="history-date-count">${items.length}</span>
+          </button>
+          <div class="history-date-items">
+            ${items.map(entry => renderHistoryItemHtml(entry.session, !isInitial && entry.globalIdx === 0)).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    historyListEl.scrollTop = prevScrollTop;
+  }
+
+  function startRenameHistoryTab(sessionId) {
+    if (!sessionId) return;
+    if (_editingSessionId && _editingSessionId !== sessionId) {
+      cancelRenameHistoryTab(false);
+    }
+
+    const itemEl = document.querySelector(`.history-item[data-session-id="${CSS.escape(sessionId)}"]`);
+    if (!itemEl) return;
+    const topEl = itemEl.querySelector('.history-item-top');
+    if (!topEl) return;
+
+    const sess = _sessionsById[sessionId] || {};
+    const currentTitle = (sess.title && sess.title.trim()) ? sess.title.trim() : (sess.query || itemEl.querySelector('.history-query')?.innerText || '');
+
+    _editingSessionId = sessionId;
+    itemEl.classList.add('is-renaming');
+
+    topEl.innerHTML = `
+      <div class="history-rename-row" onclick="event.stopPropagation()">
+        <input type="text" class="history-rename-input" value="${escapeHtml(currentTitle)}"
+               maxlength="200" aria-label="New search tab name">
+        <button type="button" class="btn-history-action btn-history-save" title="Save name" aria-label="Save name">
+          <i class="fas fa-check"></i>
+        </button>
+        <button type="button" class="btn-history-action btn-history-cancel" title="Cancel rename" aria-label="Cancel rename">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    `;
+
+    const inputEl = topEl.querySelector('.history-rename-input');
+    const saveBtn = topEl.querySelector('.btn-history-save');
+    const cancelBtn = topEl.querySelector('.btn-history-cancel');
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        commitRenameHistoryTab(sessionId, inputEl ? inputEl.value : '');
+      });
+    }
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        cancelRenameHistoryTab(true);
+      });
+    }
+    if (inputEl) {
+      inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          commitRenameHistoryTab(sessionId, inputEl.value);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          cancelRenameHistoryTab(true);
+        }
+      });
+      inputEl.focus();
+      inputEl.select();
+    }
+  }
+
+  function cancelRenameHistoryTab(shouldRefresh = true) {
+    _editingSessionId = null;
+    if (shouldRefresh) {
+      loadHistory(true);
+    }
+  }
+
+  async function commitRenameHistoryTab(sessionId, rawTitle) {
+    const cleanTitle = (rawTitle || '').trim();
+    if (!cleanTitle) {
+      cancelRenameHistoryTab(true);
+      return;
+    }
+
+    if (!api || !api.renameSession) return;
+    try {
+      const res = await api.renameSession(sessionId, cleanTitle);
+      if (res && res.ok) {
+        if (_sessionsById[sessionId]) {
+          _sessionsById[sessionId].title = res.title || cleanTitle;
+        }
+        _editingSessionId = null;
+        notifySessionsUpdated();
+        await loadHistory(true);
+      } else {
+        console.warn('[SearchHistory] Rename rejected:', res);
+        cancelRenameHistoryTab(true);
+      }
+    } catch (e) {
+      console.error('[SearchHistory] Failed to rename session:', e);
+      cancelRenameHistoryTab(true);
+    }
+  }
+
+  async function deleteHistoryTab(sessionId) {
+    if (!sessionId || !api || !api.deleteSession) return;
+    try {
+      const res = await api.deleteSession(sessionId);
+      if (res && res.ok) {
+        if (_editingSessionId === sessionId) {
+          _editingSessionId = null;
+        }
+        delete _sessionsById[sessionId];
+        if (state.activeSessionId === sessionId && typeof window.startNewSearch === 'function') {
+          window.startNewSearch('search');
+        }
+        notifySessionsUpdated();
+        await loadHistory(true);
+      } else {
+        console.warn('[SearchHistory] Delete failed:', res);
+      }
+    } catch (e) {
+      console.error('[SearchHistory] Failed to delete session:', e);
+    }
   }
 
   async function loadHistory(force = false) {
     const historyListEl = document.getElementById('history-list');
     if (!historyListEl || !api || !api.getSessions || _isLoading) return;
+    if (_editingSessionId && !force) return;
     
     _isLoading = true;
     try {
-      const res = await api.getSessions(40);
+      const res = await api.getSessions(200);
       if (res.ok && res.sessions) {
-        const digest = res.sessions.map(s => `${s.id}:${s.total_results}`).join('|');
+        if (_editingSessionId && !force) return;
+
+        const nextMap = {};
+        res.sessions.forEach(s => { nextMap[s.id] = s; });
+        _sessionsById = nextMap;
+
+        const todayKey = getLocalDateKey(new Date());
+        const digest = `${todayKey}|` + res.sessions.map(s => `${s.id}:${s.total_results}:${s.title || ''}`).join('|');
         
         // If nothing changed in the sessions list, only update active highlight
         if (!force && digest === _lastSessionsDigest) {
@@ -34,26 +328,8 @@
           return;
         }
 
-        const isInitial = !_lastSessionsDigest;
+        renderHistoryList(res.sessions);
         _lastSessionsDigest = digest;
-
-        const prevScrollTop = historyListEl.scrollTop;
-        historyListEl.innerHTML = res.sessions.map((s, idx) => `
-          <div class="history-item ${s.id === state.activeSessionId ? 'active' : ''} ${(!isInitial && idx === 0) ? 'history-item-new' : ''}" 
-               data-session-id="${s.id}" 
-               onclick="window.loadSession('${s.id}')">
-            <div class="history-query">${escapeHtml(s.query)}</div>
-            <div class="history-meta">
-              <span class="history-mode-pill">${escapeHtml((s.mode || 'web').toUpperCase())}</span>
-              <span>&bull;</span>
-              <span>${s.total_results} res.</span>
-              <span>&bull;</span>
-              <span>${escapeHtml((s.created_at || '').split(' ')[1] || '')}</span>
-            </div>
-          </div>
-        `).join('');
-
-        historyListEl.scrollTop = prevScrollTop;
       }
     } catch (e) {
       console.error('[SearchHistory] Failed to load history:', e);
@@ -62,7 +338,7 @@
     }
   }
 
-  async function loadSession(sessionId) {
+  async function loadSession(sessionId, preferredFilter = null, updateCopilot = true) {
     if (!api || !api.getSessionDetail) return;
     try {
       const res = await api.getSessionDetail(sessionId);
@@ -73,6 +349,14 @@
         state.currentMode = s.mode;
         state.results = s.results || [];
         state.activeEngine = null;
+        state.activeProvider = null;
+        state.excludedProviders = [];
+        state.refineQuery = '';
+        state.sortBy = 'default';
+        state.mediaSubFilter = 'all';
+        state.currentPage = 1;
+        state.scrollRenderCount = 40;
+        state.hasMorePages = (s.mode !== 'dark');
 
         const searchInput = document.getElementById('search-input');
         if (searchInput) searchInput.value = s.query;
@@ -83,12 +367,28 @@
           p.classList.toggle('active', p.dataset.mode === s.mode);
         });
 
+        const filters = window.SearchFilters;
+        if (filters && filters.renderFilterTabsForMode) {
+          filters.renderFilterTabsForMode(s.mode, !preferredFilter);
+          if (preferredFilter && filters.setFilter) {
+            filters.setFilter(preferredFilter, false, true);
+          }
+        }
+
         // Rebuild persistent engine chips from saved session
         const engineCounts = {};
+        const engineStats = {};
         state.results.forEach(r => {
           const eng = r.engine_id || r.metadata?.engine_id || r.engine || 'web';
           engineCounts[eng] = (engineCounts[eng] || 0) + 1;
+          if (!engineStats[eng]) {
+            engineStats[eng] = { count: 0, raw_count: 0, new_count: 0, status: 'done', categories: {} };
+          }
+          engineStats[eng].count += 1;
+          const cat = r.category || 'web';
+          engineStats[eng].categories[cat] = (engineStats[eng].categories[cat] || 0) + 1;
         });
+        state.engineStats = engineStats;
 
         const streamBar = document.getElementById('stream-live-bar');
         const streamBadges = document.getElementById('stream-badges');
@@ -96,7 +396,10 @@
         const streamStatusText = document.getElementById('stream-status-text');
         const btnClearEngine = document.getElementById('btn-clear-engine-filter');
 
-        if (streamBar) streamBar.classList.add('active');
+        if (streamBar) {
+          streamBar.classList.add('active');
+          streamBar.classList.toggle('is-collapsed', Boolean(state.isStreamCollapsed));
+        }
         if (streamStatusIcon) {
           streamStatusIcon.className = 'fas fa-circle-check';
           streamStatusIcon.style.color = 'var(--accent-emerald)';
@@ -108,25 +411,53 @@
           btnClearEngine.style.display = 'none';
         }
 
+        const getMacroInfo = (eng) => {
+          if (window.SearchStream && window.SearchStream.HECOS_ENGINE_INFO && window.SearchStream.HECOS_ENGINE_INFO[eng.toLowerCase()]) {
+            return window.SearchStream.HECOS_ENGINE_INFO[eng.toLowerCase()];
+          }
+          if (window.SearchFilters && window.SearchFilters.getEngineDisplayInfo) {
+            const d = window.SearchFilters.getEngineDisplayInfo(eng);
+            return { name: d.name, icon: d.icon, desc: eng };
+          }
+          if (window.SearchStream && window.SearchStream.getHecosEngineInfo) {
+            return window.SearchStream.getHecosEngineInfo(eng);
+          }
+          return { name: eng, icon: 'fas fa-check', desc: eng };
+        };
+
         if (streamBadges) {
-          streamBadges.innerHTML = Object.entries(engineCounts).map(([eng, count]) => `
-            <button class="engine-chip done" id="chip-${eng}" data-engine="${eng}" onclick="window.filterByEngine('${eng}')" title="Filter by ${eng} (${count} results)">
-              <i class="fas fa-check"></i> ${eng} <span class="chip-count">(${count})</span>
+          streamBadges.innerHTML = Object.entries(engineCounts).map(([eng, count]) => {
+            const info = getMacroInfo(eng);
+            const safeEng = escapeHtml(eng);
+            const safeName = escapeHtml(info.name);
+            const safeIcon = escapeHtml(info.icon || 'fas fa-check');
+            return `
+            <button class="engine-chip done" id="chip-${safeEng}" data-engine="${safeEng}" onclick="window.filterByEngine('${safeEng}')" title="${safeName} (${count} results)&#10;Click to filter exclusively">
+              <i class="${safeIcon}"></i> <span class="chip-engine-name">${safeName}</span> <span class="chip-count">${count}</span>
             </button>
-          `).join('');
+          `;
+          }).join('');
         }
 
-        const filters = window.SearchFilters;
         const copilot = window.SearchCopilot;
         if (filters) {
+          if (filters.syncRefineToolbarUI) {
+            filters.syncRefineToolbarUI();
+          }
           filters.updateFilterCounts();
+          if (filters.updateExclusionBar) {
+            filters.updateExclusionBar();
+          }
           if (filters.renderGranularProviderChips) {
             filters.renderGranularProviderChips();
+          }
+          if (filters.updateCollapsedPill) {
+            filters.updateCollapsedPill();
           }
           filters.renderCurrentView();
         }
         if (copilot && copilot.update) {
-          copilot.update(state.results, s.query, s.mode);
+          copilot.update(state.results, s.query, s.mode, updateCopilot);
         }
 
         document.querySelectorAll('.history-item').forEach(it => {
@@ -136,6 +467,64 @@
     } catch (e) {
       console.error('[SearchHistory] Load session detail error:', e);
     }
+  }
+
+  // ── History Sidebar Width Resizer ─────────────────────────────────────────
+  function initHistorySidebarResizer() {
+    const resizer = document.getElementById('sidebar-resizer');
+    const sidebar = document.getElementById('search-sidebar');
+    if (!resizer || !sidebar) return;
+
+    // Restore saved width from localStorage
+    const savedWidth = parseInt(localStorage.getItem('hecos_search_sidebar_w'), 10);
+    if (savedWidth && savedWidth >= 180 && savedWidth <= window.innerWidth * 0.5) {
+      sidebar.style.width = savedWidth + 'px';
+      document.documentElement.style.setProperty('--sidebar-w', savedWidth + 'px');
+    }
+
+    let isDragging = false;
+    let startX = 0;
+    let startW = 0;
+
+    resizer.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      startX = e.clientX;
+      startW = sidebar.getBoundingClientRect().width;
+      resizer.classList.add('is-resizing');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      const onMouseMove = (moveEvent) => {
+        if (!isDragging) return;
+        const deltaX = moveEvent.clientX - startX; // Dragging right widens left sidebar
+        let newW = Math.round(startW + deltaX);
+        const minW = 180;
+        const maxW = Math.floor(window.innerWidth * 0.45);
+        if (newW < minW) newW = minW;
+        if (newW > maxW) newW = maxW;
+
+        sidebar.style.width = newW + 'px';
+        document.documentElement.style.setProperty('--sidebar-w', newW + 'px');
+      };
+
+      const onMouseUp = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        resizer.classList.remove('is-resizing');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+
+        const finalW = Math.round(sidebar.getBoundingClientRect().width);
+        try {
+          localStorage.setItem('hecos_search_sidebar_w', String(finalW));
+        } catch (e) { /* ignore */ }
+      };
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    });
   }
 
   // ── Real-Time Auto-Sync Listeners ───────────────────────────────────────────
@@ -175,12 +564,26 @@
     }
   }, 3000);
 
+  // Auto-init resizer when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHistorySidebarResizer);
+  } else {
+    initHistorySidebarResizer();
+  }
+
   window.SearchHistory = {
     loadHistory,
-    loadSession
+    loadSession,
+    initHistorySidebarResizer,
+    startRenameHistoryTab,
+    deleteHistoryTab,
+    toggleHistoryDateGroup: toggleDateGroup
   };
 
   // Global window alias
   window.loadHistory = loadHistory;
   window.loadSession = loadSession;
+  window.startRenameHistoryTab = startRenameHistoryTab;
+  window.deleteHistoryTab = deleteHistoryTab;
+  window.toggleHistoryDateGroup = toggleDateGroup;
 })();

@@ -16,9 +16,11 @@ Engine Selection Strategy:
 from __future__ import annotations
 
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Set, Dict, Any
 
 from .base import BaseEngine
+from .files_apis import infer_extension
 from ..models import SearchQuery, SearchResult
 from ..config import get_search_config
 from .. import http_client
@@ -59,7 +61,7 @@ def _get_configured_searxng_nodes() -> List[Dict[str, Any]]:
     cfg = get_search_config()
     endpoints = cfg.get("endpoints", {}).get("searxng", {})
     local_inst = endpoints.get("local_instance") if isinstance(endpoints.get("local_instance"), dict) else {}
-    local = local_inst.get("url") or endpoints.get("local_url") or cfg.get("searxng", {}).get("url", "http://127.0.0.1:8888")
+    local = local_inst.get("url") or endpoints.get("local_url") or cfg.get("searxng", {}).get("url", "http://127.0.0.1:8889")
     fallbacks = endpoints.get("fallbacks", [])
     if isinstance(fallbacks, str):
         fallbacks = [fb.strip() for fb in fallbacks.split(",") if fb.strip()]
@@ -138,6 +140,8 @@ class ClearSearxngEngine(BaseEngine):
         return True
 
     def search(self, query: SearchQuery) -> List[SearchResult]:
+        import time
+        t0_global = time.time()
         results: List[SearchResult] = []
         seen_urls: Set[str] = set()
 
@@ -146,115 +150,163 @@ class ClearSearxngEngine(BaseEngine):
 
         nodes_to_try = _get_configured_searxng_nodes()
         if is_local_only:
-            # Privacy Shield: Strictly restrict to local private daemons, bypass public fallback nodes
             nodes_to_try = [n for n in nodes_to_try if "127.0.0.1" in n["url"] or "localhost" in n["url"]]
-            hecos_logger.info(f"[ClearSearxng:PRIVACY] Local-Only shield active: only local SearXNG nodes allowed ({len(nodes_to_try)} node)")
+            hecos_logger.info(f"[ClearSearxng:PRIVACY] Local-Only shield: {len(nodes_to_try)} local node(s) only")
 
-        local_url = nodes_to_try[0]["url"] if nodes_to_try else "http://127.0.0.1:8888"
+        local_url = nodes_to_try[0]["url"] if nodes_to_try else "http://127.0.0.1:8889"
         comp = SearXNGComponent()
 
-        # 1. On-Demand Invisible Auto-Start if local SearXNG is not yet active
-        if "127.0.0.1" in local_url or "localhost" in local_url:
+        # Auto-start local SearXNG daemon if offline
+        if ("127.0.0.1" in local_url or "localhost" in local_url):
             if not comp.is_running() and comp.is_installed():
-                hecos_logger.info("[SEARXNG] Local daemon is not active. Starting pure-Python SearXNG invisibly in background...")
+                hecos_logger.info("[ClearSearxng] Local daemon offline — auto-starting...")
                 comp.start()
 
         target_limit = 100000 if (query.limit is not None and query.limit <= 0) else max(query.limit, 25)
-
-        # Resolve the SearXNG category to query based on search mode
+        is_unlimited = (query.limit is not None and query.limit <= 0)
         search_cat = MODE_TO_CATEGORIES.get(query.mode, "general")
+        max_pages = 10 if is_unlimited else min(5, max(2, (target_limit // 20) + 1))
 
-        params = {
+        base_params = {
             "q": query.query,
             "format": "json",
             "safesearch": 0 if not query.safe_search else 1,
             "categories": search_cat
         }
         if query.time_range:
-            params["time_range"] = query.time_range
+            base_params["time_range"] = query.time_range
 
-        is_unlimited = (query.limit is not None and query.limit <= 0)
-        max_pages = 10 if is_unlimited else min(5, max(2, (target_limit // 20) + 1))
+        hecos_logger.info(
+            f"[ClearSearxng] Starting parallel query across {len(nodes_to_try)} SearXNG node(s) "
+            f"(cat={search_cat}, max_pages={max_pages}, target={target_limit}) for '{query.query}'"
+        )
 
-        for node in nodes_to_try:
-            if len(results) >= target_limit:
-                break
+        def _query_node(node: Dict[str, Any]) -> List[SearchResult]:
+            """Query a single SearXNG node across multiple pages."""
+            import time as _time
+            t_node = _time.time()
+            node_results: List[SearchResult] = []
             base_url = node["url"]
             search_url = f"{base_url}/search"
-            headers = {}
-            if node.get("use_api_key") and node.get("api_key"):
-                api_key = node["api_key"]
-                headers["Authorization"] = f"Bearer {api_key}"
-                headers["X-API-Key"] = api_key
+            node_seen: Set[str] = set()
 
-            node_yielded = 0
-            for page in range(1, max_pages + 1):
-                if len(results) >= target_limit:
-                    break
-                req_params = dict(params)
+            headers: Dict[str, str] = {}
+            if node.get("use_api_key") and node.get("api_key"):
+                headers["Authorization"] = f"Bearer {node['api_key']}"
+                headers["X-API-Key"] = node["api_key"]
+
+            q_page = max(1, getattr(query, "page", 1))
+            start_page = (q_page - 1) * max_pages + 1
+            for page in range(start_page, start_page + max_pages):
+                req_params = dict(base_params)
                 if page > 1:
                     req_params["pageno"] = page
 
-                # NOTE: We do NOT pass `engines=` parameter anymore.
-                # SearXNG uses its own settings.yml (synced via Engine Registry)
-                # to determine which engines run per category.  This unlocks all
-                # 90+ enabled engines instead of the previous hardcoded 14.
-
                 try:
-                    hecos_logger.info(f"[ClearSearxng] Querying SearXNG node {base_url} (page={page}, cat={search_cat}, mode=all_enabled_engines) for '{query.query}'...")
-                    resp = http_client.get(search_url, network="clearnet", params=req_params, headers=headers, timeout=min(query.timeout, 10.0))
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        raw_results = data.get("results", [])
-                        if not raw_results:
-                            break
-                        page_added = 0
-                        for item in raw_results:
-                            if len(results) >= target_limit:
-                                break
-                            title = item.get("title", "")
-                            url = item.get("url", "")
-                            snippet = item.get("content", "")
-                            engine_source = item.get("engine", "searxng")
-                            score = float(item.get("score", 1.0))
-                            cat = item.get("category", search_cat)
-                            thumb = item.get("thumbnail") or item.get("img_src") or item.get("thumbnail_src")
+                    hecos_logger.debug(f"[ClearSearxng] → {base_url} page={page} cat={search_cat}")
+                    resp = http_client.get(
+                        search_url,
+                        network="clearnet",
+                        params=req_params,
+                        headers=headers,
+                        timeout=min(query.timeout, 12.0)
+                    )
+                    if resp.status_code != 200:
+                        hecos_logger.debug(f"[ClearSearxng] {base_url} page={page}: HTTP {resp.status_code}")
+                        break
 
-                            meta = {
-                                "searx_node": base_url,
-                                "source_engine": engine_source,
-                                "publisher": item.get("author") or engine_source
-                            }
-                            if item.get("length"):
-                                meta["duration"] = str(item["length"])
-                            elif item.get("duration"):
-                                meta["duration"] = str(item["duration"])
+                    data = resp.json()
+                    raw_results = data.get("results", [])
+                    if not raw_results:
+                        hecos_logger.debug(f"[ClearSearxng] {base_url} page={page}: 0 results (stopping pagination)")
+                        break
 
-                            if title and url and url not in seen_urls:
-                                seen_urls.add(url)
-                                results.append(SearchResult(
-                                    title=title,
-                                    url=url,
-                                    snippet=snippet,
-                                    engine=f"searxng:{engine_source}",
-                                    engine_id="clear_searxng",
-                                    category=cat,
-                                    network="clearnet",
-                                    score=score,
-                                    thumbnail_url=thumb,
-                                    metadata=meta
-                                ))
-                                page_added += 1
-                                node_yielded += 1
+                    page_added = 0
+                    for item in raw_results:
+                        title = item.get("title", "")
+                        url = item.get("url", "")
+                        snippet = item.get("content", "")
+                        engine_source = item.get("engine", "searxng")
+                        score = float(item.get("score", 1.0))
+                        cat = item.get("category", search_cat)
+                        thumb = item.get("thumbnail") or item.get("img_src") or item.get("thumbnail_src")
 
-                        if page_added == 0:
-                            break
+                        meta = {
+                            "searx_node": base_url,
+                            "source_engine": engine_source,
+                            "publisher": item.get("author") or engine_source
+                        }
+                        if search_cat == "files" or cat == "files":
+                            cat = "files"
+                            inferred_ext = infer_extension(url, fallback="")
+                            if not inferred_ext:
+                                title_low = (title or "").lower()
+                                for cand in ("pdf", "epub", "docx", "zip", "iso", "7z", "rar", "csv", "json"):
+                                    if f".{cand}" in title_low or f"[{cand}]" in title_low:
+                                        inferred_ext = cand
+                                        break
+                            if not inferred_ext and any(k in engine_source.lower() for k in ("annas", "zlibrary", "z-library")):
+                                inferred_ext = "epub" if "epub" in (title + snippet).lower() else "pdf"
+                            elif not inferred_ext and any(k in engine_source.lower() for k in ("kickass", "piratebay", "solidtorrents", "bt4g")):
+                                inferred_ext = "zip"
+                            if inferred_ext:
+                                meta["extension"] = inferred_ext
+                        if item.get("length"):
+                            meta["duration"] = str(item["length"])
+                        elif item.get("duration"):
+                            meta["duration"] = str(item["duration"])
+
+                        if title and url and url not in node_seen:
+                            node_seen.add(url)
+                            node_results.append(SearchResult(
+                                title=title,
+                                url=url,
+                                snippet=snippet,
+                                engine=f"searxng:{engine_source}",
+                                engine_id="clear_searxng",
+                                category=cat,
+                                network="clearnet",
+                                score=score,
+                                thumbnail_url=thumb,
+                                metadata=meta
+                            ))
+                            page_added += 1
+
+                    hecos_logger.debug(
+                        f"[ClearSearxng] {base_url} page={page}: +{page_added} results "
+                        f"(node total: {len(node_results)})"
+                    )
+                    if page_added == 0:
+                        break
+
                 except Exception as e:
-                    hecos_logger.debug(f"[ClearSearxng] Query to {base_url} page {page} note: {e}")
+                    hecos_logger.debug(f"[ClearSearxng] {base_url} page={page} error: {e}")
                     break
 
-            if node_yielded > 0:
-                hecos_logger.info(f"[ClearSearxng] Retrieved {node_yielded} aggregated results across pages from node {base_url}")
-                return results
+            elapsed = round((_time.time() - t_node) * 1000)
+            hecos_logger.info(
+                f"[ClearSearxng] Node {base_url}: {len(node_results)} results in {elapsed}ms"
+            )
+            return node_results
 
+        # Fan-out: query all nodes in parallel, then merge with dedup
+        max_node_workers = min(len(nodes_to_try), 4)
+        with ThreadPoolExecutor(max_workers=max_node_workers) as pool:
+            futures = {pool.submit(_query_node, node): node for node in nodes_to_try}
+            for fut in as_completed(futures, timeout=query.timeout + 2.0):
+                try:
+                    node_res = fut.result()
+                    for item in node_res:
+                        if item.url not in seen_urls and len(results) < target_limit:
+                            seen_urls.add(item.url)
+                            results.append(item)
+                except Exception as e:
+                    node = futures[fut]
+                    hecos_logger.debug(f"[ClearSearxng] Node {node['url']} future error: {e}")
+
+        elapsed_total = round((time.time() - t0_global) * 1000)
+        hecos_logger.info(
+            f"[ClearSearxng] TOTAL: {len(results)} unique results from {len(nodes_to_try)} nodes "
+            f"in {elapsed_total}ms for '{query.query}'"
+        )
         return results

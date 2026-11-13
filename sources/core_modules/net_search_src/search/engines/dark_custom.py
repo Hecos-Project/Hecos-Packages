@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from typing import List
 
-from .base import BaseEngine
+from .base import BaseEngine, effective_tor_timeout
 from ..models import SearchQuery, SearchResult
 from .. import http_client
 
@@ -87,10 +87,11 @@ class DarkCustomEngine(BaseEngine):
                     headers["Authorization"] = f"Bearer {key_val}"
                     headers["X-API-Key"] = key_val
 
-            hecos_logger.info(f"[SEARCH:CUSTOM_ONION] Querying '{eng_name}' at {target_url} (Auth={'Yes' if headers else 'No'})...")
+            tor_timeout = effective_tor_timeout(query.timeout, minimum=15.0)
+            hecos_logger.info(f"[SEARCH:CUSTOM_ONION] Querying '{eng_name}' at {target_url} (Auth={'Yes' if headers else 'No'}, timeout={tor_timeout}s)...")
 
             try:
-                resp = http_client.get(target_url, network="tor", headers=headers, timeout=query.timeout)
+                resp = http_client.get(target_url, network="tor", headers=headers, timeout=tor_timeout)
                 if resp.status_code == 200:
                     from bs4 import BeautifulSoup
                     soup = BeautifulSoup(resp.text, "lxml")

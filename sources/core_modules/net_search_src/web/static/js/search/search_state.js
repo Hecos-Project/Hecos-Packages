@@ -30,6 +30,9 @@ window.SearchState = {
   activeFilter: 'all', // all, images, videos, audio, files, dark, osint
   activeEngine: null,
   activeProvider: null,
+  refineQuery: '',
+  sortBy: 'default',
+  mediaSubFilter: 'all', // all | videos | images | audio (used inside deep_media)
   isStreamCollapsed: (function () {
     try {
       if (typeof localStorage === 'undefined') return true;
@@ -55,6 +58,7 @@ window.SearchState = {
   scrollRenderCount: 40,
   backendPage: 1,
   isFetchingMore: false,
+  hasMorePages: true,
   autoFetchMore: (function () {
     try {
       if (typeof localStorage === 'undefined') return true;
@@ -72,10 +76,14 @@ window.SearchState = {
     this.activeEngine = null;
     this.activeProvider = null;
     this.excludedProviders = [];  // Reset exclusions on each new search
+    this.refineQuery = '';
+    this.sortBy = 'default';
+    this.mediaSubFilter = 'all';
     this.currentPage = 1;
     this.scrollRenderCount = 40;
     this.backendPage = 1;
     this.isFetchingMore = false;
+    this.hasMorePages = true;
     if (this.activeEventSource) {
       this.activeEventSource.close();
       this.activeEventSource = null;

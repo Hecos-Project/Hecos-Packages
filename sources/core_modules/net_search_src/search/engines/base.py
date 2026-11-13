@@ -10,6 +10,15 @@ from typing import List, Dict, Any, Optional
 from ..models import SearchQuery, SearchResult
 
 
+def effective_tor_timeout(query_timeout: Optional[float], minimum: float = 15.0) -> float:
+    """Returns a Tor-safe HTTP timeout ensuring hidden-service circuit handshakes do not abort at 5s."""
+    try:
+        val = float(query_timeout or 0)
+    except (TypeError, ValueError):
+        val = 0.0
+    return max(val, minimum)
+
+
 class BaseEngine(ABC):
     """Abstract search engine."""
 

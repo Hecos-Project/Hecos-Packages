@@ -8,7 +8,8 @@ from __future__ import annotations
 import logging
 from typing import List
 
-from .base import BaseEngine
+import urllib.parse
+from .base import BaseEngine, effective_tor_timeout
 from ..models import SearchQuery, SearchResult
 from .. import http_client
 
@@ -61,24 +62,43 @@ class DarkOnionlandEngine(BaseEngine):
         if tor_online:
             endpoints.append((onion_url, "tor"))
 
+        tor_timeout = effective_tor_timeout(query.timeout, minimum=15.0)
+        clear_timeout = max(float(query.timeout or 10.0), 10.0)
+        max_pages = 5 if query.limit >= 30 else 2
+
         for url, net in endpoints:
             try:
-                hecos_logger.info(f"[SEARCH:ONIONLAND] Querying Onion Search Engine via {net}: '{query.query}'...")
-                resp = http_client.get(url, network=net, params=params, timeout=min(query.timeout, 6.0))
-                if resp.status_code == 200:
+                req_timeout = tor_timeout if net == "tor" else clear_timeout
+                seen_urls = set()
+                hecos_logger.info(f"[SEARCH:ONIONLAND] Querying Onion Search Engine via {net}: '{query.query}' (max_pages={max_pages})...")
+                for page_num in range(1, max_pages + 1):
+                    if len(results) >= query.limit:
+                        break
+                    page_params = dict(params)
+                    if page_num > 1:
+                        page_params["page"] = page_num
+
+                    resp = http_client.get(url, network=net, params=page_params, timeout=req_timeout)
+                    if resp.status_code != 200:
+                        break
                     from bs4 import BeautifulSoup
                     soup = BeautifulSoup(resp.text, "lxml")
 
-                    seen_urls = set()
+                    added_this_page = 0
                     for a in soup.find_all("a", href=True):
-                        href = a["href"].strip()
-                        if not href or href in seen_urls:
+                        raw_href = a["href"].strip()
+                        if not raw_href:
                             continue
-                        if ".onion" not in href or "report_page" in href:
+                        if "url=" in raw_href or "redirect=" in raw_href:
+                            parsed = urllib.parse.parse_qs(urllib.parse.urlparse(raw_href).query)
+                            href = parsed.get("url", parsed.get("redirect", [raw_href]))[0]
+                        else:
+                            href = raw_href
+                        if href in seen_urls or ".onion" not in href.lower() or "report_page" in href:
                             continue
 
                         title = a.get_text(strip=True)
-                        if not title:
+                        if not title or title.lower() in ["next", "previous", "home", "search"]:
                             continue
 
                         parent = a.find_parent(["div", "li", "article"])
@@ -101,8 +121,11 @@ class DarkOnionlandEngine(BaseEngine):
                             category="onion",
                             network="tor"
                         ))
+                        added_this_page += 1
                         if len(results) >= query.limit:
                             break
+                    if added_this_page == 0:
+                        break
 
                 if results:
                     break

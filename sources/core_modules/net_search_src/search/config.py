@@ -64,8 +64,8 @@ _DEFAULT_SEARCH_CONFIG: Dict[str, Any] = {
     },
     "searxng": {
         "enabled": True,
-        "url": "http://127.0.0.1:8888",
-        "port": 8888,
+        "url": "http://127.0.0.1:8889",
+        "port": 8889,
         "auto_start": True,
         "custom_engines": ""
     },
@@ -82,15 +82,18 @@ _DEFAULT_SEARCH_CONFIG: Dict[str, Any] = {
         "dark_tor66": True,
         "dark_danieltore": True,
         "dark_custom": True,
+        "clear_custom": True,
+        "domain_directory": True,
         "media_images": True,
         "media_videos": True,
         "media_audio": True,
         "files_dorks": True,
+        "clear_brave": True,
         "osint_sherlock": True
     },
     "endpoints": {
         "searxng": {
-            "local_url": "http://127.0.0.1:8888",
+            "local_url": "http://127.0.0.1:8889",
             "fallbacks": [
                 "https://searx.be",
                 "https://baresearch.org",
@@ -227,10 +230,15 @@ _DEFAULT_SEARCH_CONFIG: Dict[str, Any] = {
             }
         },
         "custom_nodes": [],
-        "custom_onion_engines": []
+        "custom_onion_engines": [],
+        "custom_clear_engines": []
     },
-    "max_concurrent_engines": 6,
-    "request_timeout_sec": 12.0
+    "sources": [],
+    "sources_auto_update": True,
+    "max_concurrent_engines": 10,
+    "max_total_results": 2000,
+    "request_timeout_sec": 15.0,
+    "brave_api_key": ""
 }
 
 

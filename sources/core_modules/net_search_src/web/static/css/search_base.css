@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    search_base.css
    Hecos Deep Search: Theme Variables, Reset, Header, Workspace Layout,
    Sidebar History, Floating Search Bar, Mode Buttons & Option Toggles.
@@ -36,6 +36,31 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 body.search-page,
@@ -81,6 +106,50 @@ body:has(.search-workspace) header {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  min-width: 180px;
+}
+
+/* History Sidebar Width Resizer Handle */
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 50;
+  user-select: none;
+  background: transparent;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sidebar-resizer::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 36px;
+  border-radius: 2px;
+  background: var(--border);
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.sidebar-resizer:hover,
+.sidebar-resizer.is-resizing {
+  background: rgba(var(--accent-rgb), 0.25);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.35);
+}
+
+.sidebar-resizer:hover::after,
+.sidebar-resizer.is-resizing::after {
+  background: var(--accent);
+  opacity: 1;
+  height: 48px;
 }
 
 .sidebar-header {
@@ -94,6 +163,42 @@ body:has(.search-workspace) header {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--border);
+}
+
+.sidebar-new-search-wrap {
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-new-search-btn {
+  width: 100%;
+  height: 32px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(var(--accent-rgb), 0.45);
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: all 0.18s ease;
+  box-sizing: border-box;
+}
+
+.sidebar-new-search-btn:hover {
+  background: rgba(var(--accent-rgb), 0.22);
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.22);
+  transform: translateY(-1px);
+}
+
+.sidebar-new-search-btn:active {
+  transform: translateY(0);
 }
 
 .history-list {
@@ -129,13 +234,188 @@ body:has(.search-workspace) header {
   color: var(--accent);
 }
 
+.history-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+
 .history-query {
+  flex: 1;
+  min-width: 0;
   font-size: 12.5px;
   font-weight: 500;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.history-item-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  opacity: 0.68;
+  transition: opacity 0.15s ease;
+}
+
+.history-item:hover .history-item-actions,
+.history-item.active .history-item-actions,
+.history-item:focus-within .history-item-actions {
+  opacity: 1;
+}
+
+.btn-history-action {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-history-rename:hover,
+.btn-history-save:hover {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.45);
+  background: rgba(var(--accent-rgb), 0.14);
+}
+
+.btn-history-delete:hover,
+.btn-history-cancel:hover {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.history-rename-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+.history-rename-input {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--accent);
+  background: var(--bg2);
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+
+.history-rename-input:focus {
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.22);
+}
+
+.history-date-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.history-date-header {
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.history-date-header:hover {
+  background: var(--glass-b);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.history-date-header.is-today {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
+  border-color: rgba(var(--accent-rgb), 0.22);
+}
+
+.history-date-header-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.history-date-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-date-chevron {
+  font-size: 9px;
+  transition: transform 0.16s ease;
+  flex-shrink: 0;
+}
+
+.history-date-group.is-collapsed .history-date-chevron {
+  transform: rotate(-90deg);
+}
+
+.history-date-count {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.history-date-header.is-today .history-date-count {
+  background: rgba(var(--accent-rgb), 0.18);
+  color: var(--accent);
+}
+
+.history-date-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-date-group.is-collapsed .history-date-items {
+  display: none;
+}
+
+.history-empty-hint {
+  text-align: center;
+  padding: 20px 10px;
+  font-size: 12px;
+  color: var(--text-dim);
 }
 
 .history-meta {
@@ -149,6 +429,7 @@ body:has(.search-workspace) header {
 /* ── Central Search Feed ─────────────────────────────────────────────────── */
 .search-stage {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -190,7 +471,8 @@ body:has(.search-workspace) header {
 }
 
 .search-input-field {
-  flex: 1;
+  flex: 1 1 80px;
+  min-width: 0;
   background: transparent;
   border: none;
   outline: none;

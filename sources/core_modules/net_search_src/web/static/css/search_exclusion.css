@@ -398,29 +398,29 @@ div#hbs-presenter-embedded {
   overflow-x: hidden !important;
   overflow-y: auto !important;
   scrollbar-width: thin !important;
-  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(0, 0, 0, 0.15) !important;
+  scrollbar-color: var(--border) transparent !important;
 }
 
 .search-copilot #hbs-presenter-embedded .hbs-presenter-body::-webkit-scrollbar,
 #hbs-presenter-embedded.netsearch-presenter-embedded .hbs-presenter-body::-webkit-scrollbar {
-  width: 5px !important;
+  width: 4px !important;
 }
 
 .search-copilot #hbs-presenter-embedded .hbs-presenter-body::-webkit-scrollbar-track,
 #hbs-presenter-embedded.netsearch-presenter-embedded .hbs-presenter-body::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.15) !important;
+  background: transparent !important;
   border-radius: 4px !important;
 }
 
 .search-copilot #hbs-presenter-embedded .hbs-presenter-body::-webkit-scrollbar-thumb,
 #hbs-presenter-embedded.netsearch-presenter-embedded .hbs-presenter-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2) !important;
+  background: var(--border) !important;
   border-radius: 4px !important;
 }
 
 .search-copilot #hbs-presenter-embedded .hbs-presenter-body::-webkit-scrollbar-thumb:hover,
 #hbs-presenter-embedded.netsearch-presenter-embedded .hbs-presenter-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.35) !important;
+  background: var(--accent) !important;
 }
 
 .search-copilot #hbs-presenter-embedded .hbs-presenter-line,

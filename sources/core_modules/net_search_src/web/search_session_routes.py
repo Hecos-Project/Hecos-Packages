@@ -47,7 +47,31 @@ def register_session_routes(app, logger=None):
     @login_required
     def api_search_session_delete(session_id):
         ok = session_store.delete_session(session_id)
-        return jsonify({"ok": ok})
+        if not ok:
+            return jsonify({"ok": False, "error": "Session not found"}), 404
+        return jsonify({"ok": True, "id": session_id})
+
+    @app.route("/api/hsearch/sessions/<session_id>/rename", methods=["POST", "PATCH"])
+    @app.route("/api/hsearch/sessions/<session_id>", methods=["PATCH"])
+    @login_required
+    def api_search_session_rename(session_id):
+        data = request.get_json(silent=True) or {}
+        raw_title = data.get("title")
+        if raw_title is None:
+            raw_title = data.get("name")
+        if raw_title is None:
+            raw_title = data.get("query")
+        if raw_title is None:
+            return jsonify({"ok": False, "error": "Missing title"}), 400
+
+        clean_title = str(raw_title).strip()[:200]
+        if not clean_title:
+            return jsonify({"ok": False, "error": "Title cannot be empty"}), 400
+
+        ok = session_store.rename_session(session_id, clean_title)
+        if not ok:
+            return jsonify({"ok": False, "error": "Session not found"}), 404
+        return jsonify({"ok": True, "id": session_id, "title": clean_title})
 
     @app.route("/api/hsearch/sessions/clear", methods=["POST"])
     @login_required

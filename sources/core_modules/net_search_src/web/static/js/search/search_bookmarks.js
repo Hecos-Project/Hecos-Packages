@@ -211,9 +211,6 @@ window.BookmarksManager = (function() {
             </a>
             ${safeSnippet ? `<p style="font-size:12px; color:var(--muted); margin-bottom:8px; line-height:1.4; max-height:48px; overflow:hidden; text-overflow:ellipsis;">${safeSnippet}</p>` : ''}
             <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-              <button class="btn-result-action primary" style="font-size:10.5px; padding:3px 8px;" onclick="SearchResults.readPage('${safeUrl}')">
-                <i class="fas fa-file-alt"></i> Read AI
-              </button>
               <button class="btn-result-action" style="font-size:10.5px; padding:3px 8px;" onclick="SearchResults.copyLink('${safeUrl}')">
                 <i class="fas fa-copy"></i> Copy Link
               </button>

@@ -1,0 +1,440 @@
+/* ==========================================================================
+   netsearch_panel.css
+   Hecos Net Search Admin Configuration Tab (#tab-netsearch) Styling.
+   ========================================================================== */
+
+/* ── Net Search Endpoints & Group Styling (Scoped) ── */
+#tab-netsearch .endpoint-group {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+#tab-netsearch .endpoint-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#tab-netsearch .endpoint-group-header-clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+#tab-netsearch .endpoint-group-header-clickable:hover .endpoint-group-title {
+  color: var(--accent-cyan, #06b6d4);
+}
+
+#tab-netsearch .btn-group-toggle {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg0, #0f1017);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--accent-cyan, #06b6d4);
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.15s ease;
+}
+
+#tab-netsearch .btn-group-toggle:hover {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: var(--accent-cyan, #06b6d4);
+  color: #fff;
+}
+
+#tab-netsearch .endpoint-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#tab-netsearch .endpoint-input {
+  flex: 1;
+  background: var(--bg0, #0f1017);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+#tab-netsearch .endpoint-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+#tab-netsearch .endpoint-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#tab-netsearch .endpoint-card:hover {
+  border-color: rgba(var(--accent-rgb, 108, 140, 255), 0.4);
+}
+
+#tab-netsearch .endpoint-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#tab-netsearch .endpoint-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 220px;
+}
+
+#tab-netsearch .endpoint-name-input {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg0, #0f1017);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  max-width: 260px;
+  flex: 1;
+}
+
+#tab-netsearch .endpoint-name-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+#tab-netsearch .endpoint-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#tab-netsearch .endpoint-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+#tab-netsearch .endpoint-card-fields {
+  display: grid;
+  grid-template-columns: 140px 1fr 100px 170px;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 900px) {
+  #tab-netsearch .endpoint-card-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  #tab-netsearch .endpoint-card-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+#tab-netsearch .endpoint-field-col label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 3px;
+  display: block;
+  letter-spacing: 0.5px;
+}
+
+#tab-netsearch .proto-input-wrap {
+  display: flex;
+  gap: 4px;
+}
+
+#tab-netsearch .endpoint-proto-select {
+  background: var(--bg0, #0f1017);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--accent);
+  font-family: monospace;
+  font-size: 11px;
+  padding: 5px 6px;
+  width: 100%;
+}
+
+#tab-netsearch .endpoint-proto-custom {
+  background: var(--bg0, #0f1017);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: monospace;
+  font-size: 11px;
+  padding: 5px 6px;
+  width: 70px;
+}
+
+#tab-netsearch .endpoint-host-input,
+#tab-netsearch .endpoint-port-input,
+#tab-netsearch .endpoint-path-input {
+  width: 100%;
+  background: var(--bg0, #0f1017);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 11px;
+  font-family: monospace;
+}
+
+#tab-netsearch .endpoint-host-input:focus,
+#tab-netsearch .endpoint-port-input:focus,
+#tab-netsearch .endpoint-path-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+#tab-netsearch .endpoint-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg0, #0f1017);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+}
+
+#tab-netsearch .endpoint-preview-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+#tab-netsearch .endpoint-preview-url {
+  font-family: monospace;
+  color: var(--text);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+#tab-netsearch .btn-icon-del {
+  background: transparent;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: var(--red, #f43f5e);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 11px;
+}
+
+#tab-netsearch .btn-icon-del:hover {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: var(--red, #f43f5e);
+}
+
+#tab-netsearch .endpoint-api-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  margin-bottom: 8px;
+}
+
+#tab-netsearch .endpoint-api-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  width: fit-content;
+}
+
+#tab-netsearch .endpoint-api-toggle-label:hover {
+  color: var(--accent);
+}
+
+#tab-netsearch .endpoint-api-toggle-label input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+#tab-netsearch .endpoint-api-key-wrap {
+  margin-top: 2px;
+}
+
+#tab-netsearch .endpoint-api-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#tab-netsearch .endpoint-api-key-input {
+  flex: 1;
+  background: var(--bg0, #0f1017);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 11px;
+  font-family: monospace;
+}
+
+#tab-netsearch .endpoint-api-key-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+#tab-netsearch .btn-api-visibility {
+  background: var(--bg0, #0f1017);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#tab-netsearch .btn-api-visibility:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* 4-Tab Endpoints Organizer */
+#tab-netsearch .ns-tabs-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+
+#tab-netsearch .ns-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg1, #141621);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+#tab-netsearch .ns-tab-btn:hover {
+  color: var(--text);
+  border-color: rgba(56, 189, 248, 0.45);
+  background: var(--bg2, #1b1e2c);
+}
+
+#tab-netsearch .ns-tab-btn.active {
+  color: #fff;
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.65);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.2);
+}
+
+#tab-netsearch .ns-tab-pane {
+  display: none;
+}
+
+#tab-netsearch .ns-tab-pane.active {
+  display: block;
+}
+
+#tab-netsearch .ns-domain-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+#tab-netsearch .ns-domain-stat {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--bg0, #0f1017);
+  border: 1px solid var(--border);
+}
+
+#tab-netsearch .ns-role-btn-group {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg1);
+}
+
+#tab-netsearch .ns-role-btn {
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+#tab-netsearch .ns-role-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#tab-netsearch .ns-role-btn.active {
+  background: rgba(56, 189, 248, 0.22);
+  color: #7dd3fc;
+}
+
+#tab-netsearch .ns-info-icon {
+  font-size: 11px;
+  color: var(--muted);
+  cursor: help;
+  opacity: 0.78;
+  margin-left: 4px;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+#tab-netsearch .ns-info-icon:hover {
+  color: var(--accent-cyan, #06b6d4);
+  opacity: 1;
+}

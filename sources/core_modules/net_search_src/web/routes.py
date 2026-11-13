@@ -135,10 +135,9 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger=None):
     # Only register /search and all /api/hsearch/* routes if not already present
     if "search_page" not in app.view_functions:
         try:
-            init_ss, reg_search, reg_bookmarks = _try_import_search_modules()
+            init_ss, reg_search, _ = _try_import_search_modules()
             init_ss()
             reg_search(app, cfg_mgr, root_dir, log)
-            reg_bookmarks(app, log)
             log.info("[NetSearch] /search page and API routes registered successfully.")
         except Exception as se:
             log.error(f"[NetSearch] Failed to register search routes: {se}", exc_info=True)

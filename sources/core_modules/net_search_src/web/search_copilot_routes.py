@@ -19,8 +19,24 @@ from flask_login import login_required
 
 try:
     from hecos.modules.net_search.search.sessions import get_session_store
+    from hecos.modules.net_search.search.copilot_planner import (
+        load_copilot_presets_payload,
+        resolve_active_soul,
+        get_soul_display_name,
+        build_preset_instructions,
+        plan_copilot_turn,
+        build_responder_config,
+    )
 except (ImportError, ValueError):
     from ..search.sessions import get_session_store
+    from ..search.copilot_planner import (
+        load_copilot_presets_payload,
+        resolve_active_soul,
+        get_soul_display_name,
+        build_preset_instructions,
+        plan_copilot_turn,
+        build_responder_config,
+    )
 
 try:
     from hecos.core.logging import logger as hecos_logger
@@ -48,142 +64,20 @@ def register_copilot_routes(app, logger=None):
         log.warning(f"[DeepSearch] Could not start PresenterEngine: {_pe_err}")
 
     # ── 1. Presets Discovery ───────────────────────────────────────────────────
-    def _format_soul_name(soul_file: str) -> str:
-        if not soul_file:
-            return "Hecos AI"
-        s = str(soul_file).replace(".yaml", "").strip()
-        parts = s.split("_")
-        cap_parts = [p.capitalize() if p.islower() else p for p in parts]
-        return " ".join(cap_parts).strip()
-
     @app.route("/api/hsearch/copilot/presets", methods=["GET"])
     @login_required
     def api_copilot_presets():
-        """Lists available Global Presets (SoulProfiles) with resolved avatar URLs and internal soul names."""
-        try:
-            from hecos.core.global_presets.manager import list_souls
-            from hecos.core.persona.persona_media import PersonaMediaManager
-            souls = list_souls()
-            presets = []
-            for s in souls:
-                if s and s.meta and s.meta.id:
-                    pname = getattr(s.persona, "soul_file", None) or s.meta.id
-                    av_info = PersonaMediaManager.resolve_avatar(pname)
-                    soul_raw = getattr(s.persona, "soul_file", None) or ""
-                    soul_clean = _format_soul_name(soul_raw) if soul_raw else (s.meta.name or s.meta.id)
-                    presets.append({
-                        "id": s.meta.id,
-                        "name": s.meta.name or s.meta.id,
-                        "soul_file": soul_raw,
-                        "soul_name": soul_clean,
-                        "icon": getattr(s.meta, "icon", "🧠") or "🧠",
-                        "avatar_url": av_info.get("url", "/assets/Hecos_Logo_NBG.png"),
-                        "avatar_type": av_info.get("type", "image"),
-                        "description": getattr(s.meta, "description", "") or ""
-                    })
-            if not presets:
-                presets = [{"id": "default", "name": "Default Soul", "soul_file": "Hecos_System_Soul", "soul_name": "Hecos AI", "icon": "🧠", "avatar_url": "/assets/Hecos_Logo_NBG.png", "avatar_type": "image", "description": "Standard Assistant"}]
-            return jsonify({"ok": True, "presets": presets})
-        except Exception as e:
-            log.warning(f"[HecosAI] Failed to list soul presets: {e}")
-            return jsonify({
-                "ok": True,
-                "presets": [
-                    {"id": "balanced", "name": "Balanced Assistant", "soul_file": "balanced", "soul_name": "Balanced Assistant", "icon": "🧠", "avatar_url": "/assets/Hecos_Logo_NBG.png", "avatar_type": "image", "description": "General AI"},
-                    {"id": "creative", "name": "Creative Investigator", "soul_file": "creative", "soul_name": "Creative Investigator", "icon": "🎨", "avatar_url": "/assets/Hecos_Logo_NBG.png", "avatar_type": "image", "description": "Open exploration"},
-                    {"id": "precise", "name": "Precise Analyst", "soul_file": "precise", "soul_name": "Precise Analyst", "icon": "🎯", "avatar_url": "/assets/Hecos_Logo_NBG.png", "avatar_type": "image", "description": "Accurate & concise"}
-                ]
-            })
+        """Lists available Global Presets (SoulProfiles) with full model/inference/voice metadata and tooltips."""
+        return jsonify(load_copilot_presets_payload(log=log))
 
     # ── 2. Copilot Chat (SSE Streaming & Single Turn) ─────────────────────────
-
-    def _resolve_active_soul(preset_id: str):
-        """
-        FIX 1: Resolve the effective Soul (Global Preset) to use.
-        Priority: explicit preset_id from payload → active_global_preset from system.yaml → None.
-        Never silently ignores the active preset when the frontend sends "default".
-        """
-        try:
-            from hecos.core.global_presets.manager import get_soul, get_active_soul_id
-            # If the frontend explicitly selected a non-default preset, honour it
-            if preset_id and preset_id not in ("default", "", None):
-                soul = get_soul(preset_id)
-                if soul:
-                    return soul
-            # Otherwise, fall back to the globally active preset from system.yaml
-            active_id = get_active_soul_id("global")
-            if active_id and active_id not in ("default", "", None):
-                soul = get_soul(active_id)
-                if soul:
-                    log.info(f"[Copilot] Using system active preset '{active_id}' (payload had '{preset_id}')")
-                    return soul
-        except Exception as e:
-            log.warning(f"[Copilot] Could not resolve soul preset: {e}")
-        return None
-
-    def _build_preset_instructions(soul) -> str:
-        """
-        FIX 3: Collect ALL instruction fields from the preset into one block,
-        without overwriting each other.
-        """
-        if not soul:
-            return ""
-        parts = []
-        special = (getattr(soul.persona, "special_instructions", None) or "").strip()
-        custom = (getattr(soul.persona, "custom_instructions", None) or "").strip()
-        if special:
-            parts.append(special)
-        if custom:
-            parts.append(custom)
-        return "\n".join(parts)
-
-    def _optimize_query_via_llm(raw_query: str, preset_instructions: str, cfg: dict) -> str:
-        """
-        FIX 2: Ask the LLM to optimize/translate the raw search query BEFORE
-        sending it to the search engine, so preset rules like "search in English"
-        are applied at the right time.
-        Returns the optimized query string, or raw_query on any failure.
-        """
-        if not raw_query:
-            return raw_query
-        try:
-            from hecos.core.llm.brain import generate_response
-            import copy
-            opt_cfg = copy.deepcopy(cfg) if cfg else {}
-            if "ai" not in opt_cfg:
-                opt_cfg["ai"] = {}
-            opt_cfg["ai"]["special_instructions"] = (
-                (preset_instructions + "\n\n") if preset_instructions else ""
-            ) + (
-                "You are a search query optimizer. "
-                "Your ONLY job is to output the final, optimized search query string — "
-                "nothing else. No explanations, no punctuation around it, no quotes. "
-                "Translate to English if your instructions require it. "
-                "Make it suitable for a web search engine (keywords only, max 10 words)."
-            )
-            result = generate_response(
-                user_text=f'Optimize this search query: "{raw_query}"',
-                external_config=opt_cfg,
-                save_history=False,
-                tag="COPILOT_QUERY_OPT"
-            )
-            optimized = (result or "").strip().strip('"').strip("'").strip()
-            # Safety guard: if the LLM returned a paragraph instead of a query, use original
-            if optimized and len(optimized) <= 200 and "\n" not in optimized:
-                log.info(f"[Copilot] Query optimized: '{raw_query}' → '{optimized}'")
-                return optimized
-            log.warning(f"[Copilot] Query optimizer returned unusable output, using original: {result!r}")
-        except Exception as e:
-            log.warning(f"[Copilot] Query optimization failed, using raw query: {e}")
-        return raw_query
-
     @app.route("/api/hsearch/copilot/chat", methods=["POST"])
     @login_required
     def api_copilot_chat():
         """
         Executes a conversation turn with the AI Copilot.
-        Receives { message, preset_id?, session_id?, stream? }.
-        Streams tokens back via Server-Sent Events (SSE) or returns JSON.
+        Receives { message, preset_id?, session_id?, active_mode?, auto_mode?, current_query?, has_results?, limit?, safe_search?, dark_bypass?, local_only?, stream? }.
+        Plans intent/query/mode once, runs at most one search, and streams commentary via SSE.
         """
         data = request.get_json(silent=True) or {}
         user_message = (data.get("message") or "").strip()
@@ -191,10 +85,21 @@ def register_copilot_routes(app, logger=None):
             return jsonify({"ok": False, "error": "Empty message"}), 400
 
         preset_id = data.get("preset_id") or "default"
-        session_id = data.get("session_id") or ""
+        session_id = (data.get("session_id") or "").strip()
+        active_mode = (data.get("active_mode") or "clear").strip().lower()
+        auto_mode = data.get("auto_mode", True) is not False
+        current_query = (data.get("current_query") or "").strip()
+        has_results = bool(data.get("has_results", False))
+        try:
+            req_limit = int(data.get("limit", 100))
+        except (TypeError, ValueError):
+            req_limit = 100
+        req_safe_search = bool(data.get("safe_search", False))
+        req_dark_bypass = data.get("dark_bypass", True) is not False
+        req_local_only = bool(data.get("local_only", False))
         want_stream = data.get("stream", True) is not False
 
-        # ── FIX 1: Resolve active soul (preset) — reads system config if payload says "default" ──
+        # Resolve active soul (preset) — reads system config if payload says "default"
         import copy
         try:
             from hecos.core.llm.brain import load_config
@@ -204,8 +109,9 @@ def register_copilot_routes(app, logger=None):
             log.warning(f"[Copilot] Could not load base config: {cfg_err}")
             base_cfg = {}
 
-        soul = _resolve_active_soul(preset_id)
-        preset_instructions = _build_preset_instructions(soul)
+        soul = resolve_active_soul(preset_id, log=log)
+        soul_display_name = get_soul_display_name(soul)
+        preset_instructions = build_preset_instructions(soul)
 
         if soul:
             try:
@@ -217,152 +123,181 @@ def register_copilot_routes(app, logger=None):
         else:
             merged_cfg = base_cfg
 
-        # Build search-specific context
-        search_context = ""
-        resolved_session = None
+        # Disable unrelated tools (including IMAGE_GEN) inside Net Search Copilot
+        if isinstance(merged_cfg, dict):
+            merged_cfg["disable_tools"] = True
+
+        existing_session = None
         if session_id:
             try:
-                resolved_session = session_store.get_session(session_id)
+                existing_session = session_store.get_session(session_id)
+                if existing_session and existing_session.results:
+                    has_results = True
+                    if not current_query:
+                        current_query = existing_session.query
             except Exception as se:
                 log.warning(f"[HecosAI] Could not load session {session_id} for context: {se}")
 
-        # If no active session with results, check if message has search intent or is a query
-        if not (resolved_session and resolved_session.results):
-            import re
-            m = re.match(
-                r'^(?:cerca(?:\s+su|\s+nel|\s+in)?|cercami|trova(?:\s+su|\s+nel|\s+in)?'
-                r'|search(?:\s+for)?|find(?:\s+for)?|\/search|\/hsearch)\s+(.+)$',
-                user_message, re.IGNORECASE
+        def _execute_turn_plan(status_cb=None, stream_cb=None):
+            t_turn = time.time()
+            if status_cb:
+                status_cb("Analyzing search intent & optimizing query...")
+            plan = plan_copilot_turn(
+                user_message=user_message,
+                current_query=current_query,
+                has_results=has_results,
+                active_mode=active_mode,
+                auto_mode=auto_mode,
+                preset_instructions=preset_instructions,
+                cfg=merged_cfg,
+                log=log,
             )
-            search_query_str = m.group(1).strip() if m else None
 
-            # If no explicit search prefix but it looks like a short search intent (not a question)
-            if not search_query_str and len(user_message.split()) <= 10 and not user_message.endswith("?"):
-                search_query_str = user_message.strip()
+            resolved_sess = existing_session if plan["action"] == "analyze_current" else None
 
-            if search_query_str:
-                # ── FIX 2: Optimize the query via LLM BEFORE searching ──
-                # This is where preset instructions like "search in English" are applied
-                optimized_query = _optimize_query_via_llm(search_query_str, preset_instructions, merged_cfg)
-
+            if plan["action"] == "new_search" and plan["query"]:
+                if status_cb:
+                    status_cb(f"Searching {plan['mode'].upper()} for \"{plan['query']}\"...", plan=plan)
                 try:
-                    from hecos.modules.net_search.search.service import HecosSearchService
+                    from hecos.modules.net_search.search.service import get_search_service
                     from hecos.modules.net_search.search.models import SearchQuery
 
-                    search_mode = "clear"
-                    lower_msg = user_message.lower()
-                    if any(w in lower_msg for w in ["dark web", ".onion", "tor"]):
-                        search_mode = "dark"
-                    elif any(w in lower_msg for w in ["deep search", "ricerca profonda"]):
-                        search_mode = "deep"
-                    elif any(w in lower_msg for w in ["video", "immagine", "immagini", "foto", "audio", "musica"]):
-                        search_mode = "media"
-                    elif any(w in lower_msg for w in ["file", "pdf", "docx", "dork"]):
-                        search_mode = "files"
+                    # Focus engines for clear visual/media intents so slow news/podcast scrapers don't stall Copilot
+                    targeted_engines = []
+                    if plan["mode"] == "clear":
+                        if plan["filter"] == "images":
+                            targeted_engines = ["media_images", "clear_searxng", "clear_ddgs"]
+                        elif plan["filter"] == "videos":
+                            targeted_engines = ["media_videos", "clear_searxng", "clear_ddgs"]
+                        elif plan["filter"] == "audio":
+                            targeted_engines = ["media_audio", "clear_searxng"]
 
-                    log.info(f"[HecosAI] Auto-search: raw='{search_query_str}' → optimized='{optimized_query}' ({search_mode})")
-                    svc = HecosSearchService()
-                    sq = SearchQuery(query=optimized_query, mode=search_mode, limit=12)
-                    resolved_session = svc.search(sq)
-                    if resolved_session:
-                        session_id = resolved_session.id
+                    copilot_limit = 60 if (req_limit <= 0 or req_limit > 60) else req_limit
+                    log.info(
+                        f"[Copilot] Dispatching search: query='{plan['query']}', mode={plan['mode']}, "
+                        f"filter={plan['filter']}, limit={copilot_limit}, engines={targeted_engines or 'all'}"
+                    )
+
+                    svc = get_search_service()
+                    sq = SearchQuery(
+                        query=plan["query"],
+                        mode=plan["mode"],
+                        engines=targeted_engines,
+                        limit=copilot_limit,
+                        safe_search=req_safe_search,
+                        dark_bypass=req_dark_bypass,
+                        local_only=req_local_only,
+                    )
+                    resolved_sess = svc.search(sq, stream_cb=stream_cb)
+                    log.info(
+                        f"[Copilot] Search completed in {round((time.time() - t_turn) * 1000)}ms: "
+                        f"session={getattr(resolved_sess, 'id', None)}, results={getattr(resolved_sess, 'total_results', 0)}"
+                    )
                 except Exception as ex:
-                    log.warning(f"[HecosAI] Auto-search execution note: {ex}")
-
-        if resolved_session and resolved_session.results:
-            items_summary = []
-            for i, r in enumerate(resolved_session.results[:12], 1):
-                snip = (r.snippet or "")[:140].replace("\n", " ").strip()
-                items_summary.append(f"[{i}] {r.title} ({r.engine}, {r.category}): {snip} (URL: {r.url})")
-            search_context = (
-                f"\n\n[SEARCH RESULTS FOR \"{resolved_session.query}\"]\n"
-                f"Total results: {resolved_session.total_results} | Duration: {resolved_session.duration_ms}ms\n"
-                f"Top indexed sources:\n" + "\n".join(items_summary)
-            )
-
-        # ── FIX 3: Build system_prompt correctly — preset instructions first, then search context ──
-        # Do NOT overwrite merged_cfg["ai"]["special_instructions"] with everything mixed in;
-        # keep preset layer and copilot context layer cleanly separated.
-        copilot_base = (
-            "You are the Hecos AI Assistant integrated into Hecos Net Search. "
-            "Your role is to assist the user in analyzing, summarizing, filtering, comparing, "
-            "and synthesizing search results across clear web, dark web, and media discovery. "
-            "Respond in a sharp, clear, and concise manner, citing sources using reference "
-            "numbers [1], [2] when appropriate."
-        )
-        # Compose final system prompt: copilot role + preset instructions + search context
-        system_prompt_parts = [copilot_base]
-        if preset_instructions:
-            system_prompt_parts.append(
-                f"[PRESET DIRECTIVES — {soul.meta.name}]:\n{preset_instructions}"
-            )
-        if search_context:
-            system_prompt_parts.append(search_context)
-        final_system_prompt = "\n\n".join(system_prompt_parts)
-
-        # Apply system prompt: append to (not overwrite) any existing special_instructions
-        # from the soul that the merger already placed in merged_cfg
-        try:
-            if "ai" not in merged_cfg:
-                merged_cfg["ai"] = {}
-            # The merger already set special_instructions from the soul; append copilot context
-            existing_si = (merged_cfg["ai"].get("special_instructions") or "").strip()
-            if existing_si and existing_si != preset_instructions:
-                # Existing differs from preset (merger may have set something else) — keep it
-                merged_cfg["ai"]["special_instructions"] = existing_si + "\n\n" + copilot_base
-                if search_context:
-                    merged_cfg["ai"]["special_instructions"] += search_context
-            else:
-                merged_cfg["ai"]["special_instructions"] = final_system_prompt
-        except Exception as ce:
-            log.warning(f"[HecosAI] Configuration merge note: {ce}")
-            merged_cfg = None
+                    log.warning(f"[HecosAI] Copilot search execution note: {ex}", exc_info=True)
+            return plan, resolved_sess
 
         # SSE Streaming Path
         if want_stream:
             event_queue = queue.Queue()
+            cancel_event = threading.Event()
 
             def _llm_worker():
                 try:
-                    if resolved_session:
+                    t_worker = time.time()
+                    def _on_status(msg_text, plan=None):
+                        if cancel_event.is_set():
+                            return
+                        if plan is not None:
+                            event_queue.put({
+                                "type": "search_plan",
+                                "action": plan["action"],
+                                "query": plan["query"],
+                                "mode": plan["mode"],
+                                "filter": plan["filter"],
+                                "auto_mode": auto_mode,
+                            })
+                        event_queue.put({"type": "status", "text": msg_text})
+
+                    def _on_search_stream(evt):
+                        if cancel_event.is_set():
+                            return
+                        if evt.get("type") == "engine_done":
+                            eng = evt.get("engine", "engine")
+                            total_so_far = evt.get("total_so_far", 0)
+                            raw_cnt = evt.get("raw_count", 0)
+                            dur_ms = evt.get("duration_ms", 0)
+                            log.debug(f"[Copilot:Stream] Engine '{eng}' done in {dur_ms}ms (+{raw_cnt}, total={total_so_far})")
+                            event_queue.put({
+                                "type": "status",
+                                "text": f"Querying engines: {eng} finished ({total_so_far} results collected)..."
+                            })
+
+                    plan, resolved_sess = _execute_turn_plan(status_cb=_on_status, stream_cb=_on_search_stream)
+                    if cancel_event.is_set():
+                        log.info("[Copilot] Request cancelled by client before synthesis.")
+                        return
+
+                    if resolved_sess:
                         event_queue.put({
                             "type": "session",
-                            "session_id": resolved_session.id,
-                            "query": resolved_session.query,
-                            "total": resolved_session.total_results
+                            "session_id": resolved_sess.id,
+                            "query": resolved_sess.query,
+                            "mode": resolved_sess.mode,
+                            "filter": plan["filter"],
+                            "total": resolved_sess.total_results,
                         })
 
+                    if cancel_event.is_set():
+                        return
+
+                    event_queue.put({"type": "status", "text": f"Synthesizing results with {soul_display_name}..."})
+                    t_llm = time.time()
+                    responder_cfg = build_responder_config(resolved_sess, merged_cfg, soul, preset_instructions)
                     from hecos.core.llm.brain import generate_response
                     res = generate_response(
                         user_text=user_message,
-                        external_config=merged_cfg,
+                        external_config=responder_cfg,
                         save_history=False,
                         tag="NETSEARCH_AI"
                     )
+                    if cancel_event.is_set():
+                        log.info("[Copilot] Request cancelled by client before streaming tokens.")
+                        return
+
                     full_text = res or "No response generated."
-                    # Tokenize into natural chunks for a smooth stream
+                    log.info(
+                        f"[Copilot] LLM synthesis completed in {round((time.time() - t_llm) * 1000)}ms "
+                        f"(total_turn={round((time.time() - t_worker) * 1000)}ms, chars={len(full_text)})"
+                    )
                     words = full_text.split(" ")
                     for i, w in enumerate(words):
+                        if cancel_event.is_set():
+                            return
                         chunk = w + (" " if i < len(words) - 1 else "")
                         event_queue.put({"type": "token", "text": chunk})
                         time.sleep(0.015)
-                    event_queue.put({"type": "done", "text": full_text})
+                    if not cancel_event.is_set():
+                        event_queue.put({"type": "done", "text": full_text})
                 except Exception as e:
-                    log.error(f"[Copilot] Generation error: {e}", exc_info=True)
-                    event_queue.put({"type": "error", "error": str(e)})
+                    if not cancel_event.is_set():
+                        log.error(f"[Copilot] Generation error: {e}", exc_info=True)
+                        event_queue.put({"type": "error", "error": str(e)})
 
             threading.Thread(target=_llm_worker, daemon=True, name="HSearchCopilotWorker").start()
 
             def sse_generator():
-                full_reply = ""
-                while True:
-                    try:
-                        ev = event_queue.get(timeout=0.4)
-                        yield f"data: {json.dumps(ev)}\n\n"
-                        if ev.get("type") in ("done", "error"):
-                            break
-                    except queue.Empty:
-                        yield f"data: {json.dumps({'type': 'heartbeat'})}\n\n"
+                try:
+                    while not cancel_event.is_set():
+                        try:
+                            ev = event_queue.get(timeout=0.4)
+                            yield f"data: {json.dumps(ev)}\n\n"
+                            if ev.get("type") in ("done", "error"):
+                                break
+                        except queue.Empty:
+                            yield f"data: {json.dumps({'type': 'heartbeat'})}\n\n"
+                finally:
+                    cancel_event.set()
 
             return Response(
                 stream_with_context(sse_generator()),
@@ -376,14 +311,21 @@ def register_copilot_routes(app, logger=None):
 
         # Single JSON Turn Path
         try:
+            plan, resolved_sess = _execute_turn_plan()
+            responder_cfg = build_responder_config(resolved_sess, merged_cfg, soul, preset_instructions)
             from hecos.core.llm.brain import generate_response
             reply = generate_response(
                 user_text=user_message,
-                external_config=merged_cfg,
+                external_config=responder_cfg,
                 save_history=False,
                 tag="NETSEARCH_COPILOT"
             )
-            return jsonify({"ok": True, "reply": reply or ""})
+            return jsonify({
+                "ok": True,
+                "reply": reply or "",
+                "plan": plan,
+                "session_id": resolved_sess.id if resolved_sess else None,
+            })
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 

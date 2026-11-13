@@ -10,6 +10,7 @@ import sys
 import time
 import socket
 import logging
+import threading
 import subprocess
 import requests
 from typing import Tuple, Dict, Any, Optional, Callable
@@ -25,21 +26,52 @@ try:
 except (ImportError, ValueError):
     hecos_logger = logger
 
-DEFAULT_PORT = 8888
+DEFAULT_PORT = 8889
 _GLOBAL_SEARXNG_PROC: Optional[subprocess.Popen] = None
+_SEARXNG_LOCK = threading.RLock()
+
+
+def _win_hidden_subprocess_kwargs(detached: bool = False) -> Dict[str, Any]:
+    """Returns Windows subprocess kwargs to prevent transient console windows."""
+    if sys.platform != "win32":
+        return {}
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = 0  # SW_HIDE
+    flags = subprocess.CREATE_NO_WINDOW
+    if detached:
+        # DETACHED_PROCESS (0x8) | CREATE_NEW_PROCESS_GROUP (0x200) | CREATE_NO_WINDOW (0x08000000)
+        flags |= 0x00000008 | 0x00000200
+    return {"startupinfo": startupinfo, "creationflags": flags}
 
 
 def _kill_process_on_port(port: int):
     """Kills any process listening on the given port on Windows."""
     try:
         if sys.platform == "win32":
-            out = subprocess.check_output(f"netstat -ano | findstr :{port}", shell=True, text=True)
+            # Prefer psutil to avoid spawning netstat/cmd console processes
+            try:
+                import psutil
+                for proc in psutil.process_iter(["pid"]):
+                    try:
+                        for conn in proc.net_connections(kind="inet"):
+                            if conn.status == psutil.CONN_LISTEN and conn.laddr.port == port:
+                                proc.kill()
+                                break
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        continue
+                return
+            except Exception:
+                pass
+
+            hidden = _win_hidden_subprocess_kwargs()
+            out = subprocess.check_output(["netstat", "-ano", "-p", "TCP"], text=True, **hidden)
             for line in out.strip().splitlines():
-                if "LISTENING" in line:
+                if f":{port}" in line and "LISTENING" in line:
                     parts = line.strip().split()
                     pid = parts[-1]
                     if pid and pid != "0":
-                        subprocess.call(["taskkill", "/F", "/PID", pid], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        subprocess.call(["taskkill", "/F", "/PID", pid], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **hidden)
     except Exception:
         pass
 
@@ -100,6 +132,11 @@ def update_searxng_engines(engines: list, port: int = DEFAULT_PORT) -> bool:
         "ui:",
         "  static_use_hash: false",
         "",
+        "plugins:",
+        "  # Calculator spawns multiprocessing subprocesses on Windows, causing CLI window flashes",
+        "  searx.plugins.calculator.SXNGPlugin:",
+        "    active: false",
+        "",
         "engines:"
     ]
 
@@ -128,6 +165,28 @@ def update_searxng_engines(engines: list, port: int = DEFAULT_PORT) -> bool:
         hecos_logger.info("[SEARXNG] Restarting daemon to apply engine modifications...")
         comp.restart()
     return True
+
+
+def _patch_calculator_plugin_disabled(config_path: str) -> None:
+    """Ensures searx.plugins.calculator.SXNGPlugin is disabled in existing settings.yml."""
+    try:
+        import yaml
+        with open(config_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        if not isinstance(data, dict):
+            return
+        plugins = data.get("plugins")
+        if not isinstance(plugins, dict):
+            plugins = {}
+            data["plugins"] = plugins
+        calc = plugins.get("searx.plugins.calculator.SXNGPlugin")
+        if not isinstance(calc, dict) or calc.get("active") is not False:
+            plugins["searx.plugins.calculator.SXNGPlugin"] = {"active": False}
+            with open(config_path, "w", encoding="utf-8") as f:
+                yaml.safe_dump(data, f, sort_keys=False, allow_unicode=True)
+            hecos_logger.info("[SEARXNG] Disabled calculator plugin in settings.yml to prevent Windows console flashes")
+    except Exception:
+        pass
 
 
 def _ensure_searxng_config(port: int = DEFAULT_PORT) -> str:
@@ -164,6 +223,10 @@ redis:
 ui:
   static_use_hash: false
 
+plugins:
+  searx.plugins.calculator.SXNGPlugin:
+    active: false
+
 engines:
   - name: google
     disabled: false
@@ -199,6 +262,8 @@ engines:
         with open(config_path, "w", encoding="utf-8") as f:
             f.write(content)
         hecos_logger.info(f"[SEARXNG] Generated native SearXNG config: {config_path}")
+    else:
+        _patch_calculator_plugin_disabled(config_path)
     return config_path
 
 
@@ -225,8 +290,24 @@ class SearXNGComponent(BaseComponent):
         cfg = get_search_config().get("searxng", {})
         url = cfg.get("url", f"http://127.0.0.1:{DEFAULT_PORT}").rstrip("/")
         try:
-            r = requests.get(f"{url}/search", params={"q": "ping", "format": "json"}, timeout=1.2)
-            return r.status_code == 200
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            host = parsed.hostname or "127.0.0.1"
+            port = parsed.port or int(cfg.get("port", DEFAULT_PORT))
+            if host in ("127.0.0.1", "localhost", "::1"):
+                return is_port_open(host, port, timeout=0.5)
+        except Exception:
+            pass
+        try:
+            r = requests.get(f"{url}/healthz", timeout=1.2)
+            if r.status_code == 200:
+                return True
+            if r.status_code == 404:
+                r = requests.get(f"{url}/", timeout=1.2)
+                return r.status_code == 200
+            return False
+        except requests.exceptions.ReadTimeout:
+            return True
         except Exception:
             return False
 
@@ -239,7 +320,8 @@ class SearXNGComponent(BaseComponent):
 
         try:
             cmd = [sys.executable, "-m", "pip", "install", "simplexng", "waitress", "h2"]
-            ret = subprocess.call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            hidden = _win_hidden_subprocess_kwargs()
+            ret = subprocess.call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **hidden)
             if ret == 0:
                 return True, "SearXNG package installed successfully."
             return False, f"pip install returned error code {ret}"
@@ -248,86 +330,99 @@ class SearXNGComponent(BaseComponent):
 
     def start(self) -> Tuple[bool, str]:
         global _GLOBAL_SEARXNG_PROC
-        if self.is_running():
-            return True, "SearXNG daemon is already running."
+        with _SEARXNG_LOCK:
+            if self.is_running():
+                return True, "SearXNG daemon is already running."
 
-        cfg = get_search_config().get("searxng", {})
-        port = int(cfg.get("port", DEFAULT_PORT))
-        settings_file = _ensure_searxng_config(port)
+            # If another thread already spawned SearXNG and it is still booting, wait for it
+            if _GLOBAL_SEARXNG_PROC is not None and _GLOBAL_SEARXNG_PROC.poll() is None:
+                wait_t = time.time()
+                while time.time() - wait_t < 10.0:
+                    if self.is_running():
+                        return True, "SearXNG daemon is active."
+                    if _GLOBAL_SEARXNG_PROC.poll() is not None:
+                        break
+                    time.sleep(0.35)
+                if _GLOBAL_SEARXNG_PROC is not None and _GLOBAL_SEARXNG_PROC.poll() is None:
+                    return True, "SearXNG daemon is still starting."
 
-        hecos_logger.info(f"[SEARXNG] Spawning native SearXNG pure-python daemon on port {port}...")
+            cfg = get_search_config().get("searxng", {})
+            port = int(cfg.get("port", DEFAULT_PORT))
+            settings_file = _ensure_searxng_config(port)
 
-        # Flags to suppress CMD window on Windows (100% invisible background process)
-        startupinfo = None
-        creationflags = 0
-        if sys.platform == "win32":
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            startupinfo.wShowWindow = 0  # SW_HIDE
-            # DETACHED_PROCESS (0x8) | CREATE_NEW_PROCESS_GROUP (0x200) | CREATE_NO_WINDOW (0x08000000)
-            creationflags = subprocess.CREATE_NO_WINDOW | 0x00000008 | 0x00000200
+            hecos_logger.info(f"[SEARXNG] Spawning native SearXNG pure-python daemon on port {port}...")
 
-        env = os.environ.copy()
-        env["SEARXNG_SETTINGS_PATH"] = os.path.abspath(settings_file)
+            hidden = _win_hidden_subprocess_kwargs(detached=True)
 
-        cmd = [
-            sys.executable,
-            "-m", "simplexng.simplexng",
-            "-p", str(port),
-            "-H", "127.0.0.1",
-            "--settings", os.path.abspath(settings_file)
-        ]
+            # Use pythonw.exe on Windows so child processes (e.g. multiprocessing) never allocate a console
+            py_exe = sys.executable
+            if sys.platform == "win32":
+                candidate = os.path.join(os.path.dirname(py_exe), "pythonw.exe")
+                if os.path.isfile(candidate):
+                    py_exe = candidate
 
-        log_path = os.path.join(_get_searxng_dir(), "searxng.log")
-        try:
-            log_file = open(log_path, "a", encoding="utf-8")
-            _GLOBAL_SEARXNG_PROC = subprocess.Popen(
-                cmd,
-                stdout=log_file,
-                stderr=log_file,
-                env=env,
-                startupinfo=startupinfo,
-                creationflags=creationflags
-            )
+            env = os.environ.copy()
+            env["SEARXNG_SETTINGS_PATH"] = os.path.abspath(settings_file)
 
-            # Wait for socket to become active (up to 8 seconds)
-            start_t = time.time()
-            while time.time() - start_t < 8.0:
-                if self.is_running():
-                    hecos_logger.info(f"[SEARXNG] Native SearXNG daemon active on port {port} (PID: {_GLOBAL_SEARXNG_PROC.pid})")
-                    return True, f"SearXNG started on port {port}"
-                if _GLOBAL_SEARXNG_PROC.poll() is not None:
-                    return False, f"SearXNG process exited with code {_GLOBAL_SEARXNG_PROC.returncode}"
-                time.sleep(0.35)
+            cmd = [
+                py_exe,
+                "-m", "simplexng.simplexng",
+                "-p", str(port),
+                "-H", "127.0.0.1",
+                "--settings", os.path.abspath(settings_file)
+            ]
 
-            return True, f"SearXNG daemon spawned on port {port}"
-        except Exception as e:
-            hecos_logger.error(f"[SEARXNG] Failed to spawn SearXNG daemon: {e}")
-            return False, str(e)
+            log_path = os.path.join(_get_searxng_dir(), "searxng.log")
+            try:
+                log_file = open(log_path, "a", encoding="utf-8")
+                _GLOBAL_SEARXNG_PROC = subprocess.Popen(
+                    cmd,
+                    stdout=log_file,
+                    stderr=log_file,
+                    env=env,
+                    **hidden
+                )
+
+                # Wait for socket to become active (up to 12 seconds)
+                start_t = time.time()
+                while time.time() - start_t < 12.0:
+                    if self.is_running():
+                        hecos_logger.info(f"[SEARXNG] Native SearXNG daemon active on port {port} (PID: {_GLOBAL_SEARXNG_PROC.pid})")
+                        return True, f"SearXNG started on port {port}"
+                    if _GLOBAL_SEARXNG_PROC.poll() is not None:
+                        return False, f"SearXNG process exited with code {_GLOBAL_SEARXNG_PROC.returncode}"
+                    time.sleep(0.35)
+
+                return True, f"SearXNG daemon spawned on port {port}"
+            except Exception as e:
+                hecos_logger.error(f"[SEARXNG] Failed to spawn SearXNG daemon: {e}")
+                return False, str(e)
 
     def stop(self) -> Tuple[bool, str]:
         global _GLOBAL_SEARXNG_PROC
-        if _GLOBAL_SEARXNG_PROC and _GLOBAL_SEARXNG_PROC.poll() is None:
-            try:
-                _GLOBAL_SEARXNG_PROC.terminate()
-                _GLOBAL_SEARXNG_PROC.wait(timeout=2.0)
-            except Exception:
+        with _SEARXNG_LOCK:
+            if _GLOBAL_SEARXNG_PROC and _GLOBAL_SEARXNG_PROC.poll() is None:
                 try:
-                    _GLOBAL_SEARXNG_PROC.kill()
+                    _GLOBAL_SEARXNG_PROC.terminate()
+                    _GLOBAL_SEARXNG_PROC.wait(timeout=2.0)
                 except Exception:
-                    pass
-            _GLOBAL_SEARXNG_PROC = None
+                    try:
+                        _GLOBAL_SEARXNG_PROC.kill()
+                    except Exception:
+                        pass
+                _GLOBAL_SEARXNG_PROC = None
 
-        cfg = get_search_config().get("searxng", {})
-        port = int(cfg.get("port", DEFAULT_PORT))
-        _kill_process_on_port(port)
-        hecos_logger.info("[SEARXNG] Native SearXNG daemon stopped.")
-        return True, "SearXNG daemon stopped."
+            cfg = get_search_config().get("searxng", {})
+            port = int(cfg.get("port", DEFAULT_PORT))
+            _kill_process_on_port(port)
+            hecos_logger.info("[SEARXNG] Native SearXNG daemon stopped.")
+            return True, "SearXNG daemon stopped."
 
     def restart(self) -> Tuple[bool, str]:
-        self.stop()
-        time.sleep(0.6)
-        return self.start()
+        with _SEARXNG_LOCK:
+            self.stop()
+            time.sleep(0.6)
+            return self.start()
 
     def uninstall(self) -> Tuple[bool, str]:
         self.stop()

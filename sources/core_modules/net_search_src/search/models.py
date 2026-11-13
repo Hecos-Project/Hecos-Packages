@@ -57,6 +57,7 @@ class SearchQuery:
     excluded_providers: List[str] = field(default_factory=list)
     language: Optional[str] = None
     domain_filter: Optional[str] = None
+    session_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -67,6 +68,7 @@ class SearchSession:
     """A search execution session with all aggregated results."""
     id: str = field(default_factory=lambda: "hs_" + uuid.uuid4().hex[:10])
     query: str = ""
+    title: Optional[str] = None
     mode: str = "clear"
     engines_queried: List[str] = field(default_factory=list)
     total_results: int = 0
