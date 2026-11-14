@@ -322,6 +322,15 @@
               historyCtrl.bindLiveSessionId(pendingSessionId, evt.session_id, evt.created_at);
             }
           }
+          window.dispatchEvent(new CustomEvent('hecos:cybermap:event', {
+            detail: {
+              type: 'SEARCH_STARTED',
+              query: cleanQuery || queryStr,
+              mode: parsedMode,
+              sessionId: evt.session_id || pendingSessionId,
+              localOnly: !!state.localOnly
+            }
+          }));
           if (streamBadges && evt.engines) {
             streamBadges.innerHTML = evt.engines.map(e => {
               const info = getHecosEngineInfo(e);
@@ -336,6 +345,14 @@
           // If there are net-new results, add them to state first
           if (evt.new_results && evt.new_results.length > 0) {
             state.addResults(evt.new_results, evt.engine);
+            window.dispatchEvent(new CustomEvent('hecos:cybermap:event', {
+              detail: {
+                type: 'SEARCH_RESULTS',
+                engine: evt.engine,
+                results: evt.new_results,
+                localOnly: !!state.localOnly
+              }
+            }));
           }
 
           // Count all results matching this engine in state (including deduplicated results attributed to it)
@@ -542,6 +559,12 @@
         if (historyCtrl && historyCtrl.loadHistory) {
           historyCtrl.loadHistory(true);
         }
+        window.dispatchEvent(new CustomEvent('hecos:cybermap:event', {
+          detail: {
+            type: 'SEARCH_COMPLETED',
+            sessionId: state.activeSessionId || pendingSessionId
+          }
+        }));
       },
       // On Error
       (err) => {
@@ -664,6 +687,14 @@
           if (evt.new_results && evt.new_results.length > 0) {
             const beforeLen = state.results.length;
             state.addResults(evt.new_results, evt.engine);
+            window.dispatchEvent(new CustomEvent('hecos:cybermap:event', {
+              detail: {
+                type: 'SEARCH_RESULTS',
+                engine: evt.engine,
+                results: evt.new_results,
+                localOnly: !!state.localOnly
+              }
+            }));
             const added = state.results.length - beforeLen;
             if (added > 0) {
               newItemsBatchCount += added;

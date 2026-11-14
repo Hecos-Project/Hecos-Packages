@@ -6,30 +6,30 @@
 
 :root {
   /* Inherited Hecos System Variables */
-  --bg-dark:           var(--bg, #0d0f18);
-  --bg-card:           var(--bg2, #141726);
-  --bg-card-hover:     var(--bg3, #1c2033);
-  --border-subtle:     var(--border, #252b46);
-  --border-glow:       rgba(var(--accent-rgb, 108, 140, 255), 0.4);
-  
-  --accent-cyan:       var(--accent, #6c8cff);
-  --accent-cyan-glow:  rgba(var(--accent-rgb, 108, 140, 255), 0.25);
-  --accent-purple:     var(--accent2, #a78bfa);
+  --bg-dark: var(--bg, #0d0f18);
+  --bg-card: var(--bg2, #141726);
+  --bg-card-hover: var(--bg3, #1c2033);
+  --border-subtle: var(--border, #252b46);
+  --border-glow: rgba(var(--accent-rgb, 108, 140, 255), 0.4);
+
+  --accent-cyan: var(--accent, #6c8cff);
+  --accent-cyan-glow: rgba(var(--accent-rgb, 108, 140, 255), 0.25);
+  --accent-purple: var(--accent2, #a78bfa);
   --accent-purple-glow: rgba(var(--accent2-rgb, 167, 139, 250), 0.25);
-  --accent-emerald:    var(--green, #34d399);
-  --accent-amber:      var(--yellow, #fbbf24);
-  --accent-rose:       var(--red, #f87171);
-  --accent-tor:        #a78bfa;
-  
-  --text-main:         var(--text, #e2e8f0);
-  --text-muted:        var(--muted, #6b7280);
-  --text-dim:          #64748b;
-  
-  --sidebar-w:         260px;
-  --copilot-w:         340px;
-  --header-h:          56px;
-  --radius:            var(--radius, 10px);
-  --font-mono:         var(--font-mono, 'JetBrains Mono', monospace);
+  --accent-emerald: var(--green, #34d399);
+  --accent-amber: var(--yellow, #fbbf24);
+  --accent-rose: var(--red, #f87171);
+  --accent-tor: #a78bfa;
+
+  --text-main: var(--text, #e2e8f0);
+  --text-muted: var(--muted, #6b7280);
+  --text-dim: #64748b;
+
+  --sidebar-w: 260px;
+  --copilot-w: 340px;
+  --header-h: 56px;
+  --radius: var(--radius, 10px);
+  --font-mono: var(--font-mono, 'JetBrains Mono', monospace);
 }
 
 * {
@@ -633,7 +633,7 @@ body:has(.search-workspace) header {
   background: rgba(var(--green-rgb), 0.06);
 }
 
-.option-toggle-btn.is-state-ok > i {
+.option-toggle-btn.is-state-ok>i {
   color: var(--green);
 }
 
@@ -648,7 +648,7 @@ body:has(.search-workspace) header {
   background: rgba(var(--yellow-rgb), 0.08);
 }
 
-.option-toggle-btn.is-state-warn > i {
+.option-toggle-btn.is-state-warn>i {
   color: var(--yellow);
 }
 
@@ -692,6 +692,7 @@ body:has(.search-workspace) header {
   .search-sidebar {
     display: none;
   }
+
   .search-stage {
     padding: 14px;
   }
@@ -704,6 +705,7 @@ body:has(.search-workspace) header {
     border-color: var(--accent, #38bdf8);
     transform: translateY(-2px);
   }
+
   100% {
     background: var(--bg3);
     border-color: var(--border);

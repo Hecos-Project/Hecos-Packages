@@ -1,0 +1,502 @@
+/* ==========================================================================
+   cyber_map.css
+   Modular styling for Hecos Net Search Cyber Map (3D Globe.gl + 2D Tactical Map)
+   Zero-collision ".cm-*" namespace. Supports Docked, Fullscreen & Standalone Window.
+   ========================================================================== */
+
+.cm-dock {
+  display: none;
+  flex-direction: column;
+  position: relative;
+  width: 100%;
+  height: 390px;
+  min-height: 240px;
+  max-height: 78vh;
+  margin-bottom: 14px;
+  background: radial-gradient(circle at 50% 45%, #0b1224 0%, #060913 75%, #04060d 100%);
+  border: 1px solid rgba(56, 189, 248, 0.32);
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), inset 0 0 28px rgba(6, 182, 212, 0.08);
+  overflow: hidden;
+  flex-shrink: 0;
+  z-index: 25;
+}
+
+.cm-dock.is-open {
+  display: flex;
+}
+
+.cm-dock.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  margin: 0;
+  border-radius: 0;
+  z-index: 1050;
+}
+
+body.cm-standalone-body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #04060d;
+  color: #e2e8f0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.cm-dock.is-standalone {
+  display: flex;
+  flex: 1;
+  height: 100vh;
+  max-height: 100vh;
+  margin: 0;
+  border-radius: 0;
+  border: none;
+}
+
+/* ── Top HUD Bar ────────────────────────────────────────────────────────── */
+.cm-hud-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  background: linear-gradient(90deg, rgba(10, 15, 30, 0.96), rgba(15, 23, 42, 0.92));
+  border-bottom: 1px solid rgba(56, 189, 248, 0.22);
+  flex-wrap: wrap;
+  z-index: 4;
+}
+
+.cm-hud-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #e2e8f0;
+}
+
+.cm-hud-brand .cm-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22d3ee;
+  box-shadow: 0 0 8px #22d3ee;
+  animation: cmPulse 1.8s infinite ease-in-out;
+}
+
+@keyframes cmPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.8); }
+}
+
+.cm-privacy-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  letter-spacing: 0.04em;
+}
+
+.cm-privacy-pill.is-local {
+  background: rgba(16, 185, 129, 0.14);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.cm-privacy-pill.is-external {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.cm-hud-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.cm-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.cm-stat-chip strong {
+  color: #f8fafc;
+}
+
+.cm-hud-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.85);
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cm-btn:hover {
+  border-color: rgba(56, 189, 248, 0.65);
+  color: #ffffff;
+  background: rgba(30, 41, 59, 0.95);
+}
+
+.cm-btn.is-active {
+  background: rgba(6, 182, 212, 0.22);
+  border-color: #22d3ee;
+  color: #67e8f9;
+}
+
+.cm-btn.is-tor.is-active,
+.cm-btn.is-tor:hover {
+  border-color: rgba(168, 85, 247, 0.65);
+  color: #d8b4fe;
+}
+
+.cm-view-switch {
+  display: inline-flex;
+  background: rgba(2, 6, 23, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 7px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.cm-view-switch .cm-btn {
+  border: none;
+  background: transparent;
+  padding: 3px 8px;
+}
+
+.cm-view-switch .cm-btn.is-active {
+  background: rgba(6, 182, 212, 0.25);
+  color: #67e8f9;
+}
+
+.cm-session-select {
+  background: rgba(2, 6, 23, 0.9);
+  color: #e2e8f0;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  max-width: 240px;
+}
+
+/* ── Protocol Filter Strip ──────────────────────────────────────────────── */
+.cm-proto-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(6, 10, 22, 0.88);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  overflow-x: auto;
+  flex-shrink: 0;
+  z-index: 4;
+}
+
+.cm-proto-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.7);
+  color: #cbd5e1;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.cm-proto-chip:hover {
+  border-color: rgba(226, 232, 240, 0.45);
+  color: #fff;
+}
+
+.cm-proto-chip.is-active {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: #38bdf8;
+  color: #fff;
+}
+
+.cm-proto-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cm-proto-count {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+/* ── Stage (Canvas 3D/2D + Inspector Overlay) ───────────────────────────── */
+.cm-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+}
+
+.cm-canvas-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.cm-canvas-layer.is-hidden {
+  display: none !important;
+}
+
+/* Bottom-left Tor Circuit Banner */
+.cm-tor-banner {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  max-width: min(460px, calc(100% - 24px));
+  background: rgba(8, 13, 26, 0.84);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #e2e8f0;
+  pointer-events: auto;
+  z-index: 3;
+}
+
+.cm-tor-banner-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: #d8b4fe;
+  margin-bottom: 3px;
+}
+
+.cm-tor-hops {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  color: #cbd5e1;
+}
+
+.cm-hop-badge {
+  background: rgba(168, 85, 247, 0.16);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* Floating Node Telemetry Inspector */
+.cm-inspector {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 310px;
+  max-width: calc(100% - 24px);
+  max-height: calc(100% - 24px);
+  display: none;
+  flex-direction: column;
+  background: rgba(8, 13, 26, 0.92);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(56, 189, 248, 0.42);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  z-index: 5;
+}
+
+.cm-inspector.is-open {
+  display: flex;
+}
+
+.cm-inspector-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.cm-inspector-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f8fafc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cm-inspector-body {
+  padding: 9px 10px;
+  overflow-y: auto;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cm-kv-grid {
+  display: grid;
+  grid-template-columns: 82px 1fr;
+  gap: 4px 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+}
+
+.cm-kv-k {
+  color: #94a3b8;
+}
+
+.cm-kv-v {
+  color: #e2e8f0;
+  word-break: break-all;
+}
+
+.cm-inspector-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cm-inspector-results {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 150px;
+  overflow-y: auto;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  padding-top: 6px;
+}
+
+.cm-inspector-res-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  text-decoration: none;
+  color: #e2e8f0;
+}
+
+.cm-inspector-res-item:hover {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(30, 41, 59, 0.85);
+}
+
+.cm-inspector-res-item .res-t {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7dd3fc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cm-inspector-res-item .res-u {
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Globe.gl marker & tooltip styles */
+.cm-globe-tooltip {
+  background: rgba(6, 10, 22, 0.94);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: #e2e8f0;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+  max-width: 260px;
+}
+
+.cm-globe-tooltip .tt-host {
+  font-weight: 700;
+  color: #67e8f9;
+  font-size: 12px;
+  margin-bottom: 3px;
+  word-break: break-all;
+}
+
+.cm-globe-tooltip .tt-meta {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+/* Vertical resize bar in docked mode */
+.cm-resizer-bottom {
+  height: 6px;
+  width: 100%;
+  cursor: ns-resize;
+  background: linear-gradient(180deg, transparent, rgba(56, 189, 248, 0.25));
+  flex-shrink: 0;
+  z-index: 4;
+}
+
+.cm-resizer-bottom:hover {
+  background: rgba(56, 189, 248, 0.55);
+}
+
+.cm-dock.is-fullscreen .cm-resizer-bottom,
+.cm-dock.is-standalone .cm-resizer-bottom {
+  display: none;
+}
+
+/* Toolbar trigger button badge in Net Search header */
+.cm-trigger-btn.is-active {
+  border-color: rgba(34, 211, 238, 0.75) !important;
+  background: rgba(6, 182, 212, 0.18) !important;
+  color: #67e8f9 !important;
+}

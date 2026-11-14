@@ -91,6 +91,15 @@ def register_search_routes(app, cfg_mgr, root_dir, logger=None):
     except Exception as e:
         log.warning(f"[DeepSearch] Could not register copilot routes: {e}")
 
+    try:
+        try:
+            from hecos.modules.net_search.search.cyber_map import register_cyber_map_routes
+        except (ImportError, ValueError):
+            from ..search.cyber_map import register_cyber_map_routes
+        register_cyber_map_routes(app, logger=log)
+    except Exception as e:
+        log.warning(f"[DeepSearch] Could not register cyber_map routes: {e}")
+
     # ── Main Search Page ──────────────────────────────────────────────────────
     @app.route("/search", methods=["GET"])
     @login_required

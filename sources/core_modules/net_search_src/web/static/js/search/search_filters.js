@@ -220,6 +220,12 @@
 
   function toggleLocalOnly(explicitVal) {
     setOptionToggle('localOnly', explicitVal, true);
+    window.dispatchEvent(new CustomEvent('hecos:cybermap:event', {
+      detail: {
+        type: 'PRIVACY_CHANGED',
+        localOnly: Boolean(state.localOnly)
+      }
+    }));
   }
 
   function setSearchDepth(val) {

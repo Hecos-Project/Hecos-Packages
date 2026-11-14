@@ -1,7 +1,7 @@
 {
   "version": "1",
   "catalog_url": "https://hecos-project.github.io/store/index.json",
-  "generated_at": "2026-11-13T09:44:16Z",
+  "generated_at": "2026-11-14T03:36:34Z",
   "packages": [
     {
       "id": "org.hecos.testbuilder",
@@ -412,8 +412,8 @@
       "description": "Hecos Net Search & Intelligence System App. Privacy-preserving ClearWeb multi-engine meta-search, Tor DarkWeb (.onion) hidden services, OSINT identity lookup, media discovery, and deep file hunting.",
       "tags": [],
       "download_url": "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/packages/core_modules/net_search-1.1.4.hpkg",
-      "size_bytes": 2601402,
-      "sha256": "351398554caf427646d6a6b93f335447ce3bec61f2579637208e5d91ab9d8e35",
+      "size_bytes": 3116378,
+      "sha256": "59b87b2e8ca81005fc4c677d9918baa8c38373c8a1535600480bdbd031f4902c",
       "screenshots": [
         "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview.png"
       ],

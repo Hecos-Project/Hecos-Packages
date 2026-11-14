@@ -509,6 +509,16 @@
         document.querySelectorAll('.history-item').forEach(it => {
           it.classList.toggle('active', it.getAttribute('data-session-id') === s.id);
         });
+        window.dispatchEvent(new CustomEvent('hecos:cybermap:event', {
+          detail: {
+            type: 'SESSION_LOADED',
+            query: s.query,
+            mode: s.mode,
+            sessionId: s.id,
+            localOnly: Boolean(state.localOnly),
+            results: state.results.slice(0, 500)
+          }
+        }));
       }
     } catch (e) {
       console.error('[SearchHistory] Load session detail error:', e);
