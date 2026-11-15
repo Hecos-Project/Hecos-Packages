@@ -19,6 +19,7 @@ except ImportError:
 
 from .models import SearchQuery, SearchResult, SearchSession
 from .engines import get_engines_for_mode, get_all_engines
+from .engines.files_apis import infer_extension
 from .sessions import get_session_store
 from .config import get_search_config
 
@@ -54,10 +55,17 @@ class HecosSearchService:
         start_time = time.time()
         cfg = get_search_config()
 
-        session = SearchSession(
+        is_pagination = bool(query.page and query.page > 1)
+        existing_session: Optional[SearchSession] = None
+        if is_pagination and query.session_id:
+            existing_session = self.session_store.get_session(query.session_id)
+
+        session = existing_session if existing_session is not None else SearchSession(
             query=query.query,
             mode=query.mode
         )
+        prior_results: List[SearchResult] = list(existing_session.results) if existing_session is not None else []
+        prior_engines: List[str] = list(existing_session.engines_queried) if existing_session is not None else []
 
         if not cfg.get("enabled", True):
             hecos_logger.warning(f"[SEARCH] Query aborted: Deep Search is disabled in system configuration.")
@@ -70,14 +78,16 @@ class HecosSearchService:
                 })
             return session
 
-        max_workers = int(cfg.get("max_concurrent_engines", 6))
+        max_workers = int(cfg.get("max_concurrent_engines", 10))
+        hecos_logger.debug(f"[SEARCH] ThreadPool: max_workers={max_workers}")
 
         engines = get_engines_for_mode(query.mode, query.engines)
-        session.engines_queried = [e.id for e in engines]
+        new_engine_ids = [e.id for e in engines]
+        session.engines_queried = list(dict.fromkeys(prior_engines + new_engine_ids))
 
         if not engines:
             hecos_logger.warning(f"[SEARCH] No active/available engines for mode '{query.mode}'.")
-            session.total_results = 0
+            session.total_results = len(prior_results)
             session.error = f"No active engines available for mode '{query.mode}'. Ensure required components (e.g. Tor or DDGS) are installed and enabled in settings (/hecos/config/ui#netsearch)."
             if stream_cb:
                 stream_cb({
@@ -87,21 +97,29 @@ class HecosSearchService:
             return session
 
         hecos_logger.info(
-            f"[SEARCH] Query started: '{query.query}' [mode={query.mode}, limit={query.limit}] "
-            f"across {len(engines)} engines: {session.engines_queried}"
+            f"[SEARCH] Query started: '{query.query}' [mode={query.mode}, page={query.page}, limit={query.limit}] "
+            f"across {len(engines)} engines: {new_engine_ids}"
         )
+
+        # Persist initial session immediately on start so Search History tab exists right away
+        if not is_pagination and existing_session is None:
+            self.session_store.save_session(session)
 
         if stream_cb:
             stream_cb({
                 "type": "start",
                 "session_id": session.id,
-                "engines": session.engines_queried,
+                "engines": new_engine_ids,
                 "query": query.query,
-                "mode": query.mode
+                "mode": query.mode,
+                "created_at": session.created_at
             })
 
         accumulated_results: List[SearchResult] = []
         seen_urls: Dict[str, SearchResult] = {}
+        for pr in prior_results:
+            if getattr(pr, "url", None):
+                seen_urls[_normalize_url(pr.url)] = pr
 
         def _run_engine(eng):
             try:
@@ -131,6 +149,12 @@ class HecosSearchService:
                         if item.metadata is None:
                             item.metadata = {}
                         item.metadata["engine_id"] = engine_id
+                        if not item.metadata.get("extension") and item.url:
+                            inferred_ext = infer_extension(item.url)
+                            if inferred_ext and (
+                                item.category == "files" or inferred_ext not in ("html", "htm", "php", "asp", "aspx", "jsp")
+                            ):
+                                item.metadata["extension"] = inferred_ext
 
                         norm = _normalize_url(item.url)
                         if norm in seen_urls:
@@ -183,19 +207,70 @@ class HecosSearchService:
                 except Exception as e:
                     hecos_logger.debug(f"[SEARCH:TOR] Tor fallback engine '{deng.id}' error: {e}")
 
-        # Sort by score desc, keeping all unique multi-engine results
-        accumulated_results.sort(key=lambda x: x.score, reverse=True)
-        if query.limit and query.limit > 0:
-            max_total = max(int(cfg.get("max_total_results", 500)), query.limit * max(1, len(engines)))
-            session.results = accumulated_results[:max_total]
+        # Optional SafeSearch blocklist filter (powered by indexed domain_lists.sqlite)
+        if query.safe_search or bool(cfg.get("safe_search", False)):
+            try:
+                from .sources.domain_store import filter_blocked_hosts
+                blocked_urls = filter_blocked_hosts([r.url for r in accumulated_results if r.url])
+                if blocked_urls:
+                    before_cnt = len(accumulated_results)
+                    accumulated_results = [r for r in accumulated_results if r.url not in blocked_urls]
+                    hecos_logger.info(
+                        f"[SEARCH:SAFESEARCH] Filtered {before_cnt - len(accumulated_results)} results matching active domain blocklist."
+                    )
+            except Exception as sse:
+                hecos_logger.debug(f"[SEARCH:SAFESEARCH] Blocklist filter check skipped: {sse}")
+
+        # Domain diversity: keep max 3 per general domain, while allowing media/video/directory engines up to 25-60 items per site
+        from urllib.parse import urlparse
+        from collections import Counter
+        domain_count: Counter = Counter()
+        diverse_results = []
+        is_media_mode = query.mode in ("media", "videos", "images", "audio")
+        is_unlimited = bool(query.limit is not None and query.limit <= 0)
+        for item in sorted(accumulated_results, key=lambda x: x.score, reverse=True):
+            try:
+                domain = urlparse(item.url).netloc.replace("www.", "").replace("m.", "")
+            except Exception:
+                domain = ""
+            is_rich_media = (
+                is_media_mode
+                or item.category in ("videos", "images", "audio")
+                or str(item.engine_id or "") in ("media_videos", "media_images", "domain_directory")
+                or str(item.engine or "").startswith(("eporner", "redtube", "domain_directory"))
+            )
+            if is_rich_media:
+                max_dom = 60 if is_unlimited else (40 if is_media_mode else 25)
+            elif query.mode == "osint":
+                max_dom = 12 if is_unlimited else 8
+            elif query.mode == "files":
+                max_dom = 6
+            else:
+                max_dom = 3
+            if not domain or domain_count[domain] < max_dom:
+                domain_count[domain] += 1
+                diverse_results.append(item)
+
+        hecos_logger.debug(
+            f"[SEARCH] Domain diversity: {len(accumulated_results)} → {len(diverse_results)} results "
+            f"(across {len(domain_count)} unique domains)"
+        )
+
+        # Sort new results by score desc, appending cleanly when paginating an existing session
+        diverse_results.sort(key=lambda x: x.score, reverse=True)
+        if existing_session is not None:
+            session.results = prior_results + diverse_results
+        elif query.limit and query.limit > 0:
+            max_total = max(int(cfg.get("max_total_results", 2000)), query.limit * max(1, len(engines)))
+            session.results = diverse_results[:max_total]
         else:
-            # Unlimited / Infinite mode (query.limit <= 0 or None)
-            session.results = accumulated_results
+            session.results = diverse_results
         session.total_results = len(session.results)
         session.duration_ms = round((time.time() - start_time) * 1000)
 
-        # Save session
-        self.session_store.save_session(session)
+        # Avoid spawning duplicate orphan sessions in Search History on page > 1 without an existing parent session
+        if not is_pagination or existing_session is not None:
+            self.session_store.save_session(session)
 
         if stream_cb:
             stream_cb({

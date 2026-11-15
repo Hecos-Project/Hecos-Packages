@@ -35,7 +35,8 @@ window.SearchAPI = (function () {
         domain_filter: params.domain_filter || '',
         file_types: Array.isArray(params.file_types) ? params.file_types.join(',') : (params.file_types || ''),
         engines: Array.isArray(params.engines) ? params.engines.join(',') : (params.engines || ''),
-        time_range: params.time_range || ''
+        time_range: params.time_range || '',
+        session_id: params.session_id || ''
       });
 
       const es = new EventSource(`${BASE_URL}/query_stream?${qs.toString()}`);
@@ -81,6 +82,10 @@ window.SearchAPI = (function () {
     async deleteSession(sessionId) {
       const res = await fetch(`${BASE_URL}/sessions/${sessionId}`, { method: 'DELETE' });
       return await res.json();
+    },
+
+    async renameSession(sessionId, title) {
+      return await postJson(`/sessions/${sessionId}/rename`, { title });
     },
 
     async clearSessions() {

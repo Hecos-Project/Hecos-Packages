@@ -60,14 +60,15 @@ class MediaImagesEngine(BaseEngine):
     def is_available(self) -> bool:
         return True
 
-    def _fetch_ddgs(self, query_str: str, target_count: int, timeout: float, safe_search: bool) -> List[SearchResult]:
+    def _fetch_ddgs(self, query_str: str, target_count: int, timeout: float, safe_search: bool, page: int = 1) -> List[SearchResult]:
         results: List[SearchResult] = []
         try:
             from ddgs import DDGS
             ddg = DDGS(timeout=timeout)
             safesearch_val = "moderate" if safe_search else "off"
             pages = max(2, min(10, (target_count // 30) + 1))
-            for page_num in range(1, pages + 1):
+            start_page = (max(1, page) - 1) * pages + 1
+            for page_num in range(start_page, start_page + pages):
                 try:
                     raw = ddg.images(query_str, page=page_num, max_results=35, safesearch=safesearch_val)
                     if not raw:
@@ -100,7 +101,7 @@ class MediaImagesEngine(BaseEngine):
             logger.debug(f"[MediaImages:DDGS] error: {e}")
         return results
 
-    def _fetch_searxng(self, query_str: str, target_count: int, timeout: float, safe_search: bool) -> List[SearchResult]:
+    def _fetch_searxng(self, query_str: str, target_count: int, timeout: float, safe_search: bool, page: int = 1) -> List[SearchResult]:
         results: List[SearchResult] = []
         try:
             import requests
@@ -112,7 +113,7 @@ class MediaImagesEngine(BaseEngine):
 
             cfg = get_search_config()
             searx_cfg = cfg.get("endpoints", {}).get("searxng", {})
-            local_url = searx_cfg.get("local_instance", {}).get("url") or "http://127.0.0.1:8888"
+            local_url = searx_cfg.get("local_instance", {}).get("url") or "http://127.0.0.1:8889"
 
             resp = requests.get(
                 f"{local_url.rstrip('/')}/search",
@@ -120,9 +121,10 @@ class MediaImagesEngine(BaseEngine):
                     "q": query_str,
                     "categories": "images",
                     "format": "json",
-                    "safesearch": 0 if not safe_search else 1
+                    "safesearch": 0 if not safe_search else 1,
+                    "pageno": max(1, page)
                 },
-                timeout=min(timeout, 6.0)
+                timeout=min(timeout, 12.0)
             )
             if resp.status_code == 200:
                 raw_images = resp.json().get("results", [])
@@ -156,8 +158,10 @@ class MediaImagesEngine(BaseEngine):
         results: List[SearchResult] = []
         try:
             import requests
-            from ..config import get_search_config
-            url = get_search_config().get("endpoints", {}).get("archives", {}).get("wikimedia_commons") or "https://commons.wikimedia.org/w/api.php"
+            from ..endpoints_config import get_archive_endpoint
+            enabled, url, auth_headers = get_archive_endpoint("wikimedia_commons")
+            if not enabled or not url:
+                return results
             params = {
                 "action": "query",
                 "generator": "search",
@@ -167,7 +171,8 @@ class MediaImagesEngine(BaseEngine):
                 "iiprop": "url|dimensions|mime",
                 "format": "json"
             }
-            resp = requests.get(url, params=params, headers={"User-Agent": "Hecos/1.0"}, timeout=min(timeout, 6.0))
+            headers = {"User-Agent": "Hecos/1.0", **auth_headers}
+            resp = requests.get(url, params=params, headers=headers, timeout=min(timeout, 6.0))
             if resp.status_code == 200:
                 pages = resp.json().get("query", {}).get("pages", {})
                 for page_id, info in pages.items():
@@ -199,18 +204,20 @@ class MediaImagesEngine(BaseEngine):
         target_limit = 100000 if is_unlimited else max(query.limit or 250, 250)
         per_provider = max(50, target_limit // 3)
 
+        q_page = max(1, getattr(query, "page", 1))
+
         tasks = []
         # Task 1: SearXNG Images (local daemon with Yandex, Google, Bing, etc.)
-        tasks.append(lambda: self._fetch_searxng(query.query, per_provider, query.timeout, safe_search=query.safe_search))
+        tasks.append(lambda: self._fetch_searxng(query.query, per_provider, query.timeout, safe_search=query.safe_search, page=q_page))
 
         # Task 2: DDGS Images
-        tasks.append(lambda: self._fetch_ddgs(query.query, per_provider, query.timeout, safe_search=query.safe_search))
+        tasks.append(lambda: self._fetch_ddgs(query.query, per_provider, query.timeout, safe_search=query.safe_search, page=q_page))
 
         # Task 3: If safe_search is False and query contains Italian explicit indicators, also query normalized tokens
         if not query.safe_search:
             normalized_q = _normalize_explicit_query(query.query)
             if normalized_q != query.query.lower().strip():
-                tasks.append(lambda: self._fetch_searxng(normalized_q, per_provider, query.timeout, safe_search=False))
+                tasks.append(lambda: self._fetch_searxng(normalized_q, per_provider, query.timeout, safe_search=False, page=q_page))
 
         # Task 4: Wikimedia Commons
         tasks.append(lambda: self._fetch_wikimedia(query.query, min(per_provider, 25), query.timeout))

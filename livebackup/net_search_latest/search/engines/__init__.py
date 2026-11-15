@@ -11,6 +11,9 @@ from .base import BaseEngine
 from .clear_ddgs import ClearDdgsEngine
 from .clear_news import ClearNewsEngine
 from .clear_searxng import ClearSearxngEngine
+from .clear_brave import ClearBraveEngine
+from .clear_custom import ClearCustomEngine
+from .domain_directory import DomainDirectoryEngine
 from .dark_ahmia import DarkAhmiaEngine
 from .dark_torch import DarkTorchEngine
 from .dark_haystak import DarkHaystakEngine
@@ -25,6 +28,7 @@ from .media_videos import MediaVideosEngine
 from .media_audio import MediaAudioEngine
 from .files_dorks import FilesDorksEngine
 from .osint_sherlock import OsintSherlockEngine
+from .osint_sources import OsintSourcesEngine
 from ..config import get_search_config
 
 logger = logging.getLogger("browser.search.engines")
@@ -40,6 +44,9 @@ def _register_all():
         ClearDdgsEngine(),
         ClearNewsEngine(),
         ClearSearxngEngine(),
+        ClearBraveEngine(),
+        ClearCustomEngine(),
+        DomainDirectoryEngine(),
         DarkAhmiaEngine(),
         DarkTorchEngine(),
         DarkHaystakEngine(),
@@ -54,6 +61,7 @@ def _register_all():
         MediaAudioEngine(),
         FilesDorksEngine(),
         OsintSherlockEngine(),
+        OsintSourcesEngine(),
     ]
     for eng in engines_list:
         _ENGINES[eng.id] = eng
@@ -72,23 +80,51 @@ def get_engine(engine_id: str) -> Optional[BaseEngine]:
 def get_engines_for_mode(mode: str, requested_engines: Optional[List[str]] = None) -> List[BaseEngine]:
     """Returns the list of active engines for a given search mode."""
     _register_all()
-    cfg = get_search_config().get("engines", {})
+    full_cfg = get_search_config()
+    cfg = full_cfg.get("engines", {})
+    fh_cfg = full_cfg.get("file_hunter", {})
+
+    files_engines = ["files_dorks"]
+    if fh_cfg.get("include_all_clear", True):
+        files_engines.extend(["clear_searxng", "clear_ddgs", "clear_brave", "clear_custom"])
+    if fh_cfg.get("include_all_dark", True):
+        files_engines.extend([
+            "dark_ahmia", "dark_torch", "dark_haystak", "dark_onionland",
+            "dark_excavator", "dark_phobos", "dark_tor66", "dark_danieltore", "dark_custom"
+        ])
+    if fh_cfg.get("include_domain_directory", True):
+        files_engines.append("domain_directory")
+
+    osint_cfg = full_cfg.get("osint", {})
+    osint_engines = ["osint_sherlock", "osint_sources"]
+    if osint_cfg.get("include_all_clear", True):
+        osint_engines.extend(["clear_searxng", "clear_ddgs", "clear_brave", "clear_custom"])
+    if osint_cfg.get("include_all_dark", True):
+        osint_engines.extend([
+            "dark_ahmia", "dark_torch", "dark_haystak", "dark_onionland",
+            "dark_excavator", "dark_phobos", "dark_tor66", "dark_danieltore", "dark_custom"
+        ])
+    if osint_cfg.get("include_domain_directory", True):
+        osint_engines.append("domain_directory")
 
     mode_map = {
-        "clear": ["clear_ddgs", "clear_news", "media_images", "media_videos", "media_audio", "files_dorks", "clear_searxng"],
+        "clear": ["clear_brave", "clear_ddgs", "clear_news", "media_images", "media_videos", "media_audio", "files_dorks", "clear_searxng", "clear_custom", "domain_directory"],
         "dark": [
             "dark_ahmia", "dark_torch", "dark_haystak", "dark_onionland",
             "dark_excavator", "dark_phobos", "dark_tor66", "dark_danieltore", "dark_custom"
         ],
         "deep": [
-            "clear_ddgs", "clear_news", "media_images", "media_videos", "media_audio", "files_dorks",
+            "clear_brave", "clear_ddgs", "clear_news", "media_images", "media_videos", "media_audio", "files_dorks",
             "dark_ahmia", "dark_torch", "dark_haystak", "dark_onionland",
             "dark_excavator", "dark_phobos", "dark_tor66", "dark_danieltore", "dark_custom",
-            "clear_searxng"
+            "clear_searxng", "clear_custom", "domain_directory"
         ],
-        "media": ["media_images", "media_videos", "media_audio"],
-        "files": ["files_dorks", "clear_ddgs"],
-        "osint": ["osint_sherlock", "clear_ddgs"],
+        "media": ["media_images", "media_videos", "media_audio", "domain_directory"],
+        "videos": ["media_videos", "domain_directory"],
+        "images": ["media_images", "domain_directory"],
+        "audio": ["media_audio"],
+        "files": files_engines,
+        "osint": osint_engines,
     }
 
     selected_ids = mode_map.get(mode, mode_map["clear"])

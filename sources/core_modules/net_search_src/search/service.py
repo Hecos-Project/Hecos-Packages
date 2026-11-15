@@ -21,7 +21,7 @@ from .models import SearchQuery, SearchResult, SearchSession
 from .engines import get_engines_for_mode, get_all_engines
 from .engines.files_apis import infer_extension
 from .sessions import get_session_store
-from .config import get_search_config
+from .config import get_search_config, is_netsearch_package_enabled
 
 
 def _normalize_url(url: str) -> str:
@@ -67,10 +67,10 @@ class HecosSearchService:
         prior_results: List[SearchResult] = list(existing_session.results) if existing_session is not None else []
         prior_engines: List[str] = list(existing_session.engines_queried) if existing_session is not None else []
 
-        if not cfg.get("enabled", True):
-            hecos_logger.warning(f"[SEARCH] Query aborted: Deep Search is disabled in system configuration.")
+        if not is_netsearch_package_enabled():
+            hecos_logger.warning("[SEARCH] Query aborted: Net Search package is disabled in Package Manager.")
             session.total_results = 0
-            session.error = "Deep Search is disabled in system settings. Enable it under Net Search Settings (/hecos/config/ui#netsearch)."
+            session.error = "Net Search is disabled in Package Manager (/hecos/config/ui#packages)."
             if stream_cb:
                 stream_cb({
                     "type": "error",

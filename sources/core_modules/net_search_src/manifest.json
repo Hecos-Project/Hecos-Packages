@@ -3,7 +3,7 @@
     "display_name": "Net Search",
     "name": "Net Search",
     "description": "Hecos Net Search & Intelligence System App. Privacy-preserving ClearWeb multi-engine meta-search, Tor DarkWeb (.onion) hidden services, OSINT identity lookup, media discovery, and deep file hunting.",
-    "version": "1.1.4",
+    "version": "1.3.4",
     "author": "Antonio Meloni",
     "lazy_load": false,
     "is_class_based": true,
@@ -21,8 +21,13 @@
         "template_file": "web/templates/config_netsearch.html",
         "js_file": "web/static/js/netsearch_panel.js",
         "js_files": [
+            "web/static/js/search/hub/endpoints_adapters.js",
             "web/static/js/search/search_endpoints.js",
+            "web/static/js/search/hub/sources_sqlite_ui.js",
+            "web/static/js/search/hub/sources_importer.js",
             "web/static/js/search/search_sources.js",
+            "web/static/js/search/hub/panel_network_controls.js",
+            "web/static/js/search/hub/panel_node_actions.js",
             "web/static/js/netsearch_panel.js"
         ],
         "css_file": "web/static/css/search.css",
@@ -198,18 +203,93 @@
                     }
                 }
             }
+        },
+        {
+            "function": {
+                "name": "NETSEARCH__stream_search",
+                "description": "Searches live TV channels, radio stations, public webcams, or raw streams into a numbered channel lineup (CH 01..NN). Leave query empty (or 'all') to retrieve the complete list of all available channels.",
+                "parameters": {
+                    "type": "object",
+                    "required": [],
+                    "properties": {
+                        "query": {
+                            "default": "",
+                            "description": "Channel or station search query (e.g. 'Rai 1', 'BBC', 'jazz'), or '' to list all available channels.",
+                            "type": "string"
+                        },
+                        "category": {
+                            "default": "all",
+                            "description": "Stream category: 'all', 'tv', 'radio', 'webcam', or 'raw'.",
+                            "type": "string"
+                        },
+                        "max_results": {
+                            "default": 500,
+                            "description": "Maximum number of streams to return (use 500 or 0 for full list).",
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "function": {
+                "name": "NETSEARCH__stream_control",
+                "description": "Controls Live TV/Radio playback and the TV Remote: play a channel by name or number, list all channels (list), switch channels (ch_up, ch_down, last), stop, pause, toggle fullscreen (fullscreen), adjust volume (vol_up, vol_down, set_volume, mute), switch output target (app, vlc, libvlc), or open in VLC Desktop.",
+                "parameters": {
+                    "type": "object",
+                    "required": [
+                        "action"
+                    ],
+                    "properties": {
+                        "action": {
+                            "description": "Remote action: 'play', 'list', 'ch_up', 'ch_down', 'last', 'stop', 'pause', 'vol_up', 'vol_down', 'set_volume', 'mute', 'fullscreen', 'target', 'toggle_proxy', 'open_vlc', or 'status'.",
+                            "type": "string"
+                        },
+                        "query": {
+                            "default": "",
+                            "description": "Channel or station name to tune into when action='play' (e.g. 'Rai 1', 'Rai News 24', 'BBC News').",
+                            "type": "string"
+                        },
+                        "channel": {
+                            "description": "Channel number (1..N) or channel name to tune into.",
+                            "type": "string"
+                        },
+                        "category": {
+                            "default": "",
+                            "description": "Optional category filter ('tv', 'radio', 'webcam', 'all').",
+                            "type": "string"
+                        },
+                        "volume": {
+                            "description": "Volume percentage (0-100) when action='set_volume'.",
+                            "type": "integer"
+                        },
+                        "target": {
+                            "default": "",
+                            "description": "Playback target: 'app' (In-App Player), 'vlc' (VLC Desktop), or 'libvlc' (Headless LibVLC).",
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     ],
     "slash_commands": [],
     "pip_requirements": [
         "requests>=2.31.0",
+        "requests[socks]>=2.31.0",
         "beautifulsoup4>=4.12.0",
-        "lxml==6.0.0",
+        "lxml>=5.2.0",
         "readability-lxml>=0.8.1",
+        "trafilatura>=1.8.0",
         "ddgs>=0.7.0",
         "simplexng>=0.1.0",
+        "yt-dlp>=2024.8.0",
+        "pillow>=10.0.0",
+        "imageio-ffmpeg>=0.4.9",
+        "python-vlc>=3.0.0",
         "waitress>=3.0.0",
         "PyYAML>=6.0",
+        "psutil>=5.9.0",
         "sherlock-project>=0.15.0"
     ]
 }

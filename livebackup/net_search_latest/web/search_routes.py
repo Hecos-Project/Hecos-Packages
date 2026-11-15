@@ -24,6 +24,7 @@ try:
     from hecos.modules.net_search.web.search_session_routes import register_session_routes
     from hecos.modules.net_search.web.search_component_routes import register_component_routes
     from hecos.modules.net_search.web.search_endpoint_routes import register_endpoint_routes
+    from hecos.modules.net_search.web.search_source_routes import register_source_routes
     from hecos.modules.net_search.web.search_copilot_routes import register_copilot_routes
 except (ImportError, ValueError):
     from ..search.service import get_search_service
@@ -34,6 +35,7 @@ except (ImportError, ValueError):
     from .search_session_routes import register_session_routes
     from .search_component_routes import register_component_routes
     from .search_endpoint_routes import register_endpoint_routes
+    from .search_source_routes import register_source_routes
     from .search_copilot_routes import register_copilot_routes
 
 try:
@@ -80,9 +82,23 @@ def register_search_routes(app, cfg_mgr, root_dir, logger=None):
         log.warning(f"[DeepSearch] Could not register endpoint routes: {e}")
 
     try:
+        register_source_routes(app, logger=log)
+    except Exception as e:
+        log.warning(f"[DeepSearch] Could not register source routes: {e}")
+
+    try:
         register_copilot_routes(app, logger=log)
     except Exception as e:
         log.warning(f"[DeepSearch] Could not register copilot routes: {e}")
+
+    try:
+        try:
+            from hecos.modules.net_search.search.cyber_map import register_cyber_map_routes
+        except (ImportError, ValueError):
+            from ..search.cyber_map import register_cyber_map_routes
+        register_cyber_map_routes(app, logger=log)
+    except Exception as e:
+        log.warning(f"[DeepSearch] Could not register cyber_map routes: {e}")
 
     # ── Main Search Page ──────────────────────────────────────────────────────
     @app.route("/search", methods=["GET"])
@@ -140,13 +156,15 @@ def register_search_routes(app, cfg_mgr, root_dir, logger=None):
                 mode=data.get("mode", "clear"),
                 engines=data.get("engines", []),
                 limit=int(data.get("limit", 50)),
+                page=max(1, int(data.get("page", 1))),
                 safe_search=bool(data.get("safe_search", False)),
                 dark_bypass=bool(data.get("dark_bypass", True)),
                 time_range=data.get("time_range"),
                 file_types=data.get("file_types", []),
                 auto_fallback_tor=bool(data.get("auto_fallback_tor", True)),
                 target_username=data.get("target_username"),
-                local_only=local_only_val
+                local_only=local_only_val,
+                session_id=data.get("session_id")
             )
 
             session = service.search(sq)
@@ -168,6 +186,7 @@ def register_search_routes(app, cfg_mgr, root_dir, logger=None):
 
         mode = request.args.get("mode", "clear")
         limit = int(request.args.get("limit", 50))
+        page = max(1, int(request.args.get("page", 1)))
         safe_search = request.args.get("safe_search", "false").lower() == "true"
         dark_bypass = request.args.get("dark_bypass", "true").lower() == "true"
         file_types_raw = request.args.get("file_types", "")
@@ -176,18 +195,21 @@ def register_search_routes(app, cfg_mgr, root_dir, logger=None):
         engines = [e.strip() for e in engines_raw.split(",") if e.strip()]
         local_only_arg = request.args.get("local_only")
         local_only = (local_only_arg.lower() in ("true", "1")) if local_only_arg is not None else None
+        parent_session_id = request.args.get("session_id", "").strip() or None
 
-        hecos_logger.info(f"[SEARCH:STREAM] Client connected: query='{query_str}' [mode={mode}, limit={limit}, safe_search={safe_search}, dark_bypass={dark_bypass}, local_only={local_only}]")
+        hecos_logger.info(f"[SEARCH:STREAM] Client connected: query='{query_str}' [mode={mode}, page={page}, limit={limit}, safe_search={safe_search}, dark_bypass={dark_bypass}, local_only={local_only}, session_id={parent_session_id}]")
 
         sq = SearchQuery(
             query=query_str,
             mode=mode,
             engines=engines,
             limit=limit,
+            page=page,
             safe_search=safe_search,
             dark_bypass=dark_bypass,
             file_types=file_types,
-            local_only=local_only
+            local_only=local_only,
+            session_id=parent_session_id
         )
 
         event_queue = queue.Queue()

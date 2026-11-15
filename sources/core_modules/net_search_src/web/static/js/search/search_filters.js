@@ -323,6 +323,7 @@
 
     // Explicitly observe scrolling relative to .search-stage scroll container
     infiniteScrollObserver = new IntersectionObserver((entries) => {
+      if (state.currentMode === 'streams') return;
       const entry = entries[0];
       if (entry && entry.isIntersecting && state.viewMode === 'scroll') {
         const filtered = getFilteredResults();
@@ -344,6 +345,7 @@
     if (stage && !stageScrollListenerBound) {
       stageScrollListenerBound = true;
       stage.addEventListener('scroll', () => {
+        if (state.currentMode === 'streams') return;
         if (state.viewMode !== 'scroll') return;
         const remaining = stage.scrollHeight - stage.scrollTop - stage.clientHeight;
         if (remaining < 400) {
@@ -573,12 +575,21 @@
 
 
   function renderCurrentView() {
+    const infiniteFooter = document.getElementById('infinite-scroll-footer');
+    const paginationFooter = document.getElementById('pagination-footer');
+
+    // Never overwrite Stream Hunter's live preview card grid with generic text result cards
+    if (state.currentMode === 'streams' && window.StreamHunterUI && typeof window.StreamHunterUI.renderCurrentStreams === 'function') {
+      if (infiniteFooter) infiniteFooter.style.display = 'none';
+      if (paginationFooter) paginationFooter.style.display = 'none';
+      window.StreamHunterUI.renderCurrentStreams();
+      return;
+    }
+
     const resultsRenderer = window.SearchResults;
     syncRefineToolbarUI();
     const filtered = getFilteredResults();
-    const infiniteFooter = document.getElementById('infinite-scroll-footer');
     const infiniteStatus = document.getElementById('infinite-scroll-status');
-    const paginationFooter = document.getElementById('pagination-footer');
     const resultsCountEl = document.getElementById('results-count');
 
     updateViewModeButtons();

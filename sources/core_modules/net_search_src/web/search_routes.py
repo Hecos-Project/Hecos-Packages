@@ -100,11 +100,26 @@ def register_search_routes(app, cfg_mgr, root_dir, logger=None):
     except Exception as e:
         log.warning(f"[DeepSearch] Could not register cyber_map routes: {e}")
 
+    try:
+        try:
+            from hecos.modules.net_search.search.stream_hunter import register_stream_hunter_routes
+        except (ImportError, ValueError):
+            from ..search.stream_hunter import register_stream_hunter_routes
+        register_stream_hunter_routes(app, logger=log)
+    except Exception as e:
+        log.warning(f"[DeepSearch] Could not register stream_hunter routes: {e}")
+
     # ── Main Search Page ──────────────────────────────────────────────────────
     @app.route("/search", methods=["GET"])
     @login_required
     def search_page():
         """Renders the dedicated Hecos Deep Search & Media Discovery interface."""
+        try:
+            from hecos.modules.net_search.search.config import is_netsearch_package_enabled
+        except (ImportError, ValueError):
+            from ..search.config import is_netsearch_package_enabled
+        if not is_netsearch_package_enabled():
+            return "Net Search is disabled in Package Manager (/hecos/config/ui#packages).", 503
         initial_q = request.args.get("q", "")
         initial_mode = request.args.get("mode", "clear")
         initial_session = request.args.get("session", "")

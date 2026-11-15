@@ -233,7 +233,24 @@ _DEFAULT_SEARCH_CONFIG: Dict[str, Any] = {
         },
         "custom_nodes": [],
         "custom_onion_engines": [],
-        "custom_clear_engines": []
+        "custom_clear_engines": [],
+        "custom_stream_nodes": []
+    },
+    "stream_hunter": {
+        "preview_enabled": True,
+        "preview_refresh_sec": 30,
+        "use_global_preset": True,
+        "preset_voice_announcer": True,
+        "preset_remote_sync": True,
+        "sources": {
+            "iptv_builtin": True,
+            "iptv_org_api": True,
+            "radio_builtin": True,
+            "radio_browser_api": True,
+            "webcams_builtin": True,
+            "searxng_dorks": True,
+            "sqlite_stream_store": True
+        }
     },
     "file_hunter": {
         "include_all_clear": True,
@@ -292,6 +309,20 @@ def _get_config_manager():
         return ConfigManager()
     except Exception:
         return None
+
+
+def is_netsearch_package_enabled() -> bool:
+    """Return True unless the net_search package is explicitly disabled in Package Manager."""
+    try:
+        from hecos.core.package_manager.registry import PackageRegistry
+        hecos_base = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        data_dir = os.path.join(hecos_base, "data")
+        pkg = PackageRegistry(data_dir).get("net_search")
+        if pkg is not None:
+            return pkg.get("status") != "disabled"
+    except Exception:
+        pass
+    return True
 
 
 def get_search_config() -> Dict[str, Any]:
@@ -360,9 +391,26 @@ def update_search_config(updates: Dict[str, Any]) -> bool:
         return False
 
 
+def get_stream_preset_settings() -> Dict[str, bool]:
+    """Return Global Preset integration flags for Live Streams & TV Remote."""
+    try:
+        sh = get_search_config().get("stream_hunter", {})
+        if not isinstance(sh, dict):
+            sh = {}
+    except Exception:
+        sh = {}
+    return {
+        "use_global_preset": bool(sh.get("use_global_preset", True)),
+        "preset_voice_announcer": bool(sh.get("preset_voice_announcer", True)),
+        "preset_remote_sync": bool(sh.get("preset_remote_sync", True)),
+    }
+
+
 __all__ = [
     "get_search_config",
     "update_search_config",
+    "get_stream_preset_settings",
+    "is_netsearch_package_enabled",
     "_DEFAULT_SEARCH_CONFIG",
     "DEFAULT_SEARXNG_FALLBACKS",
     "build_endpoint_url",

@@ -64,14 +64,14 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger=None):
     tpl_dir = os.path.join(base_dir, "web", "templates")
     stc_dir = os.path.join(base_dir, "web", "static")
 
-    # ── Extend Jinja loader so search templates are discoverable ─────────────
+    # ── Extend Jinja loader so net_search templates always take precedence over legacy copies ──
     try:
         if isinstance(app.jinja_loader, ChoiceLoader):
             if not any(isinstance(l, FileSystemLoader) and l.searchpath == [tpl_dir]
                        for l in app.jinja_loader.loaders):
-                app.jinja_loader.loaders.append(FileSystemLoader(tpl_dir))
+                app.jinja_loader.loaders.insert(0, FileSystemLoader(tpl_dir))
         elif app.jinja_loader:
-            app.jinja_loader = ChoiceLoader([app.jinja_loader, FileSystemLoader(tpl_dir)])
+            app.jinja_loader = ChoiceLoader([FileSystemLoader(tpl_dir), app.jinja_loader])
         else:
             app.jinja_loader = FileSystemLoader(tpl_dir)
     except Exception as je:
@@ -157,6 +157,12 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger=None):
         @app.after_request
         def _search_card_inject_hook(response):
             try:
+                try:
+                    from hecos.modules.net_search.search.config import is_netsearch_package_enabled
+                except (ImportError, ValueError):
+                    from ..search.config import is_netsearch_package_enabled
+                if not is_netsearch_package_enabled():
+                    return response
                 ct = response.content_type or ''
                 if 'text/html' not in ct:
                     return response

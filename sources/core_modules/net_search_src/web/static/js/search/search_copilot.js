@@ -162,19 +162,20 @@ window.SearchCopilot = (function () {
 
   // ── 3.5 UI Sync Helpers for Copilot-Driven Search ────────────────────────
   function applyPlannedSearchToUI(plan) {
-    if (!plan || !plan.query) return;
+    if (!plan) return;
     const targetMode = plan.mode || window.SearchState?.currentMode || 'clear';
     const targetFilter = plan.filter || 'all';
+    const hasQuery = Boolean(plan.query && plan.query.trim());
 
-    const searchInput = document.getElementById('search-input');
-    if (searchInput) {
-      searchInput.value = plan.query;
+    if (hasQuery) {
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) searchInput.value = plan.query;
+      if (window.SearchState) window.SearchState.currentQuery = plan.query;
     }
 
     if (window.SearchState) {
-      window.SearchState.currentQuery = plan.query;
       window.SearchState.currentMode = targetMode;
-      window.SearchState.hasMorePages = (targetMode !== 'dark');
+      window.SearchState.hasMorePages = (targetMode !== 'dark' && targetMode !== 'streams');
     }
 
     const targetPill = document.querySelector(`.mode-pill[data-mode="${targetMode}"]`);
@@ -183,7 +184,14 @@ window.SearchCopilot = (function () {
       targetPill.classList.add('active');
     }
 
-    if (window.SearchFilters && window.SearchFilters.renderFilterTabsForMode) {
+    if (targetMode === 'streams') {
+      if (window.StreamRemoteController && typeof window.StreamRemoteController.setRemoteModeVisible === 'function') {
+        window.StreamRemoteController.setRemoteModeVisible(true);
+      }
+      if (window.SearchFilters && window.SearchFilters.renderFilterTabsForMode) {
+        window.SearchFilters.renderFilterTabsForMode('streams', false);
+      }
+    } else if (window.SearchFilters && window.SearchFilters.renderFilterTabsForMode) {
       window.SearchFilters.renderFilterTabsForMode(targetMode, false);
       if (targetFilter && window.SearchFilters.setFilter) {
         window.SearchFilters.setFilter(targetFilter, false, true);
@@ -191,7 +199,7 @@ window.SearchCopilot = (function () {
     }
 
     const resultsCountEl = document.getElementById('results-count');
-    if (resultsCountEl) {
+    if (resultsCountEl && hasQuery && targetMode !== 'streams') {
       const curPreset = getCurrentPreset();
       const charName = (curPreset && (curPreset.soul_name || curPreset.name)) || 'Hecos AI';
       resultsCountEl.innerText = `${charName} searching ${targetMode.toUpperCase()} for "${plan.query}"...`;
@@ -309,6 +317,7 @@ window.SearchCopilot = (function () {
     let accumulated = '';
     let plannedNewSearch = false;
     let plannedFilter = null;
+    let doneMeta = { is_stream_turn: false, use_global_preset: true, preset_voice_announcer: true };
     activeGenerationState = {
       assistantMsg,
       bubbleTextEl,
@@ -370,8 +379,15 @@ window.SearchCopilot = (function () {
               plannedNewSearch = (ev.action === 'new_search');
               plannedFilter = ev.filter || null;
               applyPlannedSearchToUI(ev);
-              if (bubbleTextEl && !accumulated) {
+              if (bubbleTextEl && !accumulated && ev.action !== 'stream_command') {
                 bubbleTextEl.innerHTML = `<span style="color:var(--accent-cyan, #06b6d4); font-size:12px;"><i class="fas fa-satellite fa-spin"></i> Searching ${escapeHtml((ev.mode || 'deep').toUpperCase())}: "${escapeHtml(ev.query || '')}"...</span>`;
+              }
+            } else if (ev.type === 'stream_command') {
+              doneMeta.is_stream_turn = true;
+              if (typeof ev.use_global_preset === 'boolean') doneMeta.use_global_preset = ev.use_global_preset;
+              if (typeof ev.preset_voice_announcer === 'boolean') doneMeta.preset_voice_announcer = ev.preset_voice_announcer;
+              if (window.StreamRemoteController && typeof window.StreamRemoteController.applyRemoteCommandFromBus === 'function') {
+                window.StreamRemoteController.applyRemoteCommandFromBus(ev.command, ev.state);
               }
             } else if (ev.type === 'session') {
               if (window.SearchState && ev.session_id) {
@@ -411,6 +427,9 @@ window.SearchCopilot = (function () {
               if (ev.text && !accumulated) {
                 accumulated = ev.text;
               }
+              if (typeof ev.is_stream_turn === 'boolean') doneMeta.is_stream_turn = ev.is_stream_turn;
+              if (typeof ev.use_global_preset === 'boolean') doneMeta.use_global_preset = ev.use_global_preset;
+              if (typeof ev.preset_voice_announcer === 'boolean') doneMeta.preset_voice_announcer = ev.preset_voice_announcer;
               if (assistantMsg && accumulated) {
                 renderAssistantBubble(assistantMsg, accumulated, false);
               }
@@ -433,7 +452,12 @@ window.SearchCopilot = (function () {
         }
         renderAssistantBubble(assistantMsg, accumulated, false);
         if (isVoiceEnabled()) {
-          speakAssistantMessage(assistantMsg);
+          const skipAnnounce = doneMeta.is_stream_turn && (doneMeta.preset_voice_announcer === false);
+          if (!skipAnnounce) {
+            speakAssistantMessage(assistantMsg, null, {
+              forceNeutralVoice: doneMeta.is_stream_turn && !doneMeta.use_global_preset
+            });
+          }
         }
       }
       chatHistory.push({ role: 'assistant', content: accumulated });

@@ -22,7 +22,8 @@ if _here not in sys.path:
     sys.path.insert(0, _here)
 
 from .search.tools import SearchTools
-from .search import init_search_subsystem
+from .search.stream_hunter.llm_tools import StreamLLMTools
+from .search import init_search_subsystem, stop_all
 
 
 class NetSearchTools:
@@ -42,7 +43,9 @@ class NetSearchTools:
             "4. MEDIA SEARCH: If the user asks for images, videos, audio/soundtracks, call NETSEARCH__media_search(query=..., media_type=...).\n"
             "5. FILE SEARCH: If the user asks for documents, PDFs, ebooks, zip archives, or file downloads, call NETSEARCH__file_search(query=..., file_types=...).\n"
             "6. OSINT: If the user asks to find a person's online accounts, usernames, or social profiles, call NETSEARCH__osint_search(username=...).\n"
-            "7. READ WEBPAGE: If the user asks to inspect, read, or scrape a specific URL (clearnet or .onion), call NETSEARCH__fetch_page(url=...)."
+            "7. READ WEBPAGE: If the user asks to inspect, read, or scrape a specific URL (clearnet or .onion), call NETSEARCH__fetch_page(url=...).\n"
+            "8. LIVE STREAMS DISCOVERY: If the user asks for live TV channels, IPTV, radio stations, or live webcams, or asks for the full list of available channels, invoke NETSEARCH__stream_search(query='', category='all', max_results=500) or NETSEARCH__stream_control(action='list') or /canali.\n"
+            "9. TV REMOTE & VOICE CONTROL: If the user asks to play a channel by name (pass channel name in query=, integer 1..N only in channel=) or number, list channels, toggle fullscreen, zap next/previous, stop, pause, adjust volume, mute, or open a stream in VLC Desktop (target='vlc'), invoke NETSEARCH__stream_control(action='play', query='Rai 1', category='tv') or /canale Rai 1."
         )
         self.slash_commands = [
             {
@@ -176,9 +179,82 @@ class NetSearchTools:
                 "method": "slash_search_config",
                 "args_schema": {"args": "str"},
                 "requires_args": False,
-            }
+            },
+            {
+                "id": "streams",
+                "aliases": ["/streams", "/live"],
+                "description": "Searches live TV, radio, webcams, and raw M3U8/RTSP streams",
+                "usage": "/streams <query>",
+                "example": "/streams italy news",
+                "icon": "📡",
+                "category": "NETSEARCH",
+                "method": "slash_streams",
+                "args_schema": {"query": "str"},
+                "requires_args": False,
+            },
+            {
+                "id": "tv",
+                "aliases": ["/tv", "/iptv"],
+                "description": "Searches live TV & IPTV channels into numbered CH 01..NN lineup",
+                "usage": "/tv <query>",
+                "example": "/tv rai",
+                "icon": "📺",
+                "category": "NETSEARCH",
+                "method": "slash_tv",
+                "args_schema": {"query": "str"},
+                "requires_args": False,
+            },
+            {
+                "id": "radio",
+                "aliases": ["/radio", "/fm"],
+                "description": "Searches live Icecast/MP3 radio stations",
+                "usage": "/radio <query>",
+                "example": "/radio jazz",
+                "icon": "📻",
+                "category": "NETSEARCH",
+                "method": "slash_radio",
+                "args_schema": {"query": "str"},
+                "requires_args": False,
+            },
+            {
+                "id": "webcam",
+                "aliases": ["/webcam", "/cam"],
+                "description": "Searches live public webcams (cities, ports, weather, space)",
+                "usage": "/webcam <query>",
+                "example": "/webcam tokyo",
+                "icon": "📷",
+                "category": "NETSEARCH",
+                "method": "slash_webcam",
+                "args_schema": {"query": "str"},
+                "requires_args": False,
+            },
+            {
+                "id": "canali",
+                "aliases": ["/canali", "/channels", "/lista"],
+                "description": "Lists all available live TV, radio, webcam, and raw channels (optionally filtered by tv/radio/webcam/keyword)",
+                "usage": "/canali [tv|radio|webcam|query]",
+                "example": "/canali",
+                "icon": "📋",
+                "category": "NETSEARCH",
+                "method": "slash_canali",
+                "args_schema": {"query": "str"},
+                "requires_args": False,
+            },
+            {
+                "id": "canale",
+                "aliases": ["/canale", "/channel", "/remote"],
+                "description": "Controls Live TV/Radio playback (number, channel name, next, prev, stop, mute, vol <0-100>, vlc)",
+                "usage": "/canale <number|name|next|prev|stop|mute|vol 60|vlc>",
+                "example": "/canale 3",
+                "icon": "🎛️",
+                "category": "NETSEARCH",
+                "method": "slash_canale",
+                "args_schema": {"args": "str"},
+                "requires_args": False,
+            },
         ]
         self._tools_impl = SearchTools()
+        self._stream_tools = StreamLLMTools()
 
     # ── LLM Function Calling Tools ────────────────────────────────────────────
 
@@ -209,6 +285,24 @@ class NetSearchTools:
     def fetch_page(self, url: str, max_chars: int = 4000) -> str:
         """Reads and extracts the textual content of any webpage (Clearnet or Tor .onion)."""
         return self._tools_impl.fetch_page(url=url, max_chars=max_chars)
+
+    def stream_search(self, query: str = "", category: str = "all", max_results: Optional[int] = None) -> str:
+        """Searches live TV channels, radio stations, public webcams, or raw streams into a numbered lineup (pass empty query or max_results=500 for full list)."""
+        return self._stream_tools.stream_search(query=query, category=category, max_results=max_results)
+
+    def stream_control(
+        self,
+        action: str,
+        channel: Optional[Any] = None,
+        query: str = "",
+        volume: Optional[int] = None,
+        target: str = "",
+        category: str = "",
+    ) -> str:
+        """Controls Live TV/Radio TV Remote: play, list, ch_up, ch_down, last, stop, pause, vol_up, vol_down, set_volume, mute, fullscreen, target, open_vlc, status."""
+        return self._stream_tools.stream_control(
+            action=action, channel=channel, query=query, volume=volume, target=target, category=category
+        )
 
     # ── Slash Commands ────────────────────────────────────────────────────────
 
@@ -314,6 +408,24 @@ class NetSearchTools:
                 return f"✅ `tor.enabled` set to `{bval}`."
         return "⚠️ Usage: `/search_config` or `/search_config set <local_only|tor> <true|false>`"
 
+    def slash_streams(self, args: str = "") -> str:
+        return self._stream_tools.slash_streams(args)
+
+    def slash_canali(self, args: str = "") -> str:
+        return self._stream_tools.slash_canali(args)
+
+    def slash_tv(self, args: str = "") -> str:
+        return self._stream_tools.slash_tv(args)
+
+    def slash_radio(self, args: str = "") -> str:
+        return self._stream_tools.slash_radio(args)
+
+    def slash_webcam(self, args: str = "") -> str:
+        return self._stream_tools.slash_webcam(args)
+
+    def slash_canale(self, args: str = "") -> str:
+        return self._stream_tools.slash_canale(args)
+
 
 
 tools = NetSearchTools()
@@ -346,6 +458,15 @@ def on_load(config=None, **kwargs):
     return tools
 
 
+def on_unload(**kwargs):
+    """Called when Net Search is disabled or unloaded via Package Manager."""
+    try:
+        stop_all()
+        logger.info("[NetSearch] Background search daemons stopped via on_unload().")
+    except Exception as e:
+        logger.warning(f"[NetSearch] on_unload stop warning: {e}")
+
+
 def info() -> Dict[str, Any]:
     return {
         "tag": "NETSEARCH",
@@ -373,7 +494,15 @@ def info() -> Dict[str, Any]:
             "/media": "Search combined media (images, videos, audio) from chat",
             "/fetch": "Scrape and clean webpage content from chat",
             "/search_engines": "Show status of all search engines and daemons",
-            "/search_config": "Inspect or set quick search configuration"
+            "/search_config": "Inspect or set quick search configuration",
+            "stream_search": "Search live TV, radio, webcams, and raw streams.",
+            "stream_control": "Control Live TV/Radio playback, channel zapping, volume, and VLC launch.",
+            "/streams": "Search live TV, radio, and webcam streams",
+            "/canali": "List all available live TV, radio, webcam, and raw channels",
+            "/tv": "Search live TV / IPTV channels",
+            "/radio": "Search live radio stations",
+            "/webcam": "Search public live webcams",
+            "/canale": "TV Remote command: channel number/name, next, prev, stop, mute, vol, vlc"
         }
     }
 

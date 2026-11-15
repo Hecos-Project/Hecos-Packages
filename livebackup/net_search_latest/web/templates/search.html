@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 
 <html lang="en">
 
@@ -34,16 +34,19 @@
   <link rel="stylesheet" href="/assets/css/core/components.css?v={{ version }}">
 
   <link rel="stylesheet"
-    href="/netsearch_static/css/search_base.css?v={{ version }}&t=20261101_filterbar_responsive_v2">
+    href="/netsearch_static/css/search_base.css?v={{ version }}&t=20261113_toggle_colors_v1">
 
-  <link rel="stylesheet" href="/netsearch_static/css/search_filters.css?v={{ version }}&t=20261101_fetchmore_v1">
+  <link rel="stylesheet" href="/netsearch_static/css/search_filters.css?v={{ version }}&t=20261113_responsive_filters_v1">
 
   <link rel="stylesheet" href="/netsearch_static/css/search_cards.css?v={{ version }}">
 
-  <link rel="stylesheet" href="/netsearch_static/css/search_modals.css?v={{ version }}">
+  <link rel="stylesheet" href="/netsearch_static/css/search_copilot.css?v={{ version }}&t=20261113_modular_v1">
 
-  <link rel="stylesheet" href="/ext/presenter/static/css/presenter.css?v={{ version }}&t=20261101_stats_v3">
-  <link rel="stylesheet" href="/netsearch_static/css/search_exclusion.css?v={{ version }}&t=20261101_power_v1">
+  <link rel="stylesheet" href="/netsearch_static/css/search_modals.css?v={{ version }}&t=20261113_modular_v1">
+
+  <link rel="stylesheet" href="/ext/presenter/static/css/presenter.css?v={{ version }}&t=20261106_mob_v1">
+  <link rel="stylesheet" href="/netsearch_static/css/search_exclusion.css?v={{ version }}&t=20261113_cyber_scroll_v1">
+  <link rel="stylesheet" href="/netsearch_static/css/cyber_map/cyber_map.css?v={{ version }}&t=20261114_cyber_map_v1">
 
 </head>
 
@@ -80,6 +83,14 @@
       </div>
 
       <!-- -- Action Buttons: Standard Hecos .btn .btn-sm .btn-secondary -- -->
+
+      <button type="button" class="btn btn-sm btn-secondary cm-trigger-btn" id="btn-cyber-map-toggle"
+        onclick="if(window.toggleCyberMap) window.toggleCyberMap();"
+        title="Toggle Interactive Cyber Map (3D Globe / 2D Map)">
+
+        <i class="fas fa-globe-americas" style="color:#22d3ee;"></i> Cyber Map
+
+      </button>
 
       <button type="button" class="btn btn-sm btn-secondary" onclick="torNewCircuit()"
         title="Request new Tor identity (New Circuit)">
@@ -129,7 +140,7 @@
 
     <!-- --   Left: Search History Sidebar   -- -->
 
-    <aside class="search-sidebar">
+    <aside class="search-sidebar" id="search-sidebar">
 
       <div class="sidebar-header">
 
@@ -139,6 +150,18 @@
           onclick="window.SearchAPI.clearSessions().then(() => location.reload())" title="Clear history">
 
           <i class="fas fa-trash-alt" style="font-size:10px;"></i>
+
+        </button>
+
+      </div>
+
+      <div class="sidebar-new-search-wrap">
+
+        <button type="button" id="sidebar-new-search-btn" class="sidebar-new-search-btn"
+          onclick="if(window.startNewSearch) window.startNewSearch('search')"
+          title="Start a fresh search and reset AI Copilot conversation">
+
+          <i class="fas fa-plus"></i> New Search
 
         </button>
 
@@ -155,6 +178,10 @@
         </div>
 
       </div>
+
+      <!-- -- Resizer Handle for History Sidebar Width -- -->
+
+      <div class="sidebar-resizer" id="sidebar-resizer" title="Drag to resize sidebar width"></div>
 
     </aside>
 
@@ -176,8 +203,7 @@
 
           <input type="text" id="search-input" class="search-input-field"
             placeholder="Search anything across Clear Web, Dark Web (.onion), documents or media..."
-            value="{{ initial_q }}" autofocus autocomplete="off" spellcheck="false"
-            onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('search-submit').click();}">
+            value="{{ initial_q }}" autofocus autocomplete="off" spellcheck="false">
 
           <button id="search-submit" class="search-submit-btn">
 
@@ -312,21 +338,21 @@
 
             <!-- -- 1. Content Moderation / SafeSearch Toggle (Explicit ON / OFF) -- -->
 
-            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn" id="btn-content-filter"
-              onclick="window.toggleContentFilter()" title="Toggle SafeSearch content moderation">
+            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn is-state-ok" id="btn-content-filter"
+              onclick="window.toggleContentFilter()" title="Content Filter: OFF (Unfiltered / Raw Search)">
 
               <i class="fas fa-shield-alt"></i>
 
               <span>Content Filter:</span>
 
-              <span class="badge-pill badge-neutral" id="badge-content-filter"
+              <span class="badge-pill badge-ok" id="badge-content-filter"
                 style="font-weight:700; padding:2px 8px;">OFF</span>
 
             </button>
 
             <!-- -- 2. DarkWeb Censorship & Blacklist Bypass Toggle -- -->
 
-            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn" id="btn-dark-filter"
+            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn is-state-ok" id="btn-dark-filter"
               onclick="window.toggleDarkFilter()"
               title="Bypass Tor/Ahmia blacklists and censorship for 100% uncensored discovery">
 
@@ -341,16 +367,15 @@
 
             <!-- -- 2b. Privacy Shield / Local-Only Mode Toggle -- -->
 
-            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn" id="btn-local-only"
+            <button type="button" class="btn btn-sm btn-secondary option-toggle-btn is-state-ok" id="btn-local-only"
               onclick="window.toggleLocalOnly()"
-              title="Toggle Privacy Shield: restrict to local private daemons (SearXNG 127.0.0.1) and Tor onion circuits">
+              title="Privacy Shield: LOCAL ONLY (Strictly querying local private SearXNG and Tor onion circuits)">
 
               <i class="fas fa-user-shield"></i>
 
               <span>Privacy Shield:</span>
 
-              <span class="badge-pill badge-neutral" id="badge-local-only" style="font-weight:700; padding:2px 8px;">ALL
-                ENGINES</span>
+              <span class="badge-pill badge-ok" id="badge-local-only" style="font-weight:700; padding:2px 8px;">LOCAL ONLY</span>
 
             </button>
 
@@ -519,6 +544,104 @@
 
       </div>
 
+      <!-- -- Post-Search Granular Refine & Sort Toolbar -- -->
+
+      <div class="results-refine-bar" id="results-refine-bar">
+
+        <div class="refine-controls-row">
+
+          <div class="refine-input-wrap" title="Filter already loaded results locally (supports multiple keywords, &quot;exact phrase&quot;, -exclude, domain:, engine:, ext:, type:video|image|audio|file|onion)">
+
+            <i class="fas fa-filter refine-input-icon"></i>
+
+            <input type="text" id="results-refine-input" class="refine-search-input"
+              placeholder="Filter within results (keywords, domain:, engine:, ext:, -exclude)..."
+              autocomplete="off" spellcheck="false" aria-label="Filter within fetched results">
+
+            <button type="button" id="results-refine-clear" class="refine-clear-btn" style="display:none;"
+              title="Clear in-results text filter" aria-label="Clear in-results filter">
+              <i class="fas fa-times"></i>
+            </button>
+
+          </div>
+
+          <div class="refine-sort-wrap">
+
+            <label for="results-sort-select" class="refine-sort-label">
+              <i class="fas fa-arrow-up-wide-short"></i> <span>Order:</span>
+            </label>
+
+            <select id="results-sort-select" class="refine-sort-select"
+              onchange="if(window.setResultsSort) window.setResultsSort(this.value)"
+              title="Order displayed results without running a new search" aria-label="Sort results order">
+              <option value="default">Default (Relevance / Arrival)</option>
+              <optgroup label="Prioritize by Type">
+                <option value="videos_first">Videos First</option>
+                <option value="images_first">Images / Photos First</option>
+                <option value="audio_first">Audio / Music First</option>
+                <option value="files_first">Files &amp; Docs First</option>
+                <option value="web_first">Web &amp; Articles First</option>
+              </optgroup>
+              <optgroup label="Prioritize by Network">
+                <option value="onion_first">Dark Web (.onion) First</option>
+                <option value="clear_first">Clearnet First</option>
+              </optgroup>
+              <optgroup label="Sort by Metadata">
+                <option value="score_desc">Highest Score</option>
+                <option value="date_desc">Newest Date First</option>
+                <option value="date_asc">Oldest Date First</option>
+                <option value="engine_asc">Source / Engine (A-Z)</option>
+                <option value="domain_asc">Domain (A-Z)</option>
+                <option value="title_asc">Title (A-Z)</option>
+              </optgroup>
+            </select>
+
+          </div>
+
+          <button type="button" id="btn-reset-post-filters" class="refine-reset-btn" style="display:none;"
+            onclick="if(window.resetPostSearchFilters) window.resetPostSearchFilters()"
+            title="Reset in-results filter, media sub-filter, and sort order">
+            <i class="fas fa-rotate-left"></i> <span>Reset</span>
+          </button>
+
+        </div>
+
+        <div class="media-subtype-bar" id="media-subtype-bar" style="display:none;">
+
+          <span class="media-subtype-label"><i class="fas fa-sliders"></i> Media Filter:</span>
+
+          <div class="media-subtype-buttons">
+
+            <button type="button" class="media-subtab-btn active" data-media-subfilter="all"
+              id="media-subtab-all" onclick="if(window.setMediaSubFilter) window.setMediaSubFilter('all')">
+              <i class="fas fa-photo-film"></i> <span>All Media</span>
+              <span class="filter-count" id="media-subcount-all">0</span>
+            </button>
+
+            <button type="button" class="media-subtab-btn" data-media-subfilter="videos"
+              id="media-subtab-videos" onclick="if(window.setMediaSubFilter) window.setMediaSubFilter('videos')">
+              <i class="fas fa-video"></i> <span>Videos</span>
+              <span class="filter-count" id="media-subcount-videos">0</span>
+            </button>
+
+            <button type="button" class="media-subtab-btn" data-media-subfilter="images"
+              id="media-subtab-images" onclick="if(window.setMediaSubFilter) window.setMediaSubFilter('images')">
+              <i class="fas fa-image"></i> <span>Images</span>
+              <span class="filter-count" id="media-subcount-images">0</span>
+            </button>
+
+            <button type="button" class="media-subtab-btn" data-media-subfilter="audio"
+              id="media-subtab-audio" onclick="if(window.setMediaSubFilter) window.setMediaSubFilter('audio')">
+              <i class="fas fa-music"></i> <span>Audio</span>
+              <span class="filter-count" id="media-subcount-audio">0</span>
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
       <!-- -- Results Meta Info & View Mode Toggle (Infinite Scroll vs Pagination) -- -->
 
       <div class="results-header-info">
@@ -556,6 +679,10 @@
         </div>
 
       </div>
+
+      <!-- -- Collapsible & Resizable Cyber Map Panel (3D Globe / 2D Map) -- -->
+
+      <div class="cm-dock" id="cyber-map-dock"></div>
 
       <!-- -- Results Feed or Grid -- -->
 
@@ -688,9 +815,15 @@
 
         <!-- -- 1. Global Presets Selector -- -->
 
-        <div class="copilot-card copilot-preset-card">
+        <div class="copilot-card copilot-preset-card" id="copilot-preset-card">
 
-          <div class="copilot-card-title"><i class="fas fa-sliders-h"></i> Global Preset</div>
+          <div class="copilot-card-title copilot-preset-header-row">
+            <span><i class="fas fa-sliders-h"></i> Global Preset</span>
+            <button type="button" id="copilot-preset-info-btn" class="copilot-preset-info-btn"
+              title="Inspect full preset model, inference, and voice settings">
+              <i class="fas fa-circle-info"></i>
+            </button>
+          </div>
 
           <div class="copilot-preset-wrapper">
 
@@ -701,6 +834,9 @@
             </select>
 
           </div>
+
+          <div id="copilot-preset-summary" class="copilot-preset-summary"></div>
+          <div id="copilot-preset-popover" class="copilot-preset-popover" style="display:none;"></div>
 
         </div>
 
@@ -727,8 +863,23 @@
 
         <div class="copilot-card copilot-chat-card">
 
-          <div class="copilot-card-title" id="copilot-chat-title"><i class="fas fa-comments"></i> <span
-              id="copilot-chat-title-text">Ask Hecos AI</span></div>
+          <div class="copilot-card-title copilot-chat-header-row" id="copilot-chat-title">
+            <span><i class="fas fa-comments"></i> <span id="copilot-chat-title-text">Ask Hecos AI</span></span>
+            <div class="copilot-header-actions">
+              <button type="button" id="copilot-new-search-btn" class="copilot-new-search-btn"
+                title="Start a new search and reset AI Copilot conversation">
+                <i class="fas fa-plus"></i> New Search
+              </button>
+              <button type="button" id="copilot-tts-toggle" class="copilot-tts-toggle-btn is-muted"
+                title="Toggle Voice Output (auto-speak Copilot replies using the active Global Preset TTS)">
+                <i class="fas fa-volume-xmark"></i> Voice: OFF
+              </button>
+              <button type="button" id="copilot-automode-toggle" class="copilot-automode-btn is-auto"
+                title="Auto-Mode ON: AI autonomously chooses optimal mode and category tab">
+                <i class="fas fa-wand-magic-sparkles"></i> Auto-Mode: ON
+              </button>
+            </div>
+          </div>
 
 
 
@@ -771,6 +922,13 @@
 
           </div>
 
+          <!-- -- Stop Voice Button (visible while TTS generating/playing) -- -->
+
+          <button type="button" id="copilot-stop-voice-btn" class="copilot-stop-voice-btn" style="display:none;"
+            title="Stop Voice Output">
+            <i class="fas fa-stop"></i> Stop Voice
+          </button>
+
           <!-- -- Input Bar -- -->
 
           <div class="copilot-chat-input-bar">
@@ -778,13 +936,22 @@
             <input type="text" id="copilot-chat-input" class="copilot-chat-input"
               placeholder="Type a question or search query..." autocomplete="off">
 
-            <button id="copilot-chat-send" class="copilot-chat-send" title="Send message (Enter)">
+            <button type="button" id="copilot-chat-mic" class="copilot-chat-mic"
+              title="Microphone: hold to talk · tap to lock (Ctrl+Shift)"
+              aria-label="Microphone — hold for PTT, tap to toggle lock">
+              <i class="fas fa-microphone" aria-hidden="true"></i>
+            </button>
+
+            <button type="button" id="copilot-chat-send" class="copilot-chat-send" title="Send message (Enter)"
+              aria-label="Send message">
 
               <i class="fas fa-paper-plane"></i>
 
             </button>
 
           </div>
+
+          <div id="copilot-mic-status" class="copilot-mic-status">MIC: Hold or Ctrl+Shift to talk · Tap to lock</div>
 
         </div>
 
@@ -801,12 +968,6 @@
               <i class="fas fa-file-export"></i> Export Report (.md)
 
             </button>
-
-            <a href="/chat" target="_blank" class="copilot-btn" style="text-decoration:none;">
-
-              <i class="fas fa-arrow-up-right-from-square"></i> Open Hecos Chat
-
-            </a>
 
           </div>
 
@@ -848,9 +1009,17 @@
 
         <div style="display:flex; align-items:center; gap:8px;">
 
+          <a href="/hecos/config/ui?tab=files#netsearch" target="_blank" class="btn btn-sm btn-secondary"
+            style="font-size:11px; text-decoration:none; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:5px;"
+            title="Configure File Hunter sources (Open APIs, Clearnet &amp; Tor .onion engines)">
+
+            <i class="fas fa-file-shield" style="color:#38bdf8;"></i> File Hunter Sources
+
+          </a>
+
           <a href="/hecos/config/ui#netsearch" target="_blank" class="btn btn-sm btn-secondary"
             style="font-size:11px; text-decoration:none; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:5px;"
-            title="Open Endpoints & Nodes in Central Hub">
+            title="Open Endpoints &amp; Nodes in Central Hub">
 
             <i class="fas fa-sliders-h" style="color:var(--accent-cyan);"></i> Configure Endpoints in Hub <i
               class="fas fa-external-link-alt" style="font-size:9px;"></i>
@@ -901,37 +1070,6 @@
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- --   Page Text Reader Modal   -- -->
-
-  <div class="search-modal-backdrop" id="page-reader-modal">
-
-    <div class="search-modal" style="max-width: 840px;">
-
-      <div class="modal-header">
-
-        <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
-
-          <i class="fas fa-file-alt" style="color:var(--accent-cyan); font-size:18px;"></i>
-
-          <h3 id="reader-modal-title"
-            style="font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Page Reader</h3>
-
-        </div>
-
-        <button class="btn-icon" onclick="closeAllModals()"><i class="fas fa-times"></i></button>
-
-      </div>
-
-      <div class="modal-body" id="reader-modal-body" style="max-height: 70vh;">
-
-        <!-- -- Injected via SearchResults.readPage -- -->
-
-      </div>
-
-    </div>
-
   </div>
 
   <!-- --   Saved Links & Bookmarks Modal   -- -->
@@ -1066,36 +1204,52 @@
 
   <script src="/static/js/chat_toast_unified/chat_toast_unified.js?v={{ version }}"></script>
 
-  <script src="/netsearch_static/js/search/search_api.js?v={{ version }}&t=20261101_fetchmore_v1"></script>
+  <script src="/netsearch_static/js/search/search_api.js?v={{ version }}&t=20261113_history_tabs_v1"></script>
 
-  <script src="/netsearch_static/js/search/search_state.js?v={{ version }}&t=20261101_ddgs_chip_fix_v2"></script>
+  <script src="/netsearch_static/js/search/search_state.js?v={{ version }}&t=20261113_toggle_persist_v1"></script>
 
-  <script src="/netsearch_static/js/search/search_bookmarks.js?v={{ version }}"></script>
+  <script src="/netsearch_static/js/search/search_bookmarks.js?v={{ version }}&t=20261113_noread"></script>
 
-  <script src="/netsearch_static/js/search/search_results.js?v={{ version }}&t=20261031_sendtochat"></script>
+  <script src="/netsearch_static/js/search/search_results.js?v={{ version }}&t=20261113_refine_sort_v1"></script>
 
   <!-- Unified Official Presenter Extension & Live Event Bus -->
   <script src="/ext/hbs_common/static/js/hbs_utils.js?v={{ version }}"></script>
-  <script src="/ext/presenter/static/js/presenter_state.js?v={{ version }}&t=20261101_stats_v3"></script>
-  <script src="/ext/presenter/static/js/presenter_stats.js?v={{ version }}&t=20261101_stats_v3"></script>
-  <script src="/ext/presenter/static/js/presenter_stats_ui.js?v={{ version }}&t=20261101_stats_v3"></script>
-  <script src="/ext/presenter/static/js/presenter_ui.js?v={{ version }}&t=20261101_stats_v3"></script>
-  <script src="/ext/presenter/static/js/presenter.js?v={{ version }}&t=20261101_stats_v3"></script>
-  <script src="/static/js/chat_events.js?v={{ version }}&t=20261101_power_v1"></script>
+  <script src="/ext/presenter/static/js/presenter_state.js?v={{ version }}&t=20261106_mob_v1"></script>
+  <script src="/ext/presenter/static/js/presenter_stats.js?v={{ version }}&t=20261106_mob_v1"></script>
+  <script src="/ext/presenter/static/js/presenter_stats_ui.js?v={{ version }}&t=20261106_mob_v1"></script>
+  <script src="/ext/presenter/static/js/presenter_ui.js?v={{ version }}&t=20261106_mob_v1"></script>
+  <script src="/ext/presenter/static/js/presenter.js?v={{ version }}&t=20261106_mob_v1"></script>
+  <script src="/static/js/audio_bus.js?v={{ version }}&t=20261113_audiobus_v2"></script>
+  <script src="/static/js/audio_encoder.js?v={{ version }}"></script>
+  <script src="/static/js/chat_events.js?v={{ version }}&t=20261113_audiobus_v2"></script>
 
-  <script src="/netsearch_static/js/search/search_copilot.js?v={{ version }}&t=20261101_copilot_presets_fix_v6"></script>
+  <script src="/netsearch_static/js/search/copilot_markdown.js?v={{ version }}&t=20261113_modular_v1"></script>
+  <script src="/netsearch_static/js/search/copilot_voice.js?v={{ version }}&t=20261113_modular_v1"></script>
+  <script src="/netsearch_static/js/search/copilot_mic.js?v={{ version }}&t=20261113_modular_v1"></script>
+  <script src="/netsearch_static/js/search/copilot_presets.js?v={{ version }}&t=20261113_modular_v1"></script>
+  <script src="/netsearch_static/js/search/search_copilot.js?v={{ version }}&t=20261113_copilot_clean_v1"></script>
 
-  <script src="/netsearch_static/js/search/search_endpoints.js?v={{ version }}&t=20261101_engineregistry_v1"></script>
+  <script src="/netsearch_static/js/search/search_endpoints.js?v={{ version }}&t=20261113_dark_files_v1"></script>
 
-  <script src="/netsearch_static/js/search/search_filters.js?v={{ version }}&t=20261101_ddgs_chip_fix_v2"></script>
+  <script src="/netsearch_static/js/search/search_engine_chips.js?v={{ version }}&t=20261113_osint_opt_v1"></script>
+  <script src="/netsearch_static/js/search/search_refine.js?v={{ version }}&t=20261113_modular_v1"></script>
+  <script src="/netsearch_static/js/search/search_filters.js?v={{ version }}&t=20261114_cyber_map_v1"></script>
 
-  <script src="/netsearch_static/js/search/search_stream.js?v={{ version }}&t=20261101_ddgs_chip_fix_v2"></script>
+  <script src="/netsearch_static/js/search/search_stream.js?v={{ version }}&t=20261114_cyber_map_v1"></script>
 
-  <script src="/netsearch_static/js/search/search_history.js?v={{ version }}&t=20261101_sidebaricons"></script>
+  <script src="/netsearch_static/js/search/search_history.js?v={{ version }}&t=20261114_cyber_map_v1"></script>
 
-  <script src="/netsearch_static/js/search/search_modals.js?v={{ version }}&t=20261101_engineregistry_v1"></script>
+  <script src="/netsearch_static/js/search/search_modals.js?v={{ version }}&t=20261113_file_hunter_v2"></script>
 
-  <script src="/netsearch_static/js/search/search_main.js?v={{ version }}&t=20261101_sidebaricons"></script>
+  <script src="/netsearch_static/js/search/search_main.js?v={{ version }}&t=20261113_toggle_persist_v1"></script>
+
+  <!-- Modular Cyber Map (3D Globe.gl + 2D Tactical Map) -->
+  <script src="/netsearch_static/js/search/cyber_map/cyber_map_bus.js?v={{ version }}&t=20261114_cyber_map_v1"></script>
+  <script src="/netsearch_static/js/search/cyber_map/cyber_map_state.js?v={{ version }}&t=20261114_cyber_map_v1"></script>
+  <script src="/netsearch_static/js/search/cyber_map/cyber_map_globe3d.js?v={{ version }}&t=20261114_cyber_map_v1"></script>
+  <script src="/netsearch_static/js/search/cyber_map/cyber_map_flat2d.js?v={{ version }}&t=20261114_cyber_map_v1"></script>
+  <script src="/netsearch_static/js/search/cyber_map/cyber_map_hud.js?v={{ version }}&t=20261114_cyber_map_v1"></script>
+  <script src="/netsearch_static/js/search/cyber_map/cyber_map_main.js?v={{ version }}&t=20261114_cyber_map_v1"></script>
 
 </body>
 

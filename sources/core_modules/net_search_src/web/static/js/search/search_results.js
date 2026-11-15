@@ -362,6 +362,13 @@ window.SearchResults = (function () {
       const container = document.getElementById(containerId);
       if (!container) return;
 
+      // Guard: keep Stream Hunter's live preview grid intact when active in streams mode
+      const activeMode = mode || (window.SearchState && window.SearchState.currentMode);
+      if (activeMode === 'streams' && containerId === 'results-list' && window.StreamHunterUI && typeof window.StreamHunterUI.renderCurrentStreams === 'function') {
+        window.StreamHunterUI.renderCurrentStreams();
+        return;
+      }
+
       if (!results || results.length === 0) {
         container.className = 'results-list';
         const refineQuery = (window.SearchState && window.SearchState.refineQuery || '').trim();

@@ -28,6 +28,10 @@ try:
         get_summary as get_domain_summary,
         set_source_role,
     )
+    from hecos.modules.net_search.search.stream_hunter.stream_store import (
+        get_stream_summary,
+        set_stream_source_role,
+    )
 except (ImportError, ValueError):
     from ..search.config import get_search_config, update_search_config
     from ..search.endpoints_config import get_endpoints
@@ -45,6 +49,10 @@ except (ImportError, ValueError):
     from ..search.sources.domain_store import (
         get_summary as get_domain_summary,
         set_source_role,
+    )
+    from ..search.stream_hunter.stream_store import (
+        get_stream_summary,
+        set_stream_source_role,
     )
 
 try:
@@ -70,6 +78,7 @@ def register_source_routes(app, logger=None):
             "presets": get_preset_sources(),
             "auto_update_enabled": bool(cfg.get("sources_auto_update", True)),
             "domain_summary": get_domain_summary(),
+            "stream_summary": get_stream_summary(),
         })
 
     @app.route("/api/hsearch/domains/role", methods=["POST"])
@@ -108,6 +117,8 @@ def register_source_routes(app, logger=None):
         tpool = source.get("target_pool", "auto")
         if tpool in ("domain_blocklist", "domain_allowlist", "domain_directory"):
             set_source_role(source["id"], tpool.replace("domain_", "", 1))
+        elif tpool in ("stream_tv", "stream_radio", "stream_webcam", "stream_raw"):
+            set_stream_source_role(source["id"], tpool.replace("stream_", "", 1))
 
         sync_res = None
         if data.get("sync_now", True) and source.get("enabled", True):
@@ -251,7 +262,7 @@ def register_source_routes(app, logger=None):
             log.info(f"[DeepSearch] Manual import -> ok={res.get('ok')} stats={res.get('stats')}")
             return jsonify(res)
         except Exception as e:
-            log.exception(f"[DeepSearch] Source import failed: {e}")
+            log.error(f"[DeepSearch] Source import failed: {e}")
             return jsonify({"ok": False, "error": str(e)}), 400
 
     # ── Compatibility Routes Referenced by Search Dashboard Modals ────────────

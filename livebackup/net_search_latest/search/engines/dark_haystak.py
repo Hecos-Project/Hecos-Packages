@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from typing import List
 
-from .base import BaseEngine
+from .base import BaseEngine, effective_tor_timeout
 from ..models import SearchQuery, SearchResult
 from .. import http_client
 
@@ -55,16 +55,19 @@ class DarkHaystakEngine(BaseEngine):
         params = {"q": query.query}
         from ..config import get_engine_auth_headers
         auth_headers = get_engine_auth_headers("dark_haystak", "onion")
-        if "X-API-Key" in auth_headers:
+        if auth_headers.get("X-API-Key") and auth_headers["X-API-Key"] != "haystak_vip_token":
             params["key"] = auth_headers["X-API-Key"]
+        else:
+            auth_headers = {}
 
+        tor_timeout = effective_tor_timeout(query.timeout, minimum=15.0)
         onion_url = _get_haystak_url().rstrip("/")
         search_urls = [onion_url, f"{onion_url}/search"]
-        hecos_logger.info(f"[SEARCH:HAYSTAK] Querying Haystak via Tor: '{query.query}' at {onion_url} (Auth={'Yes' if auth_headers else 'No'})...")
+        hecos_logger.info(f"[SEARCH:HAYSTAK] Querying Haystak via Tor: '{query.query}' at {onion_url} (Auth={'Yes' if auth_headers else 'No'}, timeout={tor_timeout}s)...")
 
         for s_url in search_urls:
             try:
-                resp = http_client.get(s_url, network="tor", params=params, headers=auth_headers, timeout=min(query.timeout, 5.0))
+                resp = http_client.get(s_url, network="tor", params=params, headers=auth_headers, timeout=tor_timeout)
                 if resp.status_code == 200:
                     from bs4 import BeautifulSoup
                     soup = BeautifulSoup(resp.text, "lxml")

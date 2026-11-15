@@ -13,6 +13,7 @@
       console.log(`[NetSearch] [${type}] ${msg}`);
     }
   }
+  window._nsNotify = _notify;
 
   function _ensureSearchEndpoints(cb) {
     if (window.SearchEndpoints) {
@@ -31,6 +32,7 @@
       setTimeout(() => _ensureSearchEndpoints(cb), 100);
     }
   }
+  window._nsEnsureSearchEndpoints = _ensureSearchEndpoints;
 
   function _ensureSearchSources(cb) {
     if (window.SearchSources) {
@@ -101,10 +103,6 @@
       // 1. Fetch plugin config
       const cfgRes = await fetch('/hecos/api/plugins/net_search/config').then(r => r.json()).catch(() => null);
       const cfg = (cfgRes && cfgRes.config) ? cfgRes.config : {};
-
-      // Master switch
-      const masterSw = document.getElementById('search-master-enabled');
-      if (masterSw) masterSw.checked = cfg.enabled !== false;
 
       // Privacy Shield (Local-Only Mode)
       const localOnlySw = document.getElementById('search-local-only-enabled');
@@ -183,6 +181,28 @@
       });
       if (typeof window.refreshOsintCountBadge === 'function') {
         window.refreshOsintCountBadge();
+      }
+
+      // Stream Hunter config (Global Preset toggles + 7 built-in source toggles)
+      const sh = cfg.stream_hunter || {};
+      const swGlobalPreset = document.getElementById('sh-sw-use-global-preset');
+      if (swGlobalPreset) swGlobalPreset.checked = sh.use_global_preset !== false;
+      const swPresetVoice = document.getElementById('sh-sw-preset-voice');
+      if (swPresetVoice) swPresetVoice.checked = sh.preset_voice_announcer !== false;
+      const swPresetRemote = document.getElementById('sh-sw-preset-remote-sync');
+      if (swPresetRemote) swPresetRemote.checked = sh.preset_remote_sync !== false;
+
+      const shSrc = sh.sources || {};
+      const shSourceKeys = [
+        'iptv_builtin', 'iptv_org_api', 'radio_builtin', 'radio_browser_api',
+        'webcams_builtin', 'searxng_dorks', 'sqlite_stream_store'
+      ];
+      shSourceKeys.forEach(k => {
+        const el = document.getElementById(`sh-src-${k}`);
+        if (el) el.checked = shSrc[k] !== false;
+      });
+      if (typeof window.updateStreamsTabBadgeCount === 'function') {
+        window.updateStreamsTabBadgeCount();
       }
 
       // Defaults
@@ -296,6 +316,26 @@
         });
       }
 
+      // 5c. Populate Custom Stream Nodes (Live Streams Tab)
+      const customStreamNodes = Array.isArray(ep.custom_stream_nodes) ? ep.custom_stream_nodes : [];
+      const streamNodesWrap = document.getElementById('endp-streams-nodes-wrap');
+      if (streamNodesWrap) {
+        streamNodesWrap.innerHTML = '';
+        customStreamNodes.forEach(csn => {
+          SE.addEndpoint('endp-streams-nodes-wrap', csn, {
+            typeBadge: 'STREAM NODE',
+            isDeletable: true,
+            key: 'custom_stream',
+            showCategory: true,
+            categoryMode: 'streams',
+            category: csn.category || 'tv'
+          });
+        });
+      }
+
+      const streamNodesBadge = document.getElementById('badge-streams-nodes-count');
+      if (streamNodesBadge) streamNodesBadge.textContent = `${customStreamNodes.length} Nodes`;
+
       // 6. Update counts on section badges & tab headers
       const fbCount = document.getElementById('badge-searxng-fallbacks-count');
       const totalFallbackNodes = fallbacks.length + customNodes.length;
@@ -320,6 +360,12 @@
         web: customClearEngines.length + totalArchives,
         dark: totalTor
       });
+      if (typeof window.updateStreamsTabBadgeCount === 'function') {
+        window.updateStreamsTabBadgeCount();
+      }
+      if (window.SearchSources && typeof window.SearchSources.renderStreamStats === 'function') {
+        window.SearchSources.renderStreamStats();
+      }
     });
   };
 
@@ -339,48 +385,10 @@
     }
   };
 
-  function _refreshSourceCountBadge(keys, prefix, tabBadgeId, secBadgeId) {
-    let activeApis = 0;
-    let totalFound = 0;
-    keys.forEach(k => {
-      const el = document.getElementById(`${prefix}-${k}`);
-      if (el) {
-        totalFound++;
-        if (el.checked) activeApis++;
-      }
-    });
-    const tabBadge = document.getElementById(tabBadgeId);
-    if (tabBadge) tabBadge.textContent = String(totalFound ? activeApis : keys.length);
-    const secBadge = document.getElementById(secBadgeId);
-    if (secBadge) secBadge.textContent = `${totalFound ? activeApis : keys.length}/${totalFound || keys.length} Active`;
-  }
-
-  window.refreshFileHunterCountBadge = function () {
-    _refreshSourceCountBadge([
-      'dorks_web', 'arxiv', 'openalex', 'zenodo', 'openlibrary',
-      'doaj', 'huggingface', 'github', 'npm', 'archive_org', 'wikimedia'
-    ], 'fh-src', 'badge-tab-files-count', 'badge-fh-sources-active');
-  };
-
-  window.refreshOsintCountBadge = function () {
-    _refreshSourceCountBadge([
-      'people_dorks', 'github', 'gitlab', 'reddit', 'hackernews',
-      'wikipedia', 'wikidata', 'gravatar', 'keybase', 'archive_org', 'crtsh'
-    ], 'osint-src', 'badge-tab-osint-count', 'badge-osint-sources-active');
-  };
-
-  window.updateFileHunterSource = function (srcKey, enabled) {
-    window.refreshFileHunterCountBadge();
-    return window.updateNetSearchConfig(`file_hunter.sources.${srcKey}`, !!enabled);
-  };
-
-  window.updateOsintSource = function (srcKey, enabled) {
-    window.refreshOsintCountBadge();
-    return window.updateNetSearchConfig(`osint.sources.${srcKey}`, !!enabled);
-  };
+  // Source count badges & provider toggles live in hub/panel_network_controls.js.
 
   window.switchNetSearchEndpointTab = function (tabName) {
-    const valid = ['searxng', 'web', 'dark', 'files', 'osint', 'domains'];
+    const valid = ['searxng', 'web', 'dark', 'files', 'osint', 'domains', 'streams'];
     const target = valid.includes(tabName) ? tabName : 'searxng';
     document.querySelectorAll('#netsearch-endpoints-manager-container .ns-tab-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.nsTab === target);
@@ -430,148 +438,7 @@
     });
   };
 
-  window.checkTorStatusBadge = async function () {
-    const badge = document.getElementById('tor-cfg-status-badge');
-    if (!badge) return;
-    try {
-      const res = await fetch('/api/hsearch/tor_status').then(r => r.json());
-      if (res.ok && res.tor_online) {
-        badge.textContent = `Online (Port ${res.tor_port || 9055})`;
-        badge.style.background = 'rgba(16, 185, 129, 0.15)';
-        badge.style.color = '#34d399';
-      } else {
-        badge.textContent = 'Offline';
-        badge.style.background = 'rgba(239, 68, 68, 0.15)';
-        badge.style.color = '#f87171';
-      }
-    } catch (e) {
-      badge.textContent = 'Check failed';
-    }
-  };
-
-  window.torNewCircuit = async function () {
-    try {
-      const res = await fetch('/api/hsearch/tor_newnym', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: '{}'
-      }).then(r => r.json());
-      if (res.ok) {
-        _notify('New Tor identity (circuit) requested successfully!', 'success');
-        window.checkTorStatusBadge();
-      } else {
-        _notify('Tor circuit request: ' + (res.message || res.error || 'Failed to switch identity'), 'warning');
-      }
-    } catch (e) {
-      _notify('Error requesting new Tor circuit: ' + e.message, 'error');
-    }
-  };
-
-  window.syncTorActionFromEndpoints = function (val) {
-    const topSel = document.getElementById('search-tor-onion-action');
-    if (topSel) topSel.value = val;
-    window.updateNetSearchConfig('tor.onion_action', val);
-  };
-
-  window.syncTorPathFromEndpoints = function (val) {
-    const topPath = document.getElementById('search-tor-browser-path');
-    if (topPath) topPath.value = val;
-    window.updateNetSearchConfig('tor.tor_browser_path', val);
-  };
-
-  window.detectTorBrowserPath = async function () {
-    try {
-      const res = await fetch('/api/hsearch/detect_tor_browser').then(r => r.json());
-      if (res.ok && res.path) {
-        const input = document.getElementById('search-tor-browser-path');
-        if (input) input.value = res.path;
-        const endpInput = document.getElementById('endp-tor-browser-path');
-        if (endpInput) endpInput.value = res.path;
-        window.updateNetSearchConfig('tor.tor_browser_path', res.path);
-        _notify('Tor Browser detected: ' + res.path, 'success');
-      } else {
-        _notify('Tor Browser could not be detected automatically.', 'warning');
-      }
-    } catch (e) {
-      _notify('Detection error: ' + e, 'error');
-    }
-  };
-  window.autoDetectTorBrowser = window.detectTorBrowserPath;
-
-  window.addSearxngFallbackNode = function () {
-    window.switchNetSearchEndpointTab && window.switchNetSearchEndpointTab('searxng');
-    window.toggleEndpointSection(null, 'endp-searxng-fallbacks-body', true);
-    _ensureSearchEndpoints((SE) => SE.addPresetEndpoint('searxng_fallback'));
-  };
-
-  window.addCustomTorEngineNode = function () {
-    window.switchNetSearchEndpointTab && window.switchNetSearchEndpointTab('dark');
-    window.toggleEndpointSection(null, 'endp-tor-engines-body', true);
-    _ensureSearchEndpoints((SE) => SE.addPresetEndpoint('custom_tor'));
-  };
-
-  window.addCustomSearchNode = function () {
-    window.switchNetSearchEndpointTab && window.switchNetSearchEndpointTab('searxng');
-    window.toggleEndpointSection(null, 'endp-searxng-fallbacks-body', true);
-    _ensureSearchEndpoints((SE) => SE.addPresetEndpoint('custom_node', 'endp-searxng-fallbacks-wrap'));
-  };
-
-  window.addCustomClearEngineNode = function () {
-    window.switchNetSearchEndpointTab && window.switchNetSearchEndpointTab('web');
-    window.toggleEndpointSection(null, 'endp-custom-clear-body', true);
-    _ensureSearchEndpoints((SE) => SE.addPresetEndpoint('custom_clear'));
-  };
-
-  window.addCustomArchiveNode = function () {
-    window.switchNetSearchEndpointTab && window.switchNetSearchEndpointTab('web');
-    window.toggleEndpointSection(null, 'endp-archives-body', true);
-    _ensureSearchEndpoints((SE) => SE.addPresetEndpoint('custom_archive'));
-  };
-
-  window.updateSearxngEnginesCount = function () {
-    const countBadge = document.getElementById('badge-searxng-engines-count');
-    if (!countBadge) return;
-    const cards = document.querySelectorAll('#endp-searxng-engines-wrap .searxng-engine-card');
-    let active = 0;
-    cards.forEach(c => {
-      if (c.querySelector('.engine-enabled-checkbox')?.checked) active++;
-    });
-    countBadge.textContent = `${cards.length} Engines (${active} Active)`;
-  };
-
-  window.addSearxngEngineNode = function (presetData) {
-    window.switchNetSearchEndpointTab && window.switchNetSearchEndpointTab('searxng');
-    window.toggleEndpointSection(null, 'endp-searxng-engines-body', true);
-    _ensureSearchEndpoints((SE) => {
-      SE.addSearxngEngine('endp-searxng-engines-wrap', presetData || {
-        name: '',
-        label: '',
-        category: 'general',
-        enabled: true
-      });
-    });
-  };
-
-  window.quickAddSearxngEngine = function (name, label, category) {
-    window.toggleEndpointSection(null, 'endp-searxng-engines-body', true);
-    // Check if engine with this name already exists in wrap
-    const existing = document.querySelector(`#endp-searxng-engines-wrap .searxng-engine-card input.engine-name-input[value="${name}"]`);
-    if (existing) {
-      const card = existing.closest('.searxng-engine-card');
-      const cb = card.querySelector('.engine-enabled-checkbox');
-      if (cb && !cb.checked) {
-        cb.checked = true;
-        _ensureSearchEndpoints(SE => SE.syncEngineCard(card.dataset.id));
-        _notify(`Activated existing engine: ${label}`, 'info');
-      } else {
-        _notify(`Engine ${label} is already configured and active.`, 'info');
-      }
-      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      return;
-    }
-    window.addSearxngEngineNode({ name, label, category, enabled: true });
-    _notify(`Added ${label} to aggregated engines. Click 'Save Endpoints' to apply.`, 'success');
-  };
+  // Tor controls live in hub/panel_network_controls.js; manual node & preset actions live in hub/panel_node_actions.js.
 
   window.saveEndpointsFromUI = async function () {
     _ensureSearchEndpoints(async (SE) => {

@@ -3,8 +3,8 @@
     "display_name": "Net Search",
     "name": "Net Search",
     "description": "Hecos Net Search & Intelligence System App. Privacy-preserving ClearWeb multi-engine meta-search, Tor DarkWeb (.onion) hidden services, OSINT identity lookup, media discovery, and deep file hunting.",
-    "version": "1.0.0",
-    "author": "Antonio Meloni / Hecos Team",
+    "version": "1.1.4",
+    "author": "Antonio Meloni",
     "lazy_load": false,
     "is_class_based": true,
     "type": "system_app",
@@ -22,6 +22,7 @@
         "js_file": "web/static/js/netsearch_panel.js",
         "js_files": [
             "web/static/js/search/search_endpoints.js",
+            "web/static/js/search/search_sources.js",
             "web/static/js/netsearch_panel.js"
         ],
         "css_file": "web/static/css/search.css",
@@ -199,5 +200,16 @@
             }
         }
     ],
-    "slash_commands": []
+    "slash_commands": [],
+    "pip_requirements": [
+        "requests>=2.31.0",
+        "beautifulsoup4>=4.12.0",
+        "lxml==6.0.0",
+        "readability-lxml>=0.8.1",
+        "ddgs>=0.7.0",
+        "simplexng>=0.1.0",
+        "waitress>=3.0.0",
+        "PyYAML>=6.0",
+        "sherlock-project>=0.15.0"
+    ]
 }

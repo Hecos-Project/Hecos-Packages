@@ -267,6 +267,21 @@ def get_endpoints() -> Dict[str, Any]:
             cce.setdefault("api_key", "")
             cce.setdefault("category", "general")
 
+    merged.setdefault("custom_stream_nodes", [])
+    for csn in merged.get("custom_stream_nodes", []):
+        if isinstance(csn, dict):
+            csn.setdefault("use_api_key", False)
+            csn.setdefault("api_key", "")
+            csn.setdefault("category", "tv")
+            csn.setdefault("country", "INT")
+            if not csn.get("url") and csn.get("host"):
+                csn["url"] = build_endpoint_url(
+                    csn.get("protocol", "https"),
+                    csn.get("host", ""),
+                    csn.get("port", ""),
+                    csn.get("path", ""),
+                )
+
     # 4. Enrich Open Archives & Repositories (structured nodes + custom_archives)
     arch = merged.setdefault("archives", {})
     ao_url = str(arch.get("archive_org") or "https://archive.org/advancedsearch.php").strip()
@@ -410,6 +425,26 @@ def update_endpoints(updates: Dict[str, Any]) -> bool:
                     if url or item.get("host"):
                         clean_ca.append(item)
             ua["custom_archives"] = clean_ca
+
+    if "custom_stream_nodes" in updates and isinstance(updates["custom_stream_nodes"], list):
+        clean_csn = []
+        for item in updates["custom_stream_nodes"]:
+            if isinstance(item, dict):
+                url = item.get("url") or build_endpoint_url(
+                    item.get("protocol", "https"),
+                    item.get("host", ""),
+                    item.get("port", ""),
+                    item.get("path", ""),
+                )
+                item["url"] = url
+                item["use_api_key"] = bool(item.get("use_api_key", False))
+                item["api_key"] = str(item.get("api_key", "")).strip()
+                item["category"] = str(item.get("category") or "tv").strip().lower()
+                item["country"] = str(item.get("country") or "INT").strip().upper()
+                item["enabled"] = item.get("enabled", True) is not False
+                if url or item.get("host"):
+                    clean_csn.append(item)
+        updates["custom_stream_nodes"] = clean_csn
 
     def _merge(dest: dict, src: dict):
         for k, v in src.items():

@@ -56,7 +56,7 @@ class MediaAudioEngine(BaseEngine):
                 from ..config import get_search_config
                 cfg = get_search_config()
                 searx_cfg = cfg.get("endpoints", {}).get("searxng", {})
-                local_url = searx_cfg.get("local_instance", {}).get("url") or "http://127.0.0.1:8888"
+                local_url = searx_cfg.get("local_instance", {}).get("url") or "http://127.0.0.1:8889"
                 resp = requests.get(
                     f"{local_url.rstrip('/')}/search",
                     params={
@@ -65,7 +65,7 @@ class MediaAudioEngine(BaseEngine):
                         "format": "json",
                         "safesearch": 0 if not query.safe_search else 1
                     },
-                    timeout=min(timeout, 4.0)
+                    timeout=min(timeout, 10.0)
                 )
                 if resp.status_code == 200:
                     raw = resp.json().get("results", [])
@@ -213,16 +213,18 @@ class MediaAudioEngine(BaseEngine):
         def _fetch_archive_org() -> List[SearchResult]:
             items: List[SearchResult] = []
             try:
-                from ..config import get_search_config
-                cfg = get_search_config()
-                url = cfg.get("endpoints", {}).get("archives", {}).get("archive_org") or "https://archive.org/advancedsearch.php"
+                from ..endpoints_config import get_archive_endpoint
+                enabled, url, auth_headers = get_archive_endpoint("archive_org")
+                if not enabled or not url:
+                    return items
                 params = {
                     "q": f"{query.query} mediatype:audio",
                     "fl[]": "identifier,title,description,creator,date",
                     "rows": per_source_limit,
                     "output": "json"
                 }
-                resp = requests.get(url, params=params, headers={"User-Agent": "HecosAudio/1.0"}, timeout=timeout)
+                headers = {"User-Agent": "HecosAudio/1.0", **auth_headers}
+                resp = requests.get(url, params=params, headers=headers, timeout=timeout)
                 if resp.status_code == 200:
                     docs = resp.json().get("response", {}).get("docs", [])
                     for d in docs:

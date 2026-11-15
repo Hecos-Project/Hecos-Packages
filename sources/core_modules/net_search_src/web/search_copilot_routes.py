@@ -19,6 +19,8 @@ from flask_login import login_required
 
 try:
     from hecos.modules.net_search.search.sessions import get_session_store
+    from hecos.modules.net_search.search.config import get_stream_preset_settings
+    from hecos.modules.net_search.search.stream_hunter.remote_bus import get_remote_bus
     from hecos.modules.net_search.search.copilot_planner import (
         load_copilot_presets_payload,
         resolve_active_soul,
@@ -29,6 +31,8 @@ try:
     )
 except (ImportError, ValueError):
     from ..search.sessions import get_session_store
+    from ..search.config import get_stream_preset_settings
+    from ..search.stream_hunter.remote_bus import get_remote_bus
     from ..search.copilot_planner import (
         load_copilot_presets_payload,
         resolve_active_soul,
@@ -55,13 +59,20 @@ def register_copilot_routes(app, logger=None):
     log.info("[DeepSearch] Registering AI Copilot routes...")
     session_store = get_session_store()
 
-    # Ensure PresenterEngine is running and subscribed to search events
+    # Ensure PresenterEngine is only started if explicitly enabled in presenter.yaml
     try:
+        from hecos.modules.web_ui.extensions.presenter.config.store import load_presenter_config
         from hecos.modules.web_ui.extensions.presenter.engine import get_engine
-        get_engine().start()
-        log.info("[DeepSearch] PresenterEngine started and subscribed.")
+        _p_cfg = load_presenter_config()
+        if getattr(_p_cfg, "enabled", False) and (
+            getattr(_p_cfg, "commentary_on_messages", False) or getattr(_p_cfg, "commentary_on_search", False)
+        ):
+            get_engine().start()
+            log.info("[DeepSearch] PresenterEngine started and subscribed.")
+        else:
+            log.info("[DeepSearch] PresenterEngine is OFF in presenter.yaml; skipping start.")
     except Exception as _pe_err:
-        log.warning(f"[DeepSearch] Could not start PresenterEngine: {_pe_err}")
+        log.warning(f"[DeepSearch] Could not check/start PresenterEngine: {_pe_err}")
 
     # ── 1. Presets Discovery ───────────────────────────────────────────────────
     @app.route("/api/hsearch/copilot/presets", methods=["GET"])
@@ -124,8 +135,12 @@ def register_copilot_routes(app, logger=None):
             merged_cfg = base_cfg
 
         # Disable unrelated tools (including IMAGE_GEN) inside Net Search Copilot
+        if isinstance(base_cfg, dict):
+            base_cfg["disable_tools"] = True
         if isinstance(merged_cfg, dict):
             merged_cfg["disable_tools"] = True
+
+        stream_preset_cfg = get_stream_preset_settings()
 
         existing_session = None
         if session_id:
@@ -154,8 +169,28 @@ def register_copilot_routes(app, logger=None):
             )
 
             resolved_sess = existing_session if plan["action"] == "analyze_current" else None
+            stream_ctx = None
 
-            if plan["action"] == "new_search" and plan["query"]:
+            if plan["action"] == "stream_command" and plan.get("stream_command"):
+                cmd_spec = dict(plan["stream_command"])
+                cmd_name = cmd_spec.get("command") or "play_query"
+                if status_cb:
+                    status_cb(f"Executing TV Remote command: {cmd_name}...", plan=plan)
+                remote_res = get_remote_bus().dispatch_command(
+                    cmd_name,
+                    cmd_spec,
+                    source="copilot",
+                    allow_headless_fallback=True,
+                )
+                stream_ctx = {
+                    "ok": remote_res.get("ok"),
+                    "error": remote_res.get("error", ""),
+                    "requested_command": cmd_name,
+                    "command": remote_res.get("command") or {"command": cmd_name, "payload": cmd_spec},
+                    "state": remote_res.get("state") or {},
+                }
+                plan["remote_result"] = stream_ctx
+            elif plan["action"] == "new_search" and plan["query"]:
                 if status_cb:
                     status_cb(f"Searching {plan['mode'].upper()} for \"{plan['query']}\"...", plan=plan)
                 try:
@@ -195,7 +230,7 @@ def register_copilot_routes(app, logger=None):
                     )
                 except Exception as ex:
                     log.warning(f"[HecosAI] Copilot search execution note: {ex}", exc_info=True)
-            return plan, resolved_sess
+            return plan, resolved_sess, stream_ctx
 
         # SSE Streaming Path
         if want_stream:
@@ -212,10 +247,11 @@ def register_copilot_routes(app, logger=None):
                             event_queue.put({
                                 "type": "search_plan",
                                 "action": plan["action"],
-                                "query": plan["query"],
+                                "query": plan.get("query", ""),
                                 "mode": plan["mode"],
                                 "filter": plan["filter"],
                                 "auto_mode": auto_mode,
+                                "stream_command": plan.get("stream_command"),
                             })
                         event_queue.put({"type": "status", "text": msg_text})
 
@@ -233,10 +269,20 @@ def register_copilot_routes(app, logger=None):
                                 "text": f"Querying engines: {eng} finished ({total_so_far} results collected)..."
                             })
 
-                    plan, resolved_sess = _execute_turn_plan(status_cb=_on_status, stream_cb=_on_search_stream)
+                    plan, resolved_sess, stream_ctx = _execute_turn_plan(status_cb=_on_status, stream_cb=_on_search_stream)
                     if cancel_event.is_set():
                         log.info("[Copilot] Request cancelled by client before synthesis.")
                         return
+
+                    if stream_ctx:
+                        event_queue.put({
+                            "type": "stream_command",
+                            "ok": stream_ctx.get("ok"),
+                            "command": stream_ctx.get("command"),
+                            "state": stream_ctx.get("state"),
+                            "use_global_preset": stream_preset_cfg["use_global_preset"],
+                            "preset_voice_announcer": stream_preset_cfg["preset_voice_announcer"],
+                        })
 
                     if resolved_sess:
                         event_queue.put({
@@ -251,9 +297,18 @@ def register_copilot_routes(app, logger=None):
                     if cancel_event.is_set():
                         return
 
-                    event_queue.put({"type": "status", "text": f"Synthesizing results with {soul_display_name}..."})
+                    is_stream_turn = (plan.get("action") == "stream_command") or (plan.get("mode") == "streams")
+                    use_preset_for_turn = (not is_stream_turn) or bool(stream_preset_cfg["use_global_preset"])
+                    eff_name = soul_display_name if use_preset_for_turn else "Hecos AI"
+                    event_queue.put({"type": "status", "text": f"Synthesizing response with {eff_name}..."})
                     t_llm = time.time()
-                    responder_cfg = build_responder_config(resolved_sess, merged_cfg, soul, preset_instructions)
+                    responder_cfg = build_responder_config(
+                        resolved_sess,
+                        merged_cfg if use_preset_for_turn else base_cfg,
+                        soul if use_preset_for_turn else None,
+                        preset_instructions if use_preset_for_turn else "",
+                        stream_context=stream_ctx,
+                    )
                     from hecos.core.llm.brain import generate_response
                     res = generate_response(
                         user_text=user_message,
@@ -278,7 +333,13 @@ def register_copilot_routes(app, logger=None):
                         event_queue.put({"type": "token", "text": chunk})
                         time.sleep(0.015)
                     if not cancel_event.is_set():
-                        event_queue.put({"type": "done", "text": full_text})
+                        event_queue.put({
+                            "type": "done",
+                            "text": full_text,
+                            "is_stream_turn": is_stream_turn,
+                            "use_global_preset": stream_preset_cfg["use_global_preset"],
+                            "preset_voice_announcer": stream_preset_cfg["preset_voice_announcer"],
+                        })
                 except Exception as e:
                     if not cancel_event.is_set():
                         log.error(f"[Copilot] Generation error: {e}", exc_info=True)
@@ -311,8 +372,16 @@ def register_copilot_routes(app, logger=None):
 
         # Single JSON Turn Path
         try:
-            plan, resolved_sess = _execute_turn_plan()
-            responder_cfg = build_responder_config(resolved_sess, merged_cfg, soul, preset_instructions)
+            plan, resolved_sess, stream_ctx = _execute_turn_plan()
+            is_stream_turn = (plan.get("action") == "stream_command") or (plan.get("mode") == "streams")
+            use_preset_for_turn = (not is_stream_turn) or bool(stream_preset_cfg["use_global_preset"])
+            responder_cfg = build_responder_config(
+                resolved_sess,
+                merged_cfg if use_preset_for_turn else base_cfg,
+                soul if use_preset_for_turn else None,
+                preset_instructions if use_preset_for_turn else "",
+                stream_context=stream_ctx,
+            )
             from hecos.core.llm.brain import generate_response
             reply = generate_response(
                 user_text=user_message,

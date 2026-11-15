@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from typing import List
 
-from .base import BaseEngine
+from .base import BaseEngine, effective_tor_timeout
 from ..models import SearchQuery, SearchResult
 from .. import http_client
 
@@ -53,11 +53,12 @@ class DarkDanielEngine(BaseEngine):
 
         raw_endpoint = _get_directory_url().rstrip("/")
         search_url = raw_endpoint if "/search" in raw_endpoint else f"{raw_endpoint}/search"
+        tor_timeout = effective_tor_timeout(query.timeout, minimum=15.0)
         params = {"q": query.query}
-        hecos_logger.info(f"[SEARCH:TORDEX] Querying TorDex/Tor Directory: '{query.query}' at {search_url}...")
+        hecos_logger.info(f"[SEARCH:TORDEX] Querying TorDex/Tor Directory: '{query.query}' at {search_url} (timeout={tor_timeout}s)...")
 
         try:
-            resp = http_client.get(search_url, network="tor", params=params, timeout=min(query.timeout, 5.0))
+            resp = http_client.get(search_url, network="tor", params=params, timeout=tor_timeout)
             if resp.status_code == 200:
                 from bs4 import BeautifulSoup
                 soup = BeautifulSoup(resp.text, "lxml")

@@ -49,6 +49,7 @@ class SearchSessionStore:
                     CREATE TABLE IF NOT EXISTS search_sessions (
                         id               TEXT PRIMARY KEY,
                         query            TEXT NOT NULL,
+                        title            TEXT DEFAULT '',
                         mode             TEXT NOT NULL,
                         engines_queried  TEXT,
                         total_results    INTEGER DEFAULT 0,
@@ -59,26 +60,36 @@ class SearchSessionStore:
                         error            TEXT
                     )
                 """)
+                cols = {row["name"] for row in conn.execute("PRAGMA table_info(search_sessions)").fetchall()}
+                if "title" not in cols:
+                    conn.execute("ALTER TABLE search_sessions ADD COLUMN title TEXT DEFAULT ''")
                 conn.execute("CREATE INDEX IF NOT EXISTS idx_search_created ON search_sessions(created_at DESC)")
                 conn.commit()
         except Exception as e:
             logger.error(f"Error initializing search_history.db: {e}")
 
     def save_session(self, session: SearchSession) -> bool:
-        """Persists a SearchSession into the database."""
+        """Persists a SearchSession into the database while preserving custom tab titles."""
         try:
             results_dicts = [r.to_dict() if isinstance(r, SearchResult) else r for r in session.results]
             results_json = json.dumps(results_dicts, ensure_ascii=False)
             engines_json = json.dumps(session.engines_queried)
 
             with self._lock, self._connect() as conn:
+                if session.title is not None:
+                    resolved_title = session.title.strip()
+                else:
+                    existing_row = conn.execute("SELECT title FROM search_sessions WHERE id = ?", (session.id,)).fetchone()
+                    resolved_title = (existing_row["title"] or "").strip() if existing_row else ""
+
                 conn.execute("""
                     INSERT OR REPLACE INTO search_sessions 
-                    (id, query, mode, engines_queried, total_results, duration_ms, created_at, results_json, error)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (id, query, title, mode, engines_queried, total_results, duration_ms, created_at, results_json, error)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     session.id,
                     session.query,
+                    resolved_title,
                     session.mode,
                     engines_json,
                     len(session.results),
@@ -105,9 +116,13 @@ class SearchSessionStore:
                 results = [SearchResult.from_dict(r) for r in results_raw]
                 engines = json.loads(row["engines_queried"] or "[]")
 
+                row_keys = set(row.keys())
+                raw_title = (row["title"] or "").strip() if "title" in row_keys else ""
+
                 session = SearchSession(
                     id=row["id"],
                     query=row["query"],
+                    title=raw_title or None,
                     mode=row["mode"],
                     engines_queried=engines,
                     total_results=row["total_results"],
@@ -126,7 +141,7 @@ class SearchSessionStore:
         try:
             with self._lock, self._connect() as conn:
                 sql = """
-                    SELECT id, query, mode, engines_queried, total_results, duration_ms, created_at, is_favorite, error 
+                    SELECT id, query, title, mode, engines_queried, total_results, duration_ms, created_at, is_favorite, error 
                     FROM search_sessions
                 """
                 params = []
@@ -138,9 +153,12 @@ class SearchSessionStore:
                 rows = conn.execute(sql, params).fetchall()
                 result = []
                 for r in rows:
+                    row_keys = set(r.keys())
+                    raw_title = (r["title"] or "").strip() if "title" in row_keys else ""
                     result.append({
                         "id": r["id"],
                         "query": r["query"],
+                        "title": raw_title,
                         "mode": r["mode"],
                         "engines_queried": json.loads(r["engines_queried"] or "[]"),
                         "total_results": r["total_results"],
@@ -154,12 +172,29 @@ class SearchSessionStore:
             logger.error(f"Failed to list sessions: {e}")
             return []
 
+    def rename_session(self, session_id: str, title: str) -> bool:
+        """Updates the manual display title for a saved search session."""
+        clean_title = (title or "").strip()[:200]
+        if not clean_title:
+            return False
+        try:
+            with self._lock, self._connect() as conn:
+                cur = conn.execute(
+                    "UPDATE search_sessions SET title = ? WHERE id = ?",
+                    (clean_title, session_id),
+                )
+                conn.commit()
+                return cur.rowcount > 0
+        except Exception as e:
+            logger.error(f"Failed to rename session {session_id}: {e}")
+            return False
+
     def delete_session(self, session_id: str) -> bool:
         try:
             with self._lock, self._connect() as conn:
-                conn.execute("DELETE FROM search_sessions WHERE id = ?", (session_id,))
+                cur = conn.execute("DELETE FROM search_sessions WHERE id = ?", (session_id,))
                 conn.commit()
-            return True
+                return cur.rowcount > 0
         except Exception as e:
             logger.error(f"Failed to delete session {session_id}: {e}")
             return False

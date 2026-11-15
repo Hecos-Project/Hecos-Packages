@@ -8,8 +8,9 @@ window.SearchSources = (function () {
   let _sources = [];
   let _presets = [];
   let _domainSummary = { total_domains: 0, by_role: {} };
-  let _editingSourceId = '';
+  let _streamSummary = { total_streams: 0, by_role: {}, by_source: {} };
   let _activeTab = 'searxng';
+  let _importer = null;
 
   const TAB_META = {
     searxng: {
@@ -51,6 +52,14 @@ window.SearchSources = (function () {
       hint: 'SQLite Domain Index (Directory / Blocklist / Allowlist)',
       addTitle: 'Add / Import Domain Compilation List',
       emptyMsg: 'No domain compilation lists loaded yet. Click "+ Add / Import Domain List".'
+    },
+    streams: {
+      pools: ['stream_tv', 'stream_radio', 'stream_webcam', 'stream_raw'],
+      defaultPool: 'stream_tv',
+      defaultFormat: 'm3u',
+      hint: 'SQLite Stream Index (TV / Radio / Webcams / Raw)',
+      addTitle: 'Add / Import Stream List (.m3u / .m3u8 / .pls / JSON)',
+      emptyMsg: 'No stream compilation lists loaded yet. Click a ready-made preset above or "+ Add / Import Stream List".'
     }
   };
 
@@ -62,6 +71,7 @@ window.SearchSources = (function () {
     }
     const fmt = String(item.format || 'auto').toLowerCase();
     const loc = String(item.location || '').toLowerCase();
+    if (fmt === 'm3u' || loc.endsWith('.m3u') || loc.endsWith('.m3u8') || loc.endsWith('.pls')) return 'streams';
     if (fmt === 'domain_list') return 'domains';
     if (fmt === 'onion_list' || item.use_tor || loc.includes('.onion') || loc.includes('onion')) return 'dark';
     if (fmt === 'yaml' || loc.includes('searx')) return 'searxng';
@@ -105,47 +115,19 @@ window.SearchSources = (function () {
   }
 
   function _renderDomainRoleSwitch(src) {
-    const curPool = String(src.target_pool || 'domain_blocklist');
-    const curRole = curPool.startsWith('domain_') ? curPool.replace('domain_', '') : 'blocklist';
-    const roles = [
-      {
-        id: 'directory',
-        label: 'Directory',
-        title: 'Searchable Directory (Reverse Mode): Actively searches domains in this list via token matching, site: dorks, and HTTP probes when SafeSearch is OFF. Best choice for unfiltered search even on parental-control blocklists.'
-      },
-      {
-        id: 'blocklist',
-        label: 'Blocklist',
-        title: 'SafeSearch Exclusion Filter: Hides search results matching these domains when SafeSearch is ON. Does NOT search them.'
-      },
-      {
-        id: 'allowlist',
-        label: 'Allowlist',
-        title: 'SafeSearch Bypass Exceptions: Always keeps results from these domains visible even when SafeSearch + Blocklist would filter them out.'
-      }
-    ];
-    return `
-      <div class="ns-role-btn-group" title="Switch how SQLite uses this domain list in 1 click (without re-downloading)">
-        ${roles.map(r => `
-          <button type="button" class="ns-role-btn ${curRole === r.id ? 'active' : ''}"
-            title="${_esc(r.title)}"
-            onclick="window.SearchSources.setDomainRole('${_esc(src.id)}', '${r.id}')">
-            ${_esc(r.label)}
-          </button>
-        `).join('')}
-      </div>
-    `;
+    return window.SearchSourcesSqliteUI ? window.SearchSourcesSqliteUI.renderDomainRoleSwitch(src, _esc) : '';
   }
 
   function renderDomainStats() {
-    const byRole = (_domainSummary && _domainSummary.by_role) ? _domainSummary.by_role : {};
-    const fmtNum = (v) => Number(v || 0).toLocaleString();
-    const dEl = document.getElementById('domain-cnt-directory');
-    const bEl = document.getElementById('domain-cnt-blocklist');
-    const aEl = document.getElementById('domain-cnt-allowlist');
-    if (dEl) dEl.textContent = fmtNum(byRole.directory);
-    if (bEl) bEl.textContent = fmtNum(byRole.blocklist);
-    if (aEl) aEl.textContent = fmtNum(byRole.allowlist);
+    if (window.SearchSourcesSqliteUI) window.SearchSourcesSqliteUI.renderDomainStats(_domainSummary);
+  }
+
+  function _renderStreamRoleSwitch(src) {
+    return window.SearchSourcesSqliteUI ? window.SearchSourcesSqliteUI.renderStreamRoleSwitch(src, _esc) : '';
+  }
+
+  function renderStreamStats() {
+    if (window.SearchSourcesSqliteUI) window.SearchSourcesSqliteUI.renderStreamStats(_streamSummary);
   }
 
   async function load() {
@@ -155,6 +137,7 @@ window.SearchSources = (function () {
       _sources = Array.isArray(res.sources) ? res.sources : [];
       _presets = Array.isArray(res.presets) ? res.presets : [];
       _domainSummary = res.domain_summary || { total_domains: 0, by_role: {} };
+      _streamSummary = res.stream_summary || { total_streams: 0, by_role: {}, by_source: {} };
 
       const autoSw = document.getElementById('sources-auto-update-master');
       if (autoSw) autoSw.checked = res.auto_update_enabled !== false;
@@ -163,6 +146,7 @@ window.SearchSources = (function () {
       if (countBadge) countBadge.textContent = `${_sources.length} Lists`;
 
       renderDomainStats();
+      renderStreamStats();
       renderPresets();
       renderList();
     } catch (e) {
@@ -201,17 +185,21 @@ window.SearchSources = (function () {
     const torBadge = src.use_tor ? '<span class="badge-pill" style="font-size:10px; background:rgba(168,85,247,0.18); color:#c084fc;" title="Fetched over Tor SOCKS5h">TOR</span>' : '';
     const roleSwitchHtml = (tab === 'domains')
       ? _renderDomainRoleSwitch(src)
-      : `<span class="badge-pill badge-neutral" style="font-size:10px;" title="Target endpoint pool">${_esc(src.target_pool || 'auto')}</span>`;
+      : (tab === 'streams'
+        ? _renderStreamRoleSwitch(src)
+        : `<span class="badge-pill badge-neutral" style="font-size:10px;" title="Target endpoint pool">${_esc(src.target_pool || 'auto')}</span>`);
     const errHtml = src.last_error ? `<div style="font-size:10px; color:#f87171; margin-top:4px;"><i class="fas fa-exclamation-triangle"></i> ${_esc(src.last_error)}</div>` : '';
 
-    const bySource = (_domainSummary && _domainSummary.by_source) ? _domainSummary.by_source[src.id] : null;
+    const bySource = (tab === 'streams')
+      ? ((_streamSummary && _streamSummary.by_source) ? _streamSummary.by_source[src.id] : null)
+      : ((_domainSummary && _domainSummary.by_source) ? _domainSummary.by_source[src.id] : null);
     const indexedCount = bySource ? Number(bySource.count || 0) : 0;
     const addedLastSync = Number(stats.added || 0);
     const skippedLastSync = Number(stats.skipped_duplicates || 0);
     const parsedCount = Number(stats.parsed || 0);
-    const countMetricHtml = (tab === 'domains' && indexedCount > 0)
-      ? `<span style="color:var(--accent-emerald, #10b981); font-weight:700;" title="Total domains currently active in SQLite for this list">${indexedCount.toLocaleString()} indexed in SQLite</span>
-         <span title="New domains inserted on the last sync run (0 means list was already indexed without new upstream additions)">(+${addedLastSync.toLocaleString()} new on last sync)</span>`
+    const countMetricHtml = ((tab === 'domains' || tab === 'streams') && indexedCount > 0)
+      ? `<span style="color:var(--accent-emerald, #10b981); font-weight:700;" title="Total entries currently active in SQLite for this list">${indexedCount.toLocaleString()} indexed in SQLite</span>
+         <span title="New entries inserted on the last sync run">(+${addedLastSync.toLocaleString()} new on last sync)</span>`
       : `<span style="color:var(--accent-emerald, #10b981);" title="New entries added during the last sync">+${addedLastSync.toLocaleString()} added</span>
          <span title="Entries already present and skipped to prevent duplicates">${skippedLastSync.toLocaleString()} already present</span>`;
 
@@ -266,6 +254,14 @@ window.SearchSources = (function () {
         const domTabBadge = document.getElementById('badge-tab-domains-count');
         if (domTabBadge) domTabBadge.textContent = String(items.length);
       }
+      if (tab === 'streams') {
+        const strTabBadge = document.getElementById('badge-tab-streams-count');
+        if (strTabBadge && typeof window.updateStreamsTabBadgeCount === 'function') {
+          window.updateStreamsTabBadgeCount();
+        } else if (strTabBadge) {
+          strTabBadge.textContent = String(items.length);
+        }
+      }
 
       if (!wrap) return;
       if (!items.length) {
@@ -286,9 +282,9 @@ window.SearchSources = (function () {
 
     const poolWrap = document.getElementById('src-form-pool-wrap');
     const importPoolWrap = document.getElementById('src-import-pool-wrap');
-    const isDomains = (tabName === 'domains');
-    if (poolWrap) poolWrap.style.display = isDomains ? '' : 'none';
-    if (importPoolWrap) importPoolWrap.style.display = isDomains ? '' : 'none';
+    const showPoolSelect = (tabName === 'domains' || tabName === 'streams');
+    if (poolWrap) poolWrap.style.display = showPoolSelect ? '' : 'none';
+    if (importPoolWrap) importPoolWrap.style.display = showPoolSelect ? '' : 'none';
 
     const poolSel = document.getElementById('src-form-pool');
     const importPoolSel = document.getElementById('src-import-pool');
@@ -296,12 +292,30 @@ window.SearchSources = (function () {
     if (importPoolSel) importPoolSel.value = pool;
   }
 
+  function _getImporter() {
+    if (!_importer && window.SearchSourcesImporter) {
+      _importer = window.SearchSourcesImporter.create({
+        tabMeta: TAB_META,
+        getActiveTab: () => _activeTab,
+        getSources: () => _sources,
+        tabForItem: _tabForItem,
+        esc: _esc,
+        notify: _notify,
+        configureEditorForTab: _configureEditorForTab,
+        closeEditor,
+        load,
+      });
+    }
+    return _importer;
+  }
+
   function setActiveTab(tabName) {
     if (!TAB_META[tabName]) return;
     const prevTab = _activeTab;
     _activeTab = tabName;
     const panel = document.getElementById('src-editor-panel');
-    if (panel && panel.style.display !== 'none' && !_editingSourceId && prevTab !== tabName) {
+    const imp = _getImporter();
+    if (panel && panel.style.display !== 'none' && !(imp && imp.isEditing()) && prevTab !== tabName) {
       panel.style.display = 'none';
     }
   }
@@ -360,6 +374,26 @@ window.SearchSources = (function () {
     }
   }
 
+  async function setStreamRole(sourceId, newRole) {
+    try {
+      const res = await fetch('/api/hsearch/streams/role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source_id: sourceId, role: newRole })
+      }).then(r => r.json());
+      if (res && res.ok) {
+        _streamSummary = res.stream_summary || _streamSummary;
+        _notify(`Stream list category updated to "${newRole.toUpperCase()}" (${Number(res.count || 0).toLocaleString()} streams).`, 'success');
+        await load();
+        if (typeof window.reloadNetSearchEndpoints === 'function') window.reloadNetSearchEndpoints();
+      } else {
+        _notify('Failed to switch stream role: ' + (res?.error || 'Unknown error'), 'error');
+      }
+    } catch (e) {
+      _notify('Stream role switch error: ' + e.message, 'error');
+    }
+  }
+
   async function quickAddPreset(presetId) {
     const preset = _presets.find(p => p.preset_id === presetId);
     if (!preset) return;
@@ -383,158 +417,10 @@ window.SearchSources = (function () {
     }
   }
 
-  function _readForm() {
-    const meta = TAB_META[_activeTab] || TAB_META.searxng;
-    return {
-      id: _editingSourceId || undefined,
-      name: (document.getElementById('src-form-name')?.value || '').trim(),
-      location: (document.getElementById('src-form-location')?.value || '').trim(),
-      format: document.getElementById('src-form-format')?.value || meta.defaultFormat || 'auto',
-      target_pool: document.getElementById('src-form-pool')?.value || meta.defaultPool || 'auto',
-      interval_hours: parseInt(document.getElementById('src-form-interval')?.value || '12', 10) || 12,
-      auto_update: document.getElementById('src-form-autoupdate')?.checked !== false,
-      use_tor: document.getElementById('src-form-usetor')?.checked === true,
-      enabled: true,
-    };
-  }
-
-  function clearForm() {
-    _editingSourceId = '';
-    ['src-form-name', 'src-form-location'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-    const meta = TAB_META[_activeTab] || TAB_META.searxng;
-    const fmt = document.getElementById('src-form-format');
-    if (fmt) fmt.value = meta.defaultFormat || 'auto';
-    const pool = document.getElementById('src-form-pool');
-    if (pool) pool.value = meta.defaultPool || 'auto';
-    const iv = document.getElementById('src-form-interval');
-    if (iv) iv.value = '12';
-    const au = document.getElementById('src-form-autoupdate');
-    if (au) au.checked = true;
-    const ut = document.getElementById('src-form-usetor');
-    if (ut) ut.checked = (_activeTab === 'dark');
-    const cancelBtn = document.getElementById('src-form-cancel-btn');
-    if (cancelBtn) cancelBtn.style.display = 'none';
-    const saveBtnLabel = document.getElementById('src-form-save-label');
-    if (saveBtnLabel) saveBtnLabel.textContent = 'Add & Sync Source';
-  }
-
-  function edit(sourceId) {
-    const src = _sources.find(s => s.id === sourceId);
-    if (!src) return;
-    const tab = _tabForItem(src);
-    _editingSourceId = src.id;
-    if (typeof window.switchNetSearchEndpointTab === 'function') {
-      window.switchNetSearchEndpointTab(tab);
-    }
-    _configureEditorForTab(tab, src.target_pool || TAB_META[tab].defaultPool);
-
-    document.getElementById('src-form-name').value = src.name || '';
-    document.getElementById('src-form-location').value = src.location || '';
-    document.getElementById('src-form-format').value = src.format || 'auto';
-    document.getElementById('src-form-pool').value = src.target_pool || 'auto';
-    document.getElementById('src-form-interval').value = String(src.interval_hours || 12);
-    document.getElementById('src-form-autoupdate').checked = src.auto_update !== false;
-    document.getElementById('src-form-usetor').checked = src.use_tor === true;
-
-    const titleEl = document.getElementById('src-editor-title');
-    if (titleEl) {
-      titleEl.innerHTML = `<i class="fas fa-pen" style="color:var(--accent-cyan, #06b6d4); margin-right:5px;"></i> Edit Source: ${_esc(src.name || src.id)}`;
-    }
-    const cancelBtn = document.getElementById('src-form-cancel-btn');
-    if (cancelBtn) cancelBtn.style.display = 'inline-flex';
-    const saveBtnLabel = document.getElementById('src-form-save-label');
-    if (saveBtnLabel) saveBtnLabel.textContent = 'Update & Sync Source';
-
-    const panel = document.getElementById('src-editor-panel');
-    if (panel) {
-      panel.style.display = 'block';
-      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-    document.getElementById('src-form-location')?.focus();
-  }
-
-  function _showPreview(res) {
-    const box = document.getElementById('src-preview-box');
-    if (!box) return;
-    if (!res || !res.ok) {
-      box.style.display = 'block';
-      box.innerHTML = `<span style="color:#f87171;"><i class="fas fa-exclamation-circle"></i> Preview error: ${_esc(res?.error || 'Unknown')}</span>`;
-      return;
-    }
-    const st = res.stats || {};
-    const sample = Array.isArray(st.preview) ? st.preview.slice(0, 8) : [];
-    const sampleHtml = sample.map(it =>
-      `<div style="font-family:monospace; font-size:10px; color:var(--text);">[${_esc(it.pool)}] ${_esc(it.name)} -> ${_esc(it.url)}</div>`
-    ).join('');
-    box.style.display = 'block';
-    box.innerHTML = `
-      <div style="font-size:11px; margin-bottom:4px;">
-        <strong>Format:</strong> ${_esc((res.detected_format || 'auto').toUpperCase())} &nbsp;|&nbsp;
-        <strong>Parsed:</strong> ${st.parsed || 0} &nbsp;|&nbsp;
-        <strong style="color:#34d399;">New unique: +${st.added || 0}</strong> &nbsp;|&nbsp;
-        <strong style="color:#fbbf24;">Duplicates skipped: ${st.skipped_duplicates || 0}</strong>
-      </div>
-      ${sampleHtml}
-    `;
-  }
-
-  async function previewUrl() {
-    const data = _readForm();
-    if (!data.location) {
-      _notify('Enter a URL, GitHub raw link, OpenSearch URL, or local file path first.', 'warning');
-      return;
-    }
-    const box = document.getElementById('src-preview-box');
-    if (box) {
-      box.style.display = 'block';
-      box.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Fetching and checking duplicates...';
-    }
-    try {
-      const res = await fetch('/api/hsearch/sources/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      }).then(r => r.json());
-      _showPreview(res);
-    } catch (e) {
-      _showPreview({ ok: false, error: e.message });
-    }
-  }
-
-  async function saveFromForm() {
-    const data = _readForm();
-    if (!data.location) {
-      _notify('Enter a URL or local file path for the source.', 'warning');
-      return;
-    }
-    _notify('Saving and syncing source...', 'info');
-    try {
-      const res = await fetch('/api/hsearch/sources', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, sync_now: true, force: true })
-      }).then(r => r.json());
-      if (res.ok) {
-        const sync = res.sync || {};
-        if (sync.ok === false) {
-          _notify(`Source saved, sync warning: ${sync.error || sync.status}`, 'warning');
-        } else {
-          const st = sync.stats || {};
-          _notify(`Source synced: +${st.added || 0} new, ${st.skipped_duplicates || 0} duplicates skipped.`, 'success');
-        }
-        closeEditor();
-        await load();
-        if (typeof window.reloadNetSearchEndpoints === 'function') window.reloadNetSearchEndpoints();
-      } else {
-        _notify('Error saving source: ' + (res.error || 'Unknown'), 'error');
-      }
-    } catch (e) {
-      _notify('Save error: ' + e.message, 'error');
-    }
-  }
+  function clearForm() { return _getImporter()?.clearForm(); }
+  function edit(sourceId) { return _getImporter()?.edit(sourceId); }
+  function previewUrl() { return _getImporter()?.previewUrl(); }
+  function saveFromForm() { return _getImporter()?.saveFromForm(); }
 
   async function syncOne(sourceId) {
     _notify('Syncing source...', 'info');
@@ -602,7 +488,7 @@ window.SearchSources = (function () {
       const res = await fetch(`/api/hsearch/sources/${encodeURIComponent(sourceId)}`, { method: 'DELETE' }).then(r => r.json());
       if (res.ok) {
         _notify(`Source removed (${res.removed_endpoints || 0} imported entries deleted).`, 'success');
-        if (_editingSourceId === sourceId) closeEditor();
+        if (_getImporter()?.isEditingId(sourceId)) closeEditor();
         await load();
         if (typeof window.reloadNetSearchEndpoints === 'function') window.reloadNetSearchEndpoints();
       } else {
@@ -628,65 +514,8 @@ window.SearchSources = (function () {
     }
   }
 
-  function updateImportFileLabel() {
-    const fileInput = document.getElementById('src-import-file');
-    const lbl = document.getElementById('src-import-file-label');
-    if (!lbl) return;
-    const f = fileInput?.files?.[0];
-    lbl.textContent = f ? f.name : 'No file selected';
-    lbl.style.color = f ? 'var(--text)' : 'var(--muted)';
-  }
-
-  async function importRawOrFile(dryRun = false) {
-    const fileInput = document.getElementById('src-import-file');
-    const textInput = document.getElementById('src-import-text');
-    const fmt = document.getElementById('src-import-format')?.value || 'auto';
-    const meta = TAB_META[_activeTab] || TAB_META.searxng;
-    const pool = document.getElementById('src-import-pool')?.value || meta.defaultPool || 'auto';
-    const file = fileInput?.files?.[0];
-    const text = (textInput?.value || '').trim();
-
-    if (!file && !text) {
-      _notify('Select a file (.json, .csv, .yaml, .sqlite, .xml, .txt) or paste list content first.', 'warning');
-      return;
-    }
-
-    const endpoint = dryRun ? '/api/hsearch/sources/preview' : '/api/hsearch/sources/import';
-    try {
-      let res;
-      if (file) {
-        const fd = new FormData();
-        fd.append('file', file);
-        fd.append('format', fmt);
-        fd.append('target_pool', pool);
-        fd.append('name', file.name);
-        if (dryRun) fd.append('dry_run', 'true');
-        res = await fetch(endpoint, { method: 'POST', body: fd }).then(r => r.json());
-      } else {
-        res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: text, format: fmt, target_pool: pool, dry_run: !!dryRun })
-        }).then(r => r.json());
-      }
-
-      if (dryRun) {
-        _showPreview(res);
-      } else if (res.ok) {
-        const st = res.stats || {};
-        _notify(`Imported (${(res.detected_format || 'auto').toUpperCase()}): +${st.added || 0} new, ${st.skipped_duplicates || 0} duplicates skipped.`, 'success');
-        if (fileInput) { fileInput.value = ''; updateImportFileLabel(); }
-        if (textInput) textInput.value = '';
-        closeEditor();
-        await load();
-        if (typeof window.reloadNetSearchEndpoints === 'function') window.reloadNetSearchEndpoints();
-      } else {
-        _notify('Import failed: ' + (res.error || 'Unknown'), 'error');
-      }
-    } catch (e) {
-      _notify('Import error: ' + e.message, 'error');
-    }
-  }
+  function updateImportFileLabel() { return _getImporter()?.updateImportFileLabel(); }
+  function importRawOrFile(dryRun = false) { return _getImporter()?.importRawOrFile(dryRun); }
 
   return {
     load,
@@ -694,6 +523,8 @@ window.SearchSources = (function () {
     openAddFormForTab,
     closeEditor,
     setDomainRole,
+    setStreamRole,
+    renderStreamStats,
     quickAddPreset,
     previewUrl,
     saveFromForm,

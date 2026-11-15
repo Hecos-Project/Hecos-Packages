@@ -47,10 +47,11 @@ logger = logging.getLogger("browser.search.config")
 
 _DEFAULT_SEARCH_CONFIG: Dict[str, Any] = {
     "enabled": True,
-    "local_only": False,               # Privacy Shield: Deactivates third-party public cloud engines/scrapers
+    "local_only": True,                # Privacy Shield: Deactivates third-party public cloud engines/scrapers
     "default_mode": "clear",
     "default_limit": 250,
     "safe_search": False,
+    "dark_bypass": True,
     "auto_fallback_tor": True,
     "tor": {
         "enabled": False,              # Default off until user turns on or starts daemon
@@ -64,8 +65,8 @@ _DEFAULT_SEARCH_CONFIG: Dict[str, Any] = {
     },
     "searxng": {
         "enabled": True,
-        "url": "http://127.0.0.1:8888",
-        "port": 8888,
+        "url": "http://127.0.0.1:8889",
+        "port": 8889,
         "auto_start": True,
         "custom_engines": ""
     },
@@ -82,15 +83,19 @@ _DEFAULT_SEARCH_CONFIG: Dict[str, Any] = {
         "dark_tor66": True,
         "dark_danieltore": True,
         "dark_custom": True,
+        "clear_custom": True,
+        "domain_directory": True,
         "media_images": True,
         "media_videos": True,
         "media_audio": True,
         "files_dorks": True,
-        "osint_sherlock": True
+        "clear_brave": True,
+        "osint_sherlock": True,
+        "osint_sources": True
     },
     "endpoints": {
         "searxng": {
-            "local_url": "http://127.0.0.1:8888",
+            "local_url": "http://127.0.0.1:8889",
             "fallbacks": [
                 "https://searx.be",
                 "https://baresearch.org",
@@ -227,10 +232,54 @@ _DEFAULT_SEARCH_CONFIG: Dict[str, Any] = {
             }
         },
         "custom_nodes": [],
-        "custom_onion_engines": []
+        "custom_onion_engines": [],
+        "custom_clear_engines": []
     },
-    "max_concurrent_engines": 6,
-    "request_timeout_sec": 12.0
+    "file_hunter": {
+        "include_all_clear": True,
+        "include_all_dark": True,
+        "include_domain_directory": True,
+        "sources": {
+            "dorks_web": True,
+            "arxiv": True,
+            "openalex": True,
+            "zenodo": True,
+            "openlibrary": True,
+            "doaj": True,
+            "huggingface": True,
+            "github": True,
+            "npm": True,
+            "archive_org": True,
+            "wikimedia": True
+        }
+    },
+    "osint": {
+        "include_all_clear": True,
+        "include_all_dark": True,
+        "include_domain_directory": True,
+        "use_sherlock_db": True,
+        "generate_name_variants": True,
+        "sherlock_max_sites": 80,
+        "sources": {
+            "people_dorks": True,
+            "github": True,
+            "gitlab": True,
+            "reddit": True,
+            "hackernews": True,
+            "wikipedia": True,
+            "wikidata": True,
+            "gravatar": True,
+            "keybase": True,
+            "archive_org": True,
+            "crtsh": True
+        }
+    },
+    "sources": [],
+    "sources_auto_update": True,
+    "max_concurrent_engines": 10,
+    "max_total_results": 2000,
+    "request_timeout_sec": 15.0,
+    "brave_api_key": ""
 }
 
 

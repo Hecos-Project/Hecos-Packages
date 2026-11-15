@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from typing import List
 
-from .base import BaseEngine
+from .base import BaseEngine, effective_tor_timeout
 from ..models import SearchQuery, SearchResult
 from .. import http_client
 
@@ -53,29 +53,37 @@ class DarkTor66Engine(BaseEngine):
 
         raw_endpoint = _get_tor66_url().rstrip("/")
         search_url = raw_endpoint if "/search" in raw_endpoint else f"{raw_endpoint}/search"
-        params = {"q": query.query}
-        hecos_logger.info(f"[SEARCH:TOR66] Querying Tor66 via Tor: '{query.query}' at {search_url}...")
+        tor_timeout = effective_tor_timeout(query.timeout, minimum=16.0)
+        hecos_logger.info(f"[SEARCH:TOR66] Querying Tor66 via Tor: '{query.query}' at {search_url} (timeout={tor_timeout}s)...")
 
+        seen_urls = set()
+        max_pages = 3 if query.limit > 25 else 1
         try:
-            resp = http_client.get(search_url, network="tor", params=params, timeout=min(query.timeout, 5.0))
-            if resp.status_code == 200:
+            for page_num in range(1, max_pages + 1):
+                if len(results) >= query.limit:
+                    break
+                params = {"q": query.query}
+                if page_num > 1:
+                    params["page"] = str(page_num)
+
+                resp = http_client.get(search_url, network="tor", params=params, timeout=tor_timeout)
+                if resp.status_code != 200:
+                    break
                 from bs4 import BeautifulSoup
                 soup = BeautifulSoup(resp.text, "lxml")
 
-                seen_urls = set()
+                added_this_page = 0
                 # Parse all distinct onion results returned by Tor66
                 for a in soup.find_all("a", href=True):
                     href = a["href"].strip()
                     if not href or href in seen_urls:
                         continue
                     # Ignore Tor66 internal links
-                    if "tor66sewebg" in href:
-                        continue
-                    if ".onion" not in href:
+                    if "tor66sewebg" in href or ".onion" not in href.lower():
                         continue
 
                     title = a.get_text(strip=True)
-                    if not title or title.lower() in ["home", "search", "advertise", "contact", "about"]:
+                    if not title or title.lower() in ["home", "search", "advertise", "contact", "about", "next", "previous"]:
                         continue
 
                     parent = a.find_parent(["div", "li", "p", "td"])
@@ -94,8 +102,11 @@ class DarkTor66Engine(BaseEngine):
                         category="onion",
                         network="tor"
                     ))
+                    added_this_page += 1
                     if len(results) >= query.limit:
                         break
+                if added_this_page == 0:
+                    break
 
             hecos_logger.info(f"[SEARCH:TOR66] Found {len(results)} results.")
         except Exception as e:

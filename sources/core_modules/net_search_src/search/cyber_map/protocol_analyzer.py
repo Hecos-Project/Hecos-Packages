@@ -197,7 +197,7 @@ def classify_protocol(
     if eng_id.startswith("files_") or cat == "files":
         return PROTOCOL_CATALOG["file_dork"], target_host, port or (443 if scheme == "https" else 80)
 
-    if eng_id.startswith("media_") or cat in ("videos", "images", "audio"):
+    if eng_id.startswith("media_") or eng_id.startswith("streams_") or cat in ("videos", "images", "audio") or cat.startswith("streams_"):
         return PROTOCOL_CATALOG["media_stream"], target_host, port or 443
 
     if "news" in eng_id or "rss:" in eng or cat == "news":

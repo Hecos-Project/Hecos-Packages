@@ -8,7 +8,7 @@ import json
 import logging
 import time
 import urllib.parse
-from flask import request, jsonify, Response
+from flask import request, jsonify, Response, stream_with_context
 from flask_login import login_required
 
 try:
@@ -80,7 +80,7 @@ def register_endpoint_routes(app, logger=None):
         return jsonify({"ok": ok, "endpoints": get_endpoints()})
 
     # ── Tor Live Proxy Streamer ───────────────────────────────────────────────
-    @app.route("/api/hsearch/onion_proxy", methods=["GET"])
+    @app.route("/api/hsearch/onion_proxy", methods=["GET", "POST"])
     @login_required
     def api_onion_proxy():
         target_url = request.args.get("url", "").strip()
@@ -89,15 +89,39 @@ def register_endpoint_routes(app, logger=None):
         if not target_url.startswith("http://") and not target_url.startswith("https://"):
             target_url = "http://" + target_url
 
+        # Forward query arguments cleanly if GET form appended extra params alongside ?url=...
+        extra_params = [
+            (k, v) for k, v in request.args.items(multi=True)
+            if k not in ("url", "_t")
+        ]
+        if extra_params:
+            sep = "&" if "?" in target_url else "?"
+            target_url = f"{target_url}{sep}{urllib.parse.urlencode(extra_params)}"
+
         try:
             resp = None
             last_err = None
+            req_method = request.method.upper()
+            post_kwargs = {}
+            if req_method == "POST":
+                if request.form:
+                    post_kwargs["data"] = list(request.form.items(multi=True))
+                else:
+                    raw_body = request.get_data()
+                    if raw_body:
+                        post_kwargs["data"] = raw_body
+                        if request.content_type:
+                            post_kwargs["headers"] = {"Content-Type": request.content_type}
+
             # Hidden services require onion descriptor lookup & rendezvous circuit setup.
             # If the first attempt times out, a second attempt usually succeeds as the circuit completes.
             for attempt in (1, 2):
                 try:
                     timeout_val = 35.0 if attempt == 1 else 45.0
-                    resp = http_client.get(target_url, network="tor", timeout=timeout_val, allow_redirects=True)
+                    if req_method == "POST":
+                        resp = http_client.post(target_url, network="tor", timeout=timeout_val, allow_redirects=True, stream=True, **post_kwargs)
+                    else:
+                        resp = http_client.get(target_url, network="tor", timeout=timeout_val, allow_redirects=True, stream=True)
                     break
                 except Exception as ex:
                     last_err = ex
@@ -114,38 +138,185 @@ def register_endpoint_routes(app, logger=None):
 
             content_type = resp.headers.get("Content-Type", "text/html; charset=utf-8")
 
-            if "text/html" in content_type.lower():
-                raw_html = resp.text
+            if "text/html" in content_type.lower() or "xhtml" in content_type.lower():
+                try:
+                    raw_html = resp.text
+                finally:
+                    try:
+                        resp.close()
+                    except Exception:
+                        pass
                 from bs4 import BeautifulSoup
+                import re as _re
                 soup = BeautifulSoup(raw_html, "html.parser")
 
                 base_target = resp.url or target_url
+                # Respect <base href> when resolving URLs, then strip it so browser doesn't bypass proxy
+                base_tag = soup.find("base", href=True)
+                if base_tag:
+                    base_target = urllib.parse.urljoin(base_target, base_tag["href"].strip())
+                    base_tag.decompose()
 
-                # Rewrite sub-resources (img, link, script, source) so Chrome requests them via our proxy
-                for tag in soup.find_all(["img", "script", "link", "source", "video", "audio"]):
-                    for attr in ["src", "href"]:
+                def _proxy_url(abs_u: str) -> str:
+                    return f"/api/hsearch/onion_proxy?url={urllib.parse.quote(abs_u, safe='')}"
+
+                def _viewer_url(abs_u: str) -> str:
+                    return f"/search/viewer?url={urllib.parse.quote(abs_u, safe='')}"
+
+                # Rewrite sub-resources & nested frames so Chrome fetches all assets via Tor proxy
+                for tag in soup.find_all(["img", "script", "link", "source", "video", "audio", "iframe", "frame", "embed"]):
+                    for attr in ("src", "href", "poster", "data-src"):
                         if tag.has_attr(attr):
-                            val = tag[attr].strip()
-                            if val and not val.startswith("data:") and not val.startswith("javascript:"):
+                            val = str(tag[attr]).strip()
+                            if val and not val.startswith(("data:", "javascript:", "blob:", "#")):
                                 abs_url = urllib.parse.urljoin(base_target, val)
-                                tag[attr] = f"/api/hsearch/onion_proxy?url={urllib.parse.quote(abs_url)}"
+                                tag[attr] = _proxy_url(abs_url)
+                    if tag.has_attr("srcset"):
+                        new_srcset = []
+                        for part in str(tag["srcset"]).split(","):
+                            toks = part.strip().split()
+                            if toks:
+                                toks[0] = _proxy_url(urllib.parse.urljoin(base_target, toks[0]))
+                                new_srcset.append(" ".join(toks))
+                        if new_srcset:
+                            tag["srcset"] = ", ".join(new_srcset)
 
-                # Rewrite <a> tags so clicking navigation stays inside Hecos Tor Viewer
-                for a in soup.find_all("a", href=True):
-                    href = a["href"].strip()
-                    if href.startswith("javascript:") or href.startswith("#") or href.startswith("mailto:"):
+                # Rewrite CSS url(...) references inside <style> tags
+                for st in soup.find_all("style"):
+                    if st.string:
+                        st.string = _re.sub(
+                            r'url\((["\']?)(?!data:|#|/api/hsearch/)([^"\')]+)\1\)',
+                            lambda m: f'url("{_proxy_url(urllib.parse.urljoin(base_target, m.group(2).strip()))}")',
+                            st.string,
+                            flags=_re.IGNORECASE,
+                        )
+
+                # Rewrite <meta http-equiv="refresh"> redirects to stay inside Tor Live Viewer
+                for meta in soup.find_all("meta"):
+                    if str(meta.get("http-equiv", "")).lower() == "refresh":
+                        content_val = str(meta.get("content", ""))
+                        m_ref = _re.search(r'url\s*=\s*["\']?([^"\';\s]+)', content_val, flags=_re.IGNORECASE)
+                        if m_ref:
+                            abs_r = urllib.parse.urljoin(base_target, m_ref.group(1).strip())
+                            target_r = _viewer_url(abs_r) if ".onion" in abs_r.lower() else _proxy_url(abs_r)
+                            prefix_delay = content_val.split(";")[0].strip() or "0"
+                            meta["content"] = f"{prefix_delay}; url={target_r}"
+
+                # Rewrite <form> submissions so GET/POST search/filter/login forms route via Tor
+                for form in soup.find_all("form"):
+                    raw_act = str(form.get("action") or "").strip()
+                    abs_act = urllib.parse.urljoin(base_target, raw_act) if raw_act else base_target
+                    method_l = str(form.get("method") or "get").strip().lower()
+                    form["data-hecos-onion-action"] = abs_act
+                    if method_l == "post":
+                        form["action"] = _proxy_url(abs_act)
+                        form["target"] = "_self"
+                    else:
+                        form["action"] = _proxy_url(abs_act)
+                        form["target"] = "_self"
+
+                # Rewrite <a> and <area> tags so clicking navigation stays inside Hecos Tor Viewer
+                for a in soup.find_all(["a", "area"], href=True):
+                    href = str(a["href"]).strip()
+                    if not href or href.startswith(("javascript:", "#", "mailto:", "tel:")):
                         continue
                     abs_url = urllib.parse.urljoin(base_target, href)
-                    if ".onion" in abs_url:
-                        a["href"] = f"/search/viewer?url={urllib.parse.quote(abs_url)}"
+                    if ".onion" in abs_url.lower():
+                        a["href"] = _viewer_url(abs_url)
                         a["target"] = "_top"
+                    elif abs_url.startswith(("http://", "https://")):
+                        a["target"] = "_blank"
+                        a["rel"] = "noopener noreferrer"
+
+                # Inject lightweight client-side bridge for dynamic links, GET forms & URL bar sync
+                bridge_js = f"""
+<script data-hecos-onion-bridge="1">
+(function() {{
+  var baseOnionUrl = {json.dumps(base_target)};
+  try {{
+    if (window.parent && window.parent !== window) {{
+      window.parent.postMessage({{ type: 'hecos_onion_loaded', url: baseOnionUrl }}, '*');
+    }}
+  }} catch (e) {{}}
+
+  function routeToViewer(absUrl) {{
+    if (!absUrl) return;
+    var dest = '/search/viewer?url=' + encodeURIComponent(absUrl);
+    try {{
+      if (window.top && window.top !== window) {{
+        window.top.location.href = dest;
+        return;
+      }}
+    }} catch (e) {{}}
+    window.location.href = '/api/hsearch/onion_proxy?url=' + encodeURIComponent(absUrl);
+  }}
+
+  document.addEventListener('click', function(ev) {{
+    var a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
+    if (!a) return;
+    var rawHref = a.getAttribute('href') || '';
+    if (!rawHref || rawHref.startsWith('#') || rawHref.startsWith('javascript:') || rawHref.startsWith('mailto:')) return;
+    if (rawHref.startsWith('/search/viewer?')) {{
+      return;
+    }}
+    try {{
+      var resolved = new URL(rawHref, baseOnionUrl).href;
+      if (resolved.toLowerCase().indexOf('.onion') !== -1) {{
+        ev.preventDefault();
+        routeToViewer(resolved);
+      }}
+    }} catch (e) {{}}
+  }}, true);
+
+  document.addEventListener('submit', function(ev) {{
+    var form = ev.target;
+    if (!form || form.tagName !== 'FORM') return;
+    var m = (form.getAttribute('method') || 'get').toLowerCase();
+    if (m === 'post') return;
+    var actionBase = form.getAttribute('data-hecos-onion-action') || baseOnionUrl;
+    try {{
+      var u = new URL(actionBase, baseOnionUrl);
+      var fd = new FormData(form);
+      var params = new URLSearchParams();
+      fd.forEach(function(v, k) {{
+        if (typeof v === 'string') params.append(k, v);
+      }});
+      var qs = params.toString();
+      var finalUrl = qs ? (u.origin + u.pathname + '?' + qs) : u.href;
+      ev.preventDefault();
+      routeToViewer(finalUrl);
+    }} catch (e) {{}}
+  }}, true);
+}})();
+</script>"""
+                bridge_soup = BeautifulSoup(bridge_js, "html.parser")
+                if soup.body:
+                    soup.body.append(bridge_soup)
+                elif soup.html:
+                    soup.html.append(bridge_soup)
+                else:
+                    soup.append(bridge_soup)
 
                 flask_resp = Response(str(soup), status=resp.status_code, content_type="text/html; charset=utf-8")
                 flask_resp.headers["X-Frame-Options"] = "SAMEORIGIN"
                 flask_resp.headers["Content-Security-Policy"] = "frame-ancestors 'self'"
                 return flask_resp
             else:
-                flask_resp = Response(resp.content, status=resp.status_code, content_type=content_type)
+                def _stream_chunks():
+                    try:
+                        for chunk in resp.iter_content(chunk_size=65536):
+                            if chunk:
+                                yield chunk
+                    finally:
+                        try:
+                            resp.close()
+                        except Exception:
+                            pass
+
+                flask_resp = Response(stream_with_context(_stream_chunks()), status=resp.status_code, content_type=content_type)
+                for hdr in ("Content-Length", "Content-Disposition"):
+                    if resp.headers.get(hdr):
+                        flask_resp.headers[hdr] = resp.headers[hdr]
                 flask_resp.headers["X-Frame-Options"] = "SAMEORIGIN"
                 return flask_resp
         except Exception as e:

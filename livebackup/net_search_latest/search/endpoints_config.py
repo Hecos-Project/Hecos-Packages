@@ -1,4 +1,4 @@
-﻿"""
+"""
 search/endpoints_config.py
 Endpoints configuration, URL builder/decomposer, SearXNG fallbacks, and authentication headers.
 """
@@ -193,7 +193,7 @@ def get_endpoints() -> Dict[str, Any]:
     merged.setdefault("searxng", {})["fallbacks"] = rich_fallbacks
 
     # 2. Enrich SearXNG local instance
-    sx_local = merged.get("searxng", {}).get("local_url", "http://127.0.0.1:8888")
+    sx_local = merged.get("searxng", {}).get("local_url", "http://127.0.0.1:8889")
     if not merged.get("searxng", {}).get("local_instance"):
         merged["searxng"]["local_instance"] = decompose_endpoint_url(sx_local, default_name="SearXNG Local Daemon", default_protocol="http")
     else:
@@ -260,6 +260,56 @@ def get_endpoints() -> Dict[str, Any]:
             coe.setdefault("use_api_key", False)
             coe.setdefault("api_key", "")
 
+    merged.setdefault("custom_clear_engines", [])
+    for cce in merged.get("custom_clear_engines", []):
+        if isinstance(cce, dict):
+            cce.setdefault("use_api_key", False)
+            cce.setdefault("api_key", "")
+            cce.setdefault("category", "general")
+
+    # 4. Enrich Open Archives & Repositories (structured nodes + custom_archives)
+    arch = merged.setdefault("archives", {})
+    ao_url = str(arch.get("archive_org") or "https://archive.org/advancedsearch.php").strip()
+    wm_url = str(arch.get("wikimedia_commons") or "https://commons.wikimedia.org/w/api.php").strip()
+    arch["archive_org"] = ao_url
+    arch["wikimedia_commons"] = wm_url
+
+    ao_node = arch.get("archive_org_node")
+    if not isinstance(ao_node, dict) or not ao_node.get("host"):
+        ao_node = decompose_endpoint_url(ao_url, default_name="Internet Archive", default_protocol="https")
+    ao_node["enabled"] = arch.get("archive_org_enabled", ao_node.get("enabled", True)) is not False
+    ao_node.setdefault("use_api_key", False)
+    ao_node.setdefault("api_key", "")
+    ao_node["url"] = ao_node.get("url") or build_endpoint_url(
+        ao_node.get("protocol", "https"), ao_node.get("host", "archive.org"), ao_node.get("port", ""), ao_node.get("path", "")
+    )
+    arch["archive_org_node"] = ao_node
+    arch["archive_org_enabled"] = bool(ao_node["enabled"])
+
+    wm_node = arch.get("wikimedia_node")
+    if not isinstance(wm_node, dict) or not wm_node.get("host"):
+        wm_node = decompose_endpoint_url(wm_url, default_name="Wikimedia Commons", default_protocol="https")
+    wm_node["enabled"] = arch.get("wikimedia_enabled", wm_node.get("enabled", True)) is not False
+    wm_node.setdefault("use_api_key", False)
+    wm_node.setdefault("api_key", "")
+    wm_node["url"] = wm_node.get("url") or build_endpoint_url(
+        wm_node.get("protocol", "https"), wm_node.get("host", "commons.wikimedia.org"), wm_node.get("port", ""), wm_node.get("path", "")
+    )
+    arch["wikimedia_node"] = wm_node
+    arch["wikimedia_enabled"] = bool(wm_node["enabled"])
+
+    custom_arch = arch.get("custom_archives", [])
+    if not isinstance(custom_arch, list):
+        custom_arch = []
+    for ca in custom_arch:
+        if isinstance(ca, dict):
+            ca.setdefault("use_api_key", False)
+            ca.setdefault("api_key", "")
+            ca.setdefault("category", "general")
+            if not ca.get("url") and ca.get("host"):
+                ca["url"] = build_endpoint_url(ca.get("protocol", "https"), ca.get("host", ""), ca.get("port", ""), ca.get("path", ""))
+    arch["custom_archives"] = custom_arch
+
     return merged
 
 
@@ -294,7 +344,7 @@ def update_endpoints(updates: Dict[str, Any]) -> bool:
 
         if "local_instance" in updates["searxng"] and isinstance(updates["searxng"]["local_instance"], dict):
             li = updates["searxng"]["local_instance"]
-            url = li.get("url") or build_endpoint_url(li.get("protocol", "http"), li.get("host", "127.0.0.1"), li.get("port", "8888"), li.get("path", ""))
+            url = li.get("url") or build_endpoint_url(li.get("protocol", "http"), li.get("host", "127.0.0.1"), li.get("port", "8889"), li.get("path", ""))
             li["url"] = url
             li["use_api_key"] = bool(li.get("use_api_key", False))
             li["api_key"] = str(li.get("api_key", "")).strip()
@@ -320,6 +370,47 @@ def update_endpoints(updates: Dict[str, Any]) -> bool:
             except Exception as se:
                 logger.warning(f"Could not sync SearXNG settings.yml: {se}")
 
+    if "archives" in updates and isinstance(updates["archives"], dict):
+        ua = updates["archives"]
+        if isinstance(ua.get("archive_org_node"), dict):
+            ao = ua["archive_org_node"]
+            ao_url = ao.get("url") or build_endpoint_url(
+                ao.get("protocol", "https"), ao.get("host", "archive.org"), ao.get("port", ""), ao.get("path", "")
+            )
+            ao["url"] = ao_url
+            ao["use_api_key"] = bool(ao.get("use_api_key", False))
+            ao["api_key"] = str(ao.get("api_key", "")).strip()
+            ao["enabled"] = ao.get("enabled", True) is not False
+            if ao_url:
+                ua["archive_org"] = ao_url
+            ua["archive_org_enabled"] = ao["enabled"]
+        if isinstance(ua.get("wikimedia_node"), dict):
+            wm = ua["wikimedia_node"]
+            wm_url = wm.get("url") or build_endpoint_url(
+                wm.get("protocol", "https"), wm.get("host", "commons.wikimedia.org"), wm.get("port", ""), wm.get("path", "")
+            )
+            wm["url"] = wm_url
+            wm["use_api_key"] = bool(wm.get("use_api_key", False))
+            wm["api_key"] = str(wm.get("api_key", "")).strip()
+            wm["enabled"] = wm.get("enabled", True) is not False
+            if wm_url:
+                ua["wikimedia_commons"] = wm_url
+            ua["wikimedia_enabled"] = wm["enabled"]
+        if isinstance(ua.get("custom_archives"), list):
+            clean_ca = []
+            for item in ua["custom_archives"]:
+                if isinstance(item, dict):
+                    url = item.get("url") or build_endpoint_url(
+                        item.get("protocol", "https"), item.get("host", ""), item.get("port", ""), item.get("path", "")
+                    )
+                    item["url"] = url
+                    item["use_api_key"] = bool(item.get("use_api_key", False))
+                    item["api_key"] = str(item.get("api_key", "")).strip()
+                    item["category"] = str(item.get("category") or "general").strip().lower()
+                    if url or item.get("host"):
+                        clean_ca.append(item)
+            ua["custom_archives"] = clean_ca
+
     def _merge(dest: dict, src: dict):
         for k, v in src.items():
             if isinstance(v, dict) and k in dest and isinstance(dest[k], dict):
@@ -329,6 +420,34 @@ def update_endpoints(updates: Dict[str, Any]) -> bool:
 
     _merge(current_endpoints, updates)
     return update_search_config({"endpoints": current_endpoints})
+
+
+def get_archive_endpoint(key: str) -> tuple[bool, str, Dict[str, str]]:
+    """Returns `(enabled, url, auth_headers)` for a built-in archive (`archive_org` | `wikimedia_commons`)."""
+    try:
+        from hecos.modules.net_search.search.config import get_search_config
+    except (ImportError, ValueError):
+        from .config import get_search_config
+
+    arch = get_search_config().get("endpoints", {}).get("archives", {})
+    if key == "wikimedia_commons":
+        default_url = "https://commons.wikimedia.org/w/api.php"
+        node = arch.get("wikimedia_node") if isinstance(arch.get("wikimedia_node"), dict) else {}
+        enabled = arch.get("wikimedia_enabled", node.get("enabled", True)) is not False
+        url = str(node.get("url") or arch.get("wikimedia_commons") or default_url).strip()
+    else:
+        default_url = "https://archive.org/advancedsearch.php"
+        node = arch.get("archive_org_node") if isinstance(arch.get("archive_org_node"), dict) else {}
+        enabled = arch.get("archive_org_enabled", node.get("enabled", True)) is not False
+        url = str(node.get("url") or arch.get("archive_org") or default_url).strip()
+
+    headers: Dict[str, str] = {}
+    if node.get("use_api_key") and node.get("api_key"):
+        token = str(node["api_key"]).strip()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+            headers["X-API-Key"] = token
+    return enabled, url, headers
 
 
 def get_engine_auth_headers(engine_key: str, sub_key: str = "onion") -> Dict[str, str]:

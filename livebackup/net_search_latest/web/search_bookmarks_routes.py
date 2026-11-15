@@ -21,6 +21,8 @@ except (ImportError, ValueError):
 
 def register_bookmarks_routes(app, logger=None):
     """Registers bookmarks REST API endpoints on the Flask application."""
+    if "api_bookmarks_list" in app.view_functions:
+        return
     log = logger or hecos_logger
     log.info("[DeepSearch] Registering bookmarks routes...")
     store = get_bookmark_store()
@@ -71,9 +73,11 @@ def register_bookmarks_routes(app, logger=None):
             network=network,
             category=category
         )
+        bookmarked = bool(res.get("bookmarked", False))
+        log.debug(f"[DeepSearch] Bookmark {'added' if bookmarked else 'removed'} ({network}/{category}): {url}")
         return jsonify({
             "ok": True,
-            "bookmarked": res.get("bookmarked", False),
+            "bookmarked": bookmarked,
             "bookmark": res,
             "total": store.get_count()
         })
@@ -92,6 +96,7 @@ def register_bookmarks_routes(app, logger=None):
         else:
             return jsonify({"ok": False, "error": "Missing url or id"}), 400
 
+        log.debug(f"[DeepSearch] Bookmark delete url={url or '-'} id={bookmark_id or '-'} -> ok={ok}")
         return jsonify({
             "ok": ok,
             "total": store.get_count()

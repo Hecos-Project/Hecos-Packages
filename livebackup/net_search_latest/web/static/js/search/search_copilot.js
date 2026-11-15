@@ -1,17 +1,52 @@
-﻿/**
+/**
  * search_copilot.js
- * Hecos AI Support intelligence, live SSE chat, dynamic personality avatars, 
- * interactive sidebar/presenter drag-resizers, and Presenter telemetry feed.
+ * Hecos AI Support intelligence, live SSE chat, sidebar/presenter drag-resizer, and orchestration.
+ * Delegates Markdown (copilot_markdown.js), Voice/TTS (copilot_voice.js), Mic STT (copilot_mic.js), and Presets (copilot_presets.js).
  */
 window.SearchCopilot = (function () {
   'use strict';
 
-  let currentPresetId = 'default';
-  let presetsMap = {};
   let chatHistory = [];
   let isGenerating = false;
+  let activeRequestController = null;
+  let activeRequestToken = 0;
+  let activeGenerationState = null;
   let presenterEventSource = null;
   let userAvatarUrl = window.HecosUserAvatar || '';
+  let autoMode = (function () {
+    try {
+      const v = localStorage.getItem('hecos_copilot_automode');
+      return v === null ? true : v !== 'false';
+    } catch (e) {
+      return true;
+    }
+  })();
+
+  function updateAutoModeUI() {
+    const btn = document.getElementById('copilot-automode-toggle');
+    if (!btn) return;
+    btn.classList.toggle('is-auto', autoMode);
+    btn.classList.toggle('is-manual', !autoMode);
+    if (autoMode) {
+      btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Auto-Mode: ON';
+      btn.title = 'Auto-Mode ON: AI autonomously chooses optimal mode (Global Sweep, ClearWeb, DarkWeb, Files, OSINT) and category tab. Click to lock to manual mode pill.';
+    } else {
+      btn.innerHTML = '<i class="fas fa-lock"></i> Mode: Manual';
+      btn.title = 'Manual Mode: AI strictly searches inside your currently selected mode pill. Click to enable autonomous Auto-Mode.';
+    }
+  }
+
+  function toggleAutoMode() {
+    autoMode = !autoMode;
+    try {
+      localStorage.setItem('hecos_copilot_automode', autoMode ? 'true' : 'false');
+    } catch (e) { /* ignore */ }
+    updateAutoModeUI();
+    appendSystemNotice(autoMode
+      ? '<i class="fas fa-wand-magic-sparkles"></i> <strong>Auto-Mode ON</strong>: AI will pick the best search mode autonomously.'
+      : `<i class="fas fa-lock"></i> <strong>Manual Mode</strong>: AI locked to <strong>${escapeHtml((window.SearchState?.currentMode || 'clear').toUpperCase())}</strong>.`
+    );
+  }
 
   async function resolveUserAvatar() {
     if (window.HecosUserAvatar) {
@@ -32,147 +67,28 @@ window.SearchCopilot = (function () {
     }
   }
 
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
 
-  function formatMarkdown(text) {
-    if (!text) return '';
-    // Collapsible think/reasoning block
-    text = text.replace(/<think>([\s\S]*?)<\/think>/gi, (m, p1) => {
-      const thinkClean = p1.trim();
-      if (!thinkClean) return '';
-      return `<details class="copilot-think-box"><summary><i class="fas fa-brain"></i> Reasoning</summary><div class="copilot-think-content">${escapeHtml(thinkClean)}</div></details>`;
-    });
-    let html = escapeHtml(text);
-    // Bold **text**
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    // Italic *text*
-    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    // Inline code `code`
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    // Reference numbers [1], [2] -> link pills
-    html = html.replace(/\[(\d+)\]/g, '<span class="copilot-cite">[$1]</span>');
-    // Bullet points
-    html = html.replace(/^• (.*?)$/gm, '<li>$1</li>');
-    html = html.replace(/^- (.*?)$/gm, '<li>$1</li>');
-    // Line breaks
-    html = html.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
-    return html;
-  }
+  // ── Helper Module Bridges ────────────────────────────────────────────────
+  const escapeHtml = (s) => (window.SearchCopilotMarkdown ? window.SearchCopilotMarkdown.escapeHtml(s) : String(s || ''));
+  const formatMarkdown = (t, c) => (window.SearchCopilotMarkdown ? window.SearchCopilotMarkdown.formatMarkdown(t, c) : escapeHtml(t));
+  const renderAssistantBubble = (el, t, s) => window.SearchCopilotMarkdown?.renderAssistantBubble?.(el, t, s);
 
-  // ── 1. Avatar Helpers ──────────────────────────────────────────────────────
-  function getAssistantAvatarHtml(preset) {
-    const p = preset || presetsMap[currentPresetId] || {
-      name: 'Hecos AI',
-      soul_name: 'Hecos AI',
-      avatar_url: '/assets/Hecos_Logo_SQR_NBG_LogoOnly.png',
-      avatar_type: 'image'
-    };
-    const url = escapeHtml(p.avatar_url || '/assets/Hecos_Logo_SQR_NBG_LogoOnly.png');
-    const charName = escapeHtml(p.soul_name || p.name || 'Hecos AI');
+  const isVoiceActive = () => Boolean(window.SearchCopilotVoice?.isVoiceActive?.());
+  const isVoiceEnabled = () => Boolean(window.SearchCopilotVoice?.isVoiceEnabled?.());
+  const stopVoice = () => window.SearchCopilotVoice?.stopVoice?.();
+  const toggleVoiceOutput = () => window.SearchCopilotVoice?.toggleVoiceOutput?.();
+  const updateTtsToggleUI = () => window.SearchCopilotVoice?.updateTtsToggleUI?.();
+  const speakAssistantMessage = (el, ov) => window.SearchCopilotVoice?.speakAssistantMessage?.(el, ov);
+  const attachListenAction = (el, b) => window.SearchCopilotVoice?.attachListenAction?.(el, b);
 
-    if (p.avatar_type === 'video') {
-      return `<video src="${url}" autoplay loop muted playsinline class="copilot-avatar-video" title="${charName}"></video>`;
-    }
-    return `<img src="${url}" class="copilot-avatar-img" alt="${charName}" title="${charName}" onerror="this.src='/assets/Hecos_Logo_SQR_NBG_LogoOnly.png';">`;
-  }
+  const loadPresets = () => window.SearchCopilotPresets?.loadPresets?.();
+  const getCurrentPresetId = () => (window.SearchCopilotPresets ? window.SearchCopilotPresets.getCurrentPresetId() : 'default');
+  const getCurrentPreset = () => (window.SearchCopilotPresets ? window.SearchCopilotPresets.getCurrentPreset() : null);
+  const getAssistantAvatarHtml = (p) => (window.SearchCopilotPresets ? window.SearchCopilotPresets.getAssistantAvatarHtml(p) : '');
 
-  function updatePersonalityUI() {
-    const curPreset = presetsMap[currentPresetId];
-    const charName = curPreset ? (curPreset.soul_name || curPreset.name || 'Hecos AI') : 'Hecos AI';
-    const avatarHtml = getAssistantAvatarHtml(curPreset);
-
-    // 1. Update initial greeting avatar & persona name
-    const initialAvatar = document.getElementById('copilot-initial-avatar');
-    if (initialAvatar) {
-      initialAvatar.innerHTML = avatarHtml;
-      initialAvatar.title = charName;
-    }
-    const initialNameEl = document.getElementById('copilot-initial-name');
-    if (initialNameEl) {
-      // Character name omitted from greeting per user preference
-    }
-
-    // 2. Update all assistant avatar elements currently rendered in chat
-    const allAvatars = document.querySelectorAll('.copilot-chat-messages .copilot-assistant-avatar');
-    allAvatars.forEach(el => {
-      el.innerHTML = avatarHtml;
-      el.title = charName;
-    });
-
-    // 3. Update the Card Title: "Ask <Character Name>"
-    const titleTextEl = document.getElementById('copilot-chat-title-text');
-    if (titleTextEl) {
-      titleTextEl.textContent = `Ask ${charName}`;
-    }
-
-    // 4. Update the input placeholder (distinct from card title)
-    const inputEl = document.getElementById('copilot-chat-input');
-    if (inputEl) {
-      inputEl.placeholder = 'Type a question or search query...';
-    }
-  }
-
-  // ── 2. Presets Management ──────────────────────────────────────────────────
-  async function loadPresets() {
-    const select = document.getElementById('copilot-preset-select');
-    if (!select) return;
-
-    /** Populate the <select> with an array of preset objects. */
-    function _populateSelect(presets) {
-      presetsMap = {};
-      presets.forEach(p => { presetsMap[p.id] = p; });
-      const saved = localStorage.getItem('hecos_search_copilot_preset') || 'default';
-      select.innerHTML = presets.map(p => `
-        <option value="${escapeHtml(p.id)}" ${p.id === saved ? 'selected' : ''}>
-          ${escapeHtml(p.icon || '\u{1F9E0}')} ${escapeHtml(p.name)}
-        </option>
-      `).join('');
-      currentPresetId = select.value || (presets[0] ? presets[0].id : 'default');
-      updatePersonalityUI();
-    }
-
-    /** Minimal fallback shown when the API is unreachable or returns an error. */
-    const _fallbackPresets = [
-      { id: 'default', name: 'Hecos AI', soul_name: 'Hecos AI', icon: '\u{1F9E0}',
-        avatar_url: '/assets/Hecos_Logo_NBG.png', avatar_type: 'image', description: 'Standard Assistant' }
-    ];
-
-    try {
-      const res = await fetch('/api/hsearch/copilot/presets', { credentials: 'same-origin' });
-      if (!res.ok) {
-        // Non-2xx (e.g. 401 not authenticated) — use fallback silently
-        console.warn(`[HecosAI] Presets API HTTP ${res.status}; using fallback preset.`);
-        _populateSelect(_fallbackPresets);
-      } else {
-        const data = await res.json();
-        if (data.ok && Array.isArray(data.presets) && data.presets.length > 0) {
-          _populateSelect(data.presets);
-        } else {
-          console.warn('[HecosAI] Presets list empty or malformed; using fallback preset.');
-          _populateSelect(_fallbackPresets);
-        }
-      }
-    } catch (e) {
-      console.warn('[HecosAI] Could not load presets:', e);
-      _populateSelect(_fallbackPresets);
-    }
-    select.addEventListener('change', () => {
-      currentPresetId = select.value;
-      localStorage.setItem('hecos_search_copilot_preset', currentPresetId);
-      const curPreset = presetsMap[currentPresetId];
-      const charName = curPreset ? (curPreset.soul_name || curPreset.name || 'Hecos AI') : 'Hecos AI';
-      updatePersonalityUI();
-      appendSystemNotice(`Active Preset: <strong>${escapeHtml(charName)}</strong>`);
-    });
-  }
+  const bindCopilotMicButton = () => window.SearchCopilotMic?.bindCopilotMicButton?.();
+  const bindCopilotMicKeyboard = () => window.SearchCopilotMic?.bindCopilotMicKeyboard?.();
+  const setCopilotMicState = (st) => window.SearchCopilotMic?.setCopilotMicState?.(st);
 
   // ── 3. Chat UI Helpers ─────────────────────────────────────────────────────
   function appendMessage(role, text) {
@@ -198,7 +114,7 @@ window.SearchCopilot = (function () {
       }
     } else {
       avatarClass += ' copilot-assistant-avatar';
-      const curPreset = presetsMap[currentPresetId];
+      const curPreset = getCurrentPreset();
       avatarTitle = curPreset ? (curPreset.soul_name || curPreset.name || 'Hecos AI') : 'Hecos AI';
       avatarInner = getAssistantAvatarHtml(curPreset);
     }
@@ -206,88 +122,180 @@ window.SearchCopilot = (function () {
     msgEl.innerHTML = `
       <div class="${avatarClass}" title="${escapeHtml(avatarTitle)}">${avatarInner}</div>
       <div class="copilot-msg-bubble">
-        <div class="copilot-msg-text">${formatMarkdown(text)}</div>
+        <div class="copilot-msg-text"></div>
       </div>
     `;
+
+    if (role === 'assistant') {
+      renderAssistantBubble(msgEl, text, false);
+    } else {
+      const textEl = msgEl.querySelector('.copilot-msg-text');
+      if (textEl) textEl.innerHTML = formatMarkdown(text);
+    }
 
     container.appendChild(msgEl);
     container.scrollTop = container.scrollHeight;
     return msgEl;
   }
 
-  function appendSystemNotice(text) {
+  function appendSystemNotice(text, upsertKey = null) {
     const container = document.getElementById('copilot-chat-messages');
     if (!container) return;
+    if (upsertKey) {
+      const existing = Array.from(container.querySelectorAll('.copilot-sys-notice')).find(
+        n => n.dataset && n.dataset.upsertKey === upsertKey
+      );
+      if (existing) {
+        existing.innerHTML = text;
+        return;
+      }
+    }
     const el = document.createElement('div');
     el.className = 'copilot-sys-notice';
+    if (upsertKey) {
+      el.dataset.upsertKey = upsertKey;
+    }
     el.innerHTML = text;
     container.appendChild(el);
     container.scrollTop = container.scrollHeight;
   }
 
-  // ── 3.5 Search Intent & Mode Parser ───────────────────────────────────────
-  function detectSearchIntent(rawText) {
-    if (!rawText) return null;
-    const clean = rawText.trim();
+  // ── 3.5 UI Sync Helpers for Copilot-Driven Search ────────────────────────
+  function applyPlannedSearchToUI(plan) {
+    if (!plan || !plan.query) return;
+    const targetMode = plan.mode || window.SearchState?.currentMode || 'clear';
+    const targetFilter = plan.filter || 'all';
 
-    // Explicit search verbs/phrases in Italian & English
-    const searchPattern = /^(?:cerca(?:\s+su|\s+nel|\s+in|\s+per|\s+un|\s+una)?|cercami|trova(?:\s+su|\s+nel|\s+in|\s+per|\s+un|\s+una)?|trovami|fai\s+una\s+ricerca(?:\s+su|\s+per)?|esegui\s+una\s+ricerca(?:\s+su|\s+per)?|search(?:\s+for)?|find(?:\s+for)?|look\s+up(?:\s+for)?|look\s+for|\/search|\/hsearch)\s+(.+)$/i;
-    const m = clean.match(searchPattern);
-    if (m && m[1].trim()) {
-      return { query: m[1].trim(), explicit: true };
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+      searchInput.value = plan.query;
     }
 
-    // Direct slash commands
-    if (clean.startsWith('/s ') || clean.startsWith('/find ')) {
-      return { query: clean.slice(clean.indexOf(' ') + 1).trim(), explicit: true };
+    if (window.SearchState) {
+      window.SearchState.currentQuery = plan.query;
+      window.SearchState.currentMode = targetMode;
+      window.SearchState.hasMorePages = (targetMode !== 'dark');
     }
 
-    // Implicit search: if results are empty and input is short and not a question/greeting
-    const hasResults = Boolean(window.SearchState?.results && window.SearchState.results.length > 0);
-    const words = clean.split(/\s+/);
-    const isGreetingOrCasual = /^(ciao|buongiorno|buonasera|salve|hey|hello|hi|chi sei|come ti chiami|cosa puoi fare|help|aiuto)\b/i.test(clean);
-
-    if (!hasResults && !isGreetingOrCasual && words.length <= 10 && !clean.endsWith('?')) {
-      return { query: clean, explicit: false };
+    const targetPill = document.querySelector(`.mode-pill[data-mode="${targetMode}"]`);
+    if (targetPill) {
+      document.querySelectorAll('.mode-pill').forEach(p => p.classList.remove('active'));
+      targetPill.classList.add('active');
     }
 
-    return null;
+    if (window.SearchFilters && window.SearchFilters.renderFilterTabsForMode) {
+      window.SearchFilters.renderFilterTabsForMode(targetMode, false);
+      if (targetFilter && window.SearchFilters.setFilter) {
+        window.SearchFilters.setFilter(targetFilter, false, true);
+      }
+    }
+
+    const resultsCountEl = document.getElementById('results-count');
+    if (resultsCountEl) {
+      const curPreset = getCurrentPreset();
+      const charName = (curPreset && (curPreset.soul_name || curPreset.name)) || 'Hecos AI';
+      resultsCountEl.innerText = `${charName} searching ${targetMode.toUpperCase()} for "${plan.query}"...`;
+    }
   }
 
-  function detectSearchMode(rawText, defaultMode) {
-    const lower = rawText.toLowerCase();
-    if (lower.includes('dark web') || lower.includes('.onion') || lower.includes(' tor ') || lower.startsWith('tor ') || lower.includes('hidden service')) {
-      return 'dark';
+  // ── 4. Chat Send, Instant Stop & SSE Stream ────────────────────────────────
+  function updateSendButtonState(generating) {
+    const sendBtn = document.getElementById('copilot-chat-send');
+    if (!sendBtn) return;
+    sendBtn.disabled = false;
+    if (generating) {
+      sendBtn.classList.add('is-stopping');
+      sendBtn.innerHTML = '<i class="fas fa-stop"></i><span>Stop</span>';
+      sendBtn.title = 'Stop request (Esc)';
+      sendBtn.setAttribute('aria-label', 'Stop request');
+    } else {
+      sendBtn.classList.remove('is-stopping');
+      sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+      sendBtn.title = 'Send message (Enter)';
+      sendBtn.setAttribute('aria-label', 'Send message');
     }
-    if (lower.includes('deep search') || lower.includes('ricerca profonda')) {
-      return 'deep';
-    }
-    if (lower.includes('video') || lower.includes('filmati') || lower.includes('canzoni') || lower.includes('musica') || lower.includes('audio') || lower.includes('podcast') || lower.includes('immagine') || lower.includes('immagini') || lower.includes('foto')) {
-      return 'media';
-    }
-    if (lower.includes('dork') || lower.includes('filetype:') || lower.includes('.pdf') || lower.includes('.docx') || lower.includes('documenti') || lower.includes('file hunter')) {
-      return 'files';
-    }
-    return defaultMode || window.SearchState?.currentMode || 'clear';
   }
 
-  // ── 4. Chat Send & SSE Stream ──────────────────────────────────────────────
+  function stopActiveMainSearchStream() {
+    if (window.SearchState?.activeEventSource && window.SearchState.activeEventSource.readyState !== 2) {
+      if (window.SearchStream && typeof window.SearchStream.stopSearch === 'function') {
+        window.SearchStream.stopSearch();
+        return true;
+      }
+      if (typeof window.stopSearch === 'function') {
+        window.stopSearch();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function stopCopilotRequest() {
+    let stoppedAny = false;
+    if (isGenerating || activeRequestController) {
+      stoppedAny = true;
+      activeRequestToken += 1;
+      isGenerating = false;
+
+      if (activeRequestController) {
+        try { activeRequestController.abort(); } catch (e) {}
+        activeRequestController = null;
+      }
+
+      if (activeGenerationState) {
+        const { assistantMsg, bubbleTextEl, getAccumulated } = activeGenerationState;
+        const partial = typeof getAccumulated === 'function' ? (getAccumulated() || '') : '';
+        if (partial.trim() && assistantMsg) {
+          renderAssistantBubble(assistantMsg, partial, false);
+          if (bubbleTextEl) {
+            const note = document.createElement('div');
+            note.className = 'copilot-stopped-note';
+            note.innerHTML = '<i class="fas fa-stop-circle"></i> Request stopped';
+            bubbleTextEl.appendChild(note);
+          }
+          chatHistory.push({ role: 'assistant', content: partial });
+        } else if (bubbleTextEl) {
+          bubbleTextEl.innerHTML = '<span class="copilot-stopped-inline"><i class="fas fa-stop-circle"></i> Request stopped by user.</span>';
+        }
+        activeGenerationState = null;
+      }
+      updateSendButtonState(false);
+
+      const resultsCountEl = document.getElementById('results-count');
+      if (resultsCountEl && /searching/i.test(resultsCountEl.innerText || '')) {
+        const total = window.SearchState?.results?.length || 0;
+        resultsCountEl.innerText = total > 0 ? `${total} of ${total} results found (Stopped)` : 'Search stopped by user';
+      }
+    }
+
+    if (stopActiveMainSearchStream()) {
+      stoppedAny = true;
+    }
+
+    if (stoppedAny) {
+      const input = document.getElementById('copilot-chat-input');
+      if (input && !input.disabled) {
+        input.focus();
+      }
+    }
+    return stoppedAny;
+  }
+
   async function sendMessage(text) {
     if (!text || !text.trim() || isGenerating) return;
     const cleanText = text.trim();
 
     const input = document.getElementById('copilot-chat-input');
-    const sendBtn = document.getElementById('copilot-chat-send');
     if (input) input.value = '';
 
     appendMessage('user', cleanText);
     chatHistory.push({ role: 'user', content: cleanText });
 
+    const myGenToken = ++activeRequestToken;
+    const controller = new AbortController();
+    activeRequestController = controller;
     isGenerating = true;
-    if (sendBtn) {
-      sendBtn.disabled = true;
-      sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    }
+    updateSendButtonState(true);
 
     // Prepare assistant message bubble for streaming
     const assistantMsg = appendMessage('assistant', '');
@@ -296,46 +304,34 @@ window.SearchCopilot = (function () {
       bubbleTextEl.innerHTML = '<span class="copilot-typing-dots"><span>.</span><span>.</span><span>.</span></span>';
     }
 
-    // Trigger live engine search on the main Net Search view if search intent is detected
-    const searchIntent = detectSearchIntent(cleanText);
-    if (searchIntent && searchIntent.query) {
-      const queryToSearch = searchIntent.query;
-      const targetMode = detectSearchMode(cleanText, window.SearchState?.currentMode || 'clear');
-
-      const searchInput = document.getElementById('search-input');
-      if (searchInput) {
-        searchInput.value = queryToSearch;
-      }
-
-      if (targetMode !== window.SearchState?.currentMode) {
-        const targetPill = document.querySelector(`.mode-pill[data-mode="${targetMode}"]`);
-        if (targetPill) {
-          document.querySelectorAll('.mode-pill').forEach(p => p.classList.remove('active'));
-          targetPill.classList.add('active');
-          if (window.SearchState) window.SearchState.currentMode = targetMode;
-          if (window.SearchFilters && window.SearchFilters.renderFilterTabsForMode) {
-            window.SearchFilters.renderFilterTabsForMode(targetMode, false);
-          }
-        }
-      }
-
-      if (window.SearchStream && typeof window.SearchStream.executeSearch === 'function') {
-        window.SearchStream.executeSearch(queryToSearch, targetMode);
-      }
-    }
-
-    // If this is a fresh search intent, clear old session_id so AI synthesizes the new search
-    const currentSession = searchIntent ? '' : (window.SearchState?.activeSessionId || window.SearchState?.currentSessionId || '');
+    const activeSessionId = window.SearchState?.activeSessionId || window.SearchState?.currentSessionId || '';
+    const hasResults = Boolean(window.SearchState?.results && window.SearchState.results.length > 0);
     let accumulated = '';
+    let plannedNewSearch = false;
+    let plannedFilter = null;
+    activeGenerationState = {
+      assistantMsg,
+      bubbleTextEl,
+      getAccumulated: () => accumulated
+    };
 
     try {
       const response = await fetch('/api/hsearch/copilot/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           message: cleanText,
-          preset_id: currentPresetId,
-          session_id: currentSession,
+          preset_id: getCurrentPresetId(),
+          session_id: activeSessionId,
+          active_mode: window.SearchState?.currentMode || 'clear',
+          auto_mode: autoMode,
+          current_query: window.SearchState?.currentQuery || '',
+          has_results: hasResults,
+          limit: window.SearchState?.searchLimit ?? 100,
+          safe_search: Boolean(window.SearchState?.safeSearch),
+          dark_bypass: window.SearchState?.darkBypass !== false,
+          local_only: Boolean(window.SearchState?.localOnly),
           stream: true
         })
       });
@@ -349,14 +345,20 @@ window.SearchCopilot = (function () {
       let buffer = '';
 
       while (true) {
+        if (myGenToken !== activeRequestToken) {
+          try { await reader.cancel(); } catch (_e) {}
+          break;
+        }
         const { value, done } = await reader.read();
         if (done) break;
+        if (myGenToken !== activeRequestToken) break;
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
 
         for (const line of lines) {
+          if (myGenToken !== activeRequestToken) break;
           const trimmed = line.trim();
           if (!trimmed.startsWith('data:')) continue;
           const jsonStr = trimmed.slice(5).trim();
@@ -364,10 +366,35 @@ window.SearchCopilot = (function () {
 
           try {
             const ev = JSON.parse(jsonStr);
-            if (ev.type === 'session') {
+            if (ev.type === 'search_plan') {
+              plannedNewSearch = (ev.action === 'new_search');
+              plannedFilter = ev.filter || null;
+              applyPlannedSearchToUI(ev);
+              if (bubbleTextEl && !accumulated) {
+                bubbleTextEl.innerHTML = `<span style="color:var(--accent-cyan, #06b6d4); font-size:12px;"><i class="fas fa-satellite fa-spin"></i> Searching ${escapeHtml((ev.mode || 'deep').toUpperCase())}: "${escapeHtml(ev.query || '')}"...</span>`;
+              }
+            } else if (ev.type === 'session') {
               if (window.SearchState && ev.session_id) {
                 window.SearchState.activeSessionId = ev.session_id;
                 window.SearchState.currentSessionId = ev.session_id;
+              }
+              if (ev.session_id && (plannedNewSearch || ev.session_id !== activeSessionId)) {
+                if (window.SearchHistory && typeof window.SearchHistory.loadSession === 'function') {
+                  Promise.resolve(
+                    window.SearchHistory.loadSession(ev.session_id, ev.filter || plannedFilter, false)
+                  ).then(() => {
+                    if (myGenToken !== activeRequestToken) return;
+                    if (assistantMsg && window.SearchState && Array.isArray(window.SearchState.results)) {
+                      assistantMsg._citeResults = window.SearchState.results.slice(0, 25);
+                      if (accumulated && !isGenerating) {
+                        renderAssistantBubble(assistantMsg, accumulated, false);
+                      }
+                    }
+                  }).catch(() => {});
+                  if (typeof window.SearchHistory.loadHistory === 'function') {
+                    window.SearchHistory.loadHistory(true);
+                  }
+                }
               }
             } else if (ev.type === 'status') {
               if (bubbleTextEl && !accumulated) {
@@ -375,15 +402,17 @@ window.SearchCopilot = (function () {
               }
             } else if (ev.type === 'token') {
               accumulated += ev.text || '';
-              if (bubbleTextEl) {
-                bubbleTextEl.innerHTML = formatMarkdown(accumulated);
+              if (assistantMsg) {
+                renderAssistantBubble(assistantMsg, accumulated, true);
                 const container = document.getElementById('copilot-chat-messages');
                 if (container) container.scrollTop = container.scrollHeight;
               }
             } else if (ev.type === 'done') {
               if (ev.text && !accumulated) {
                 accumulated = ev.text;
-                if (bubbleTextEl) bubbleTextEl.innerHTML = formatMarkdown(accumulated);
+              }
+              if (assistantMsg && accumulated) {
+                renderAssistantBubble(assistantMsg, accumulated, false);
               }
             } else if (ev.type === 'error') {
               if (bubbleTextEl) bubbleTextEl.innerHTML = `<span style="color:#f87171;">⚠️ ${escapeHtml(ev.error || 'Generation error')}</span>`;
@@ -394,17 +423,34 @@ window.SearchCopilot = (function () {
         }
       }
 
+      if (myGenToken !== activeRequestToken) {
+        return;
+      }
+
+      if (assistantMsg && accumulated) {
+        if (!assistantMsg._citeResults && window.SearchState && Array.isArray(window.SearchState.results) && window.SearchState.results.length) {
+          assistantMsg._citeResults = window.SearchState.results.slice(0, 25);
+        }
+        renderAssistantBubble(assistantMsg, accumulated, false);
+        if (isVoiceEnabled()) {
+          speakAssistantMessage(assistantMsg);
+        }
+      }
       chatHistory.push({ role: 'assistant', content: accumulated });
     } catch (err) {
+      if ((err && err.name === 'AbortError') || myGenToken !== activeRequestToken) {
+        return;
+      }
       console.error('[HecosAI] Chat streaming failed:', err);
       if (bubbleTextEl) {
         bubbleTextEl.innerHTML = `<span style="color:#f87171;">⚠️ Connection error to Hecos AI Assistant: ${escapeHtml(err.message)}</span>`;
       }
     } finally {
-      isGenerating = false;
-      if (sendBtn) {
-        sendBtn.disabled = false;
-        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+      if (myGenToken === activeRequestToken) {
+        isGenerating = false;
+        activeRequestController = null;
+        activeGenerationState = null;
+        updateSendButtonState(false);
       }
     }
   }
@@ -467,7 +513,7 @@ window.SearchCopilot = (function () {
   }
 
   // ── 7. Search Updates & Synthesis ──────────────────────────────────────────
-  function updateOverview(results, query, mode) {
+  function updateOverview(results, query, mode, showNotice = true) {
     const summaryCard = document.getElementById('copilot-summary-content');
     if (!summaryCard) return;
 
@@ -492,10 +538,16 @@ window.SearchCopilot = (function () {
       </div>
     `;
 
-    // Prompt greeting in assistant chat
-    const curPreset = presetsMap[currentPresetId];
-    const charName = curPreset ? (curPreset.soul_name || curPreset.name || 'AI') : 'AI';
-    appendSystemNotice(`🔍 Search completed for <strong>"${escapeHtml(query)}"</strong> (${total} sources). Ask ${escapeHtml(charName)} to analyze or summarize the findings!`);
+    // Prompt greeting in assistant chat (1 deduplicated notice per search session/query)
+    if (showNotice) {
+      const curPreset = getCurrentPreset();
+      const charName = curPreset ? (curPreset.soul_name || curPreset.name || 'AI') : 'AI';
+      const noticeKey = `search-complete:${window.SearchState?.activeSessionId || window.SearchState?.currentSessionId || query || ''}`;
+      appendSystemNotice(
+        `🔍 Search completed for <strong>"${escapeHtml(query)}"</strong> (${total} sources). Ask ${escapeHtml(charName)} to analyze or summarize the findings!`,
+        noticeKey
+      );
+    }
   }
 
   // ── 8. Export Report ───────────────────────────────────────────────────────
@@ -529,18 +581,144 @@ window.SearchCopilot = (function () {
     URL.revokeObjectURL(url);
   }
 
+  function buildInitialGreetingEl() {
+    const curPreset = getCurrentPreset();
+    const charName = curPreset ? (curPreset.soul_name || curPreset.name || 'Hecos AI') : 'Hecos AI';
+    const avatarHtml = getAssistantAvatarHtml(curPreset);
+    const welcomeText = 'Hello! I can synthesize sources, surface top media, extract data, and analyze search findings.';
+
+    const msgEl = document.createElement('div');
+    msgEl.className = 'copilot-msg copilot-msg-assistant';
+    msgEl.innerHTML = `
+      <div class="copilot-msg-avatar copilot-assistant-avatar" id="copilot-initial-avatar" title="${escapeHtml(charName)}">${avatarHtml}</div>
+      <div class="copilot-msg-bubble">
+        <div class="copilot-msg-text">${escapeHtml(welcomeText)}</div>
+      </div>
+    `;
+    attachListenAction(msgEl, welcomeText);
+    return msgEl;
+  }
+
+  function resetChat() {
+    stopVoice();
+
+    activeRequestToken++;
+    if (activeRequestController) {
+      try { activeRequestController.abort(); } catch (_e) {}
+      activeRequestController = null;
+    }
+    isGenerating = false;
+    activeGenerationState = null;
+    updateSendButtonState(false);
+
+    chatHistory = [];
+
+    const summaryCard = document.getElementById('copilot-summary-content');
+    if (summaryCard) {
+      summaryCard.innerHTML = '<span style="color:var(--text-dim); font-size:12px;">Waiting for search results to generate intelligence summary...</span>';
+    }
+
+    const container = document.getElementById('copilot-chat-messages');
+    if (container) {
+      container.innerHTML = '';
+      container.appendChild(buildInitialGreetingEl());
+      container.scrollTop = 0;
+    }
+
+    const inputEl = document.getElementById('copilot-chat-input');
+    if (inputEl) {
+      inputEl.value = '';
+    }
+  }
+
   // ── 9. Public API & Initialization ─────────────────────────────────────────
   return {
     init() {
       loadPresets();
       resolveUserAvatar();
       initSidebarResizer();
+      updateAutoModeUI();
+      updateTtsToggleUI();
+      bindCopilotMicButton();
+      bindCopilotMicKeyboard();
+      setCopilotMicState('idle');
+
+      // Attach Listen action button on the initial assistant greeting message
+      const welcomeMsg = document.querySelector('#copilot-chat-messages .copilot-msg-assistant');
+      if (welcomeMsg) {
+        attachListenAction(welcomeMsg, welcomeMsg.querySelector('.copilot-msg-text')?.innerText || '');
+      }
+
+      const newSearchBtn = document.getElementById('copilot-new-search-btn');
+      if (newSearchBtn) {
+        newSearchBtn.addEventListener('click', () => {
+          if (typeof window.startNewSearch === 'function') {
+            window.startNewSearch('copilot');
+          } else {
+            resetChat();
+          }
+        });
+      }
+
+      const autoBtn = document.getElementById('copilot-automode-toggle');
+      if (autoBtn) {
+        autoBtn.addEventListener('click', toggleAutoMode);
+      }
+
+      const ttsToggleBtn = document.getElementById('copilot-tts-toggle');
+      if (ttsToggleBtn) {
+        ttsToggleBtn.addEventListener('click', toggleVoiceOutput);
+      }
+
+      const stopVoiceBtn = document.getElementById('copilot-stop-voice-btn');
+      if (stopVoiceBtn) {
+        stopVoiceBtn.addEventListener('click', stopVoice);
+      }
+
+      const infoBtn = document.getElementById('copilot-preset-info-btn');
+      const popoverEl = document.getElementById('copilot-preset-popover');
+      if (infoBtn && popoverEl) {
+        infoBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const willOpen = popoverEl.style.display === 'none';
+          popoverEl.style.display = willOpen ? 'flex' : 'none';
+          infoBtn.classList.toggle('is-open', willOpen);
+        });
+        document.addEventListener('click', (e) => {
+          if (popoverEl.style.display !== 'none' && !popoverEl.contains(e.target) && e.target !== infoBtn) {
+            popoverEl.style.display = 'none';
+            infoBtn.classList.remove('is-open');
+          }
+        });
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (document.querySelector('.search-modal-backdrop.open')) return;
+
+        // 1st Esc: if voice playback/synthesis is active, stop ONLY voice (never interrupt search/request)
+        if (isVoiceActive()) {
+          e.preventDefault();
+          e.stopPropagation();
+          stopVoice();
+          return;
+        }
+
+        // 2nd Esc (or Esc when no voice is active): stop active Copilot request and/or active Search stream
+        if (stopCopilotRequest()) {
+          e.preventDefault();
+        }
+      });
 
       const input = document.getElementById('copilot-chat-input');
       const sendBtn = document.getElementById('copilot-chat-send');
 
       if (sendBtn) {
         sendBtn.addEventListener('click', () => {
+          if (isGenerating) {
+            stopCopilotRequest();
+            return;
+          }
           if (input) sendMessage(input.value);
         });
       }
@@ -563,12 +741,52 @@ window.SearchCopilot = (function () {
       });
     },
 
-    update(results, query, mode) {
-      updateOverview(results, query, mode);
+    update(results, query, mode, showNotice = true) {
+      updateOverview(results, query, mode, showNotice);
     },
 
     sendMessage(text) {
       sendMessage(text);
+    },
+
+    toggleAutoMode() {
+      toggleAutoMode();
+    },
+
+    isAutoMode() {
+      return autoMode;
+    },
+
+    toggleVoiceOutput() {
+      toggleVoiceOutput();
+    },
+
+    isVoiceEnabled() {
+      return isVoiceEnabled();
+    },
+
+    stopVoice() {
+      stopVoice();
+    },
+
+    stopRequest() {
+      return stopCopilotRequest();
+    },
+
+    appendSystemNotice(text) {
+      appendSystemNotice(text);
+    },
+
+    isGeneratingRequest() {
+      return isGenerating;
+    },
+
+    resetChat() {
+      resetChat();
+    },
+
+    isVoiceActive() {
+      return isVoiceActive();
     },
 
     exportReport() {

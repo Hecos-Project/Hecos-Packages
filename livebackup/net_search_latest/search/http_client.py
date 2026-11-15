@@ -191,7 +191,7 @@ def request(
         if is_onion:
             verify_ssl = False
 
-    hecos_logger.debug(f"[HTTP] {method.upper()} {url} (routing={'TOR' if use_tor else 'CLEAR'})")
+    hecos_logger.debug(f"[HTTP] {method.upper()} {url} (routing={'TOR' if use_tor else 'CLEAR'}, timeout={timeout}s)")
 
     return requests.request(
         method=method.upper(),

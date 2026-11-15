@@ -16,13 +16,14 @@ from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("net_search.search.copilot_planner")
 
-VALID_MODES = {"clear", "dark", "files", "osint", "deep"}
+VALID_MODES = {"clear", "dark", "files", "osint", "deep", "streams"}
 MODE_VALID_FILTERS = {
     "clear": {"all", "web", "images", "videos", "audio", "files"},
     "dark": {"all", "dark_directories", "dark_forums", "dark_leaks", "dark_market"},
     "files": {"all", "files_docs", "files_data", "files_archives", "files_code"},
     "osint": {"all", "osint_social", "osint_dev", "osint_media", "osint_records", "osint_onion"},
     "deep": {"all", "deep_clear", "deep_dark", "deep_media", "deep_files"},
+    "streams": {"all", "tv", "radio", "webcam", "raw"},
 }
 
 
@@ -241,14 +242,192 @@ def normalize_mode_and_filter(mode: str, flt: str, active_mode: str, auto_mode: 
     return m, f
 
 
+def parse_stream_intent(user_message: str, active_mode: str = "clear") -> Optional[Dict[str, Any]]:
+    """
+    Deterministically parses TV Remote / Live Stream control & discovery commands
+    (channel numbers, CH+/CH-/LAST, volume/mute, stop/pause, open in VLC, or named channel/radio/webcam).
+    Returns a planner dict with action='stream_command', or None if regular search/chat.
+    """
+    clean = (user_message or "").strip()
+    lower = clean.lower()
+    if not clean:
+        return None
+
+    in_streams_mode = (active_mode or "").strip().lower() == "streams"
+
+    # 1. Explicit slash / direct channel number ("canale 5", "metti il 3", "ch 12", or bare "5" in streams mode)
+    m_num = re.match(
+        r"^(?:/canale|/channel|/remote|(?:metti|vai\s+al|sintonizza|apri|premi|switch\s+to|tune\s+to|play|channel|canale|ch)\s*(?:il|la|al|number|nr|n\.|#)?\s+)#?(\d{1,3})\s*(?:in\s+vlc|su\s+vlc)?[.!?]*$",
+        lower,
+    )
+    if not m_num and in_streams_mode and re.match(r"^\d{1,3}$", lower):
+        m_num = re.match(r"^(\d{1,3})$", lower)
+    if m_num:
+        ch_num = int(m_num.group(1))
+        cmd = "open_vlc" if "vlc" in lower else "play_channel"
+        return {
+            "action": "stream_command",
+            "query": "",
+            "mode": "streams",
+            "filter": "all",
+            "stream_command": {"command": cmd, "channel": ch_num},
+        }
+
+    # 2. Next / Prev / Last channel
+    if re.search(r"\b(?:prossimo\s+canale|canale\s+successivo|next\s+channel|avanti\s+canale|ch\s*\+|zapping\s+avanti|salta\s+canale)\b", lower) or lower in ("ch+", "avanti", "prossimo"):
+        return {
+            "action": "stream_command",
+            "query": "",
+            "mode": "streams",
+            "filter": "all",
+            "stream_command": {"command": "ch_up"},
+        }
+    if re.search(r"\b(?:canale\s+precedente|previous\s+channel|prev\s+channel|indietro\s+canale|ch\s*-)\b", lower) or lower in ("ch-", "precedente"):
+        return {
+            "action": "stream_command",
+            "query": "",
+            "mode": "streams",
+            "filter": "all",
+            "stream_command": {"command": "ch_down"},
+        }
+    if re.search(r"\b(?:ultimo\s+canale|torna\s+al\s+canale|last\s+channel|recall\s+channel)\b", lower):
+        return {
+            "action": "stream_command",
+            "query": "",
+            "mode": "streams",
+            "filter": "all",
+            "stream_command": {"command": "last"},
+        }
+
+    # 3. Stop / Pause / Mute / Volume
+    if re.search(r"\b(?:ferma\s+(?:lo\s+|la\s+|il\s+|the\s+)?(?:stream|video|tv|radio|canale)|spegni\s+(?:lo\s+|la\s+|il\s+|the\s+)?(?:tv|radio|stream|canale)|stop\s+(?:the\s+)?(?:tv|stream|channel|radio|playback))\b", lower) or (in_streams_mode and lower in ("stop", "spegni", "off")):
+        return {
+            "action": "stream_command",
+            "query": "",
+            "mode": "streams",
+            "filter": "all",
+            "stream_command": {"command": "stop"},
+        }
+    if re.search(r"\b(?:metti\s+in\s+pausa(?:\s+(?:lo\s+|la\s+)?(?:stream|tv|radio))?|riprendi\s+(?:lo\s+|la\s+|il\s+)?(?:stream|tv|radio|canale)|pause\s+(?:the\s+)?(?:tv|stream|radio)|play/?pause)\b", lower) or (in_streams_mode and lower in ("pausa", "pause")):
+        return {
+            "action": "stream_command",
+            "query": "",
+            "mode": "streams",
+            "filter": "all",
+            "stream_command": {"command": "pause"},
+        }
+    if re.search(r"\b(?:togli\s+(?:l['’])?audio|metti\s+muto|silenzia|unmute|mute(?:\s+(?:tv|stream|audio))?)\b", lower) or (in_streams_mode and lower in ("muto", "mute")):
+        return {
+            "action": "stream_command",
+            "query": "",
+            "mode": "streams",
+            "filter": "all",
+            "stream_command": {"command": "mute"},
+        }
+    m_vol = re.search(r"\b(?:volume|vol)\s*(?:a|al|to|set)?\s*(\d{1,3})\s*%?", lower)
+    if m_vol:
+        return {
+            "action": "stream_command",
+            "query": "",
+            "mode": "streams",
+            "filter": "all",
+            "stream_command": {"command": "set_volume", "volume": max(0, min(100, int(m_vol.group(1))))},
+        }
+    if re.search(r"\b(?:alza\s+(?:il\s+)?volume|volume\s+(?:su|up|più|piu|alto|maggiore)|vol\s*\+)\b", lower):
+        return {
+            "action": "stream_command",
+            "query": "",
+            "mode": "streams",
+            "filter": "all",
+            "stream_command": {"command": "vol_up"},
+        }
+    if re.search(r"\b(?:abbassa\s+(?:il\s+)?volume|volume\s+(?:gi[uù]|down|meno|basso)|vol\s*-)\b", lower):
+        return {
+            "action": "stream_command",
+            "query": "",
+            "mode": "streams",
+            "filter": "all",
+            "stream_command": {"command": "vol_down"},
+        }
+
+    # 4. Open in VLC Desktop (with optional channel name)
+    m_vlc = re.search(r"\b(?:apri|manda|lancia|avvia|guarda|riproduci|open|launch|send|play)\b(.*?)\b(?:in|su|con|on|with)\s+vlc\b", lower)
+    if m_vlc or re.match(r"^(?:apri|open|launch)\s+vlc$", lower):
+        inner = re.sub(r"\b(?:il\s+canale|canale|channel|stream|la\s+tv|questo|this|corrente|attuale)\b", "", (m_vlc.group(1) if m_vlc else "")).strip()
+        cmd_payload: Dict[str, Any] = {"command": "open_vlc"}
+        if inner and len(inner) >= 2:
+            cmd_payload["query"] = inner
+        return {
+            "action": "stream_command",
+            "query": "",
+            "mode": "streams",
+            "filter": "all",
+            "stream_command": cmd_payload,
+        }
+
+    # 5. Live stream category detection
+    subfilter = "all"
+    if any(w in lower for w in ("radio", "icecast", "stazioni radio", "emittente", "fm")):
+        subfilter = "radio"
+    elif any(w in lower for w in ("webcam", "telecamera", "cam live", "live cam")):
+        subfilter = "webcam"
+    elif any(w in lower for w in ("canali tv", "canale", "iptv", "televisione", "in diretta", "live tv", "tv ", " tv", "rai ", "mediaset", "bbc", "cnn", "euronews", "sky tg", "nasa tv")):
+        subfilter = "tv"
+
+    # Explicit search/tune phrases for live streams
+    is_stream_search = bool(re.search(
+        r"\b(?:live\s*streams?|canali\s*tv|iptv|webcams?\s*live|live\s*webcams?|stazioni\s*radio|radio\s*(?:live|in\s+diretta|streaming)|"
+        r"cerca\s+(?:canali|radio|webcam|stream)|trova\s+(?:canali|radio|webcam|stream)|m3u8|rtsp)\b",
+        lower,
+    ))
+    is_tune_named = bool(re.search(
+        r"^(?:metti|sintonizza|guarda|accendi|ascolta|tune(?:\s+in(?:to)?)?|watch|play\s+live|open\s+(?:channel|tv|radio|stream))\b",
+        lower,
+    )) and (subfilter != "all" or in_streams_mode or any(k in lower for k in ("rai", "cnn", "bbc", "nasa", "euronews", "sky", "radio", "la7", "tv8", "deejay", "rds", "rtl")))
+
+    if is_tune_named:
+        target_name = re.sub(
+            r"^(?:metti|sintonizza|guarda|accendi|ascolta|tune(?:\s+in(?:to)?)?|watch|play\s+live|open)\s*(?:il\s+canale|la\s+tv|la\s+radio|lo\s+stream|channel|tv|radio)?\s*",
+            "",
+            lower,
+        ).strip()
+        target_name = re.sub(r"\b(?:in\s+diretta|live|per\s+favore|please)\b", "", target_name).strip()
+        if target_name:
+            return {
+                "action": "stream_command",
+                "query": target_name,
+                "mode": "streams",
+                "filter": subfilter,
+                "stream_command": {"command": "play_query", "query": target_name, "category": subfilter},
+            }
+
+    if is_stream_search:
+        cleaned_q = strip_conversational_fillers(
+            re.sub(r"\b(?:canali\s*tv|live\s*streams?|iptv|stazioni\s*radio|webcams?|in\s+diretta)\b", "", clean, flags=re.IGNORECASE).strip()
+        )
+        return {
+            "action": "stream_command",
+            "query": cleaned_q,
+            "mode": "streams",
+            "filter": subfilter,
+            "stream_command": {"command": "search", "query": cleaned_q, "category": subfilter},
+        }
+
+    return None
+
+
 def heuristic_plan(
     user_message: str,
     has_results: bool,
     active_mode: str,
     auto_mode: bool,
-) -> Dict[str, str]:
+) -> Dict[str, Any]:
     clean = (user_message or "").strip()
     lower = clean.lower()
+
+    stream_intent = parse_stream_intent(clean, active_mode=active_mode)
+    if stream_intent:
+        return stream_intent
 
     is_greeting = bool(re.match(
         r"^(?:ciao|buongiorno|buonasera|salve|hey|hello|hi|chi sei|come ti chiami|cosa puoi fare|help|aiuto)[\s!?.]*$",
@@ -268,7 +447,7 @@ def heuristic_plan(
         m, f = normalize_mode_and_filter(active_mode, "all", active_mode, auto_mode)
         return {"action": "analyze_current", "query": "", "mode": m, "filter": f}
 
-    mode = "deep"
+    mode = "streams" if (active_mode or "").strip().lower() == "streams" and not auto_mode else "deep"
     flt = "all"
     if any(w in lower for w in ("dark web", "darknet", ".onion", "tor ", " tor", "hidden service")):
         mode = "dark"
@@ -304,15 +483,15 @@ def plan_copilot_turn(
     preset_instructions: str,
     cfg: dict,
     log: Optional[logging.Logger] = None,
-) -> Dict[str, str]:
+) -> Dict[str, Any]:
     """
     Autonomous LLM planner for Net Search Copilot.
-    Decides action (new_search | analyze_current | chat), cleans/optimizes query,
+    Decides action (stream_command | new_search | analyze_current | chat), cleans/optimizes query,
     and selects mode + category tab when Auto-Mode is enabled.
     """
     _log = log or logger
     fallback = heuristic_plan(user_message, has_results, active_mode, auto_mode)
-    if fallback["action"] == "chat":
+    if fallback["action"] in ("chat", "stream_command"):
         return fallback
 
     try:
@@ -415,10 +594,35 @@ def build_responder_config(
     merged_cfg: Any,
     soul: Any,
     preset_instructions: str,
+    stream_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Builds the search-context-injected LLM config for the Net Search Copilot responder."""
+    """Builds the search-context & Live-TV-aware LLM config for the Net Search Copilot responder."""
     search_context = ""
-    if resolved_sess and getattr(resolved_sess, "results", None):
+    if stream_context:
+        state = stream_context.get("state") or {}
+        cmd = stream_context.get("command") or {}
+        active_st = state.get("active_stream") or {}
+        ch = state.get("active_channel")
+        ok = stream_context.get("ok", True)
+        err = stream_context.get("error", "")
+        use_preset = bool((state.get("preset_settings") or {}).get("use_global_preset", True))
+        active_title = active_st.get("title") or ""
+        if active_st and ch:
+            active_label = f"CH {int(ch):02d} — {active_title}"
+        elif active_st:
+            active_label = active_title or "Live Stream"
+        else:
+            active_label = "STANDBY"
+        search_context = (
+            "\n\n[LIVE STREAMS & TV REMOTE ACTION EXECUTED]\n"
+            f"- Command: {cmd.get('command') or stream_context.get('requested_command')} | Success: {ok}"
+            + (f" | Error: {err}" if err else "")
+            + f"\n- Active Channel: {active_label}"
+            + f"\n- Target: {str(state.get('target') or 'app').upper()} | Volume: {state.get('volume', 85)}% | Muted: {bool(state.get('muted'))} | Lineup Count: {state.get('queue_count', 0)}"
+            + f"\n- Global Preset Sync for Live TV: {'ENABLED' if use_preset else 'DISABLED (neutral mode)'}\n"
+            "Confirm the TV / Stream Remote action concisely and naturally based ONLY on the facts above."
+        )
+    elif resolved_sess and getattr(resolved_sess, "results", None):
         items_summary = []
         for i, r in enumerate(resolved_sess.results[:15], 1):
             snip = (r.snippet or "")[:140].replace("\n", " ").strip()

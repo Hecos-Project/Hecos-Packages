@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from typing import List
 
-from .base import BaseEngine
+from .base import BaseEngine, effective_tor_timeout
 from ..models import SearchQuery, SearchResult
 from .. import http_client
 
@@ -53,29 +53,51 @@ class DarkExcavatorEngine(BaseEngine):
 
         raw_endpoint = _get_excavator_url().rstrip("/")
         search_url = raw_endpoint if "/search" in raw_endpoint else f"{raw_endpoint}/search"
-        # Excavator HTML uses name="query", support both query and q
-        params = {"query": query.query, "q": query.query}
-        hecos_logger.info(f"[SEARCH:EXCAVATOR] Querying Excavator via Tor: '{query.query}' at {search_url}...")
+        tor_timeout = effective_tor_timeout(query.timeout, minimum=15.0)
+        hecos_logger.info(f"[SEARCH:EXCAVATOR] Querying Excavator via Tor: '{query.query}' at {search_url} (timeout={tor_timeout}s)...")
 
+        seen_urls = set()
+        max_pages = 2 if query.limit > 22 else 1
         try:
-            resp = http_client.get(search_url, network="tor", params=params, timeout=min(query.timeout, 5.0))
-            if resp.status_code == 200:
+            for page_num in range(1, max_pages + 1):
+                if len(results) >= query.limit:
+                    break
+                # Excavator HTML uses name="query", support both query and q
+                params = {"query": query.query, "q": query.query}
+                if page_num > 1:
+                    params["p"] = str(page_num)
+                resp = http_client.get(search_url, network="tor", params=params, timeout=tor_timeout)
+                if resp.status_code != 200:
+                    break
                 from bs4 import BeautifulSoup
                 soup = BeautifulSoup(resp.text, "lxml")
 
-                seen_urls = set()
+                added_this_page = 0
+                is_files_mode = (getattr(query, "mode", "") or "").lower() == "files"
                 for a in soup.find_all("a", href=True):
                     href = a["href"].strip()
+                    href_lower = href.lower()
                     if not href or href in seen_urls:
                         continue
-                    # Exclude self-references and non-onion navigation
-                    if "2fd6cemt4g" in href or "2fd6uvfdwh" in href:
+                    # Exclude self-references, sponsored ad trackers, and non-onion navigation
+                    if "2fd6cemt4g" in href_lower or "2fd6uvfdwh" in href_lower:
                         continue
-                    if ".onion" not in href:
+                    if "clickid=" in href_lower or "aff_id=" in href_lower or "/ad/" in href_lower or "utm_source=excavator" in href_lower:
+                        continue
+                    if ".onion" not in href_lower:
+                        continue
+
+                    ad_ancestor = a.find_parent(
+                        lambda tag: any(
+                            tok in (" ".join(tag.get("class") or []) + " " + str(tag.get("id") or "")).lower()
+                            for tok in ("sponsor", "ad-box", "adbox", "banner", "promo", "ads")
+                        )
+                    )
+                    if ad_ancestor:
                         continue
 
                     title = a.get_text(strip=True)
-                    if not title or title.lower() in ["advertise", "add url", "about", "terms"]:
+                    if not title or title.lower() in ["advertise", "add url", "about", "terms", "next", "previous"]:
                         continue
 
                     # Try to extract surrounding snippet
@@ -92,11 +114,14 @@ class DarkExcavatorEngine(BaseEngine):
                         title=title,
                         snippet=snippet,
                         engine=self.id,
-                        category="onion",
+                        category="files" if is_files_mode else "onion",
                         network="tor"
                     ))
+                    added_this_page += 1
                     if len(results) >= query.limit:
                         break
+                if added_this_page == 0:
+                    break
 
             hecos_logger.info(f"[SEARCH:EXCAVATOR] Found {len(results)} results.")
         except Exception as e:

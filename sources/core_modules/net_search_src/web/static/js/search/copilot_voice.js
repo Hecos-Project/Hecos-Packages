@@ -110,12 +110,13 @@ window.SearchCopilotVoice = (function () {
       .trim();
   }
 
-  async function speakAssistantMessage(msgEl, overrideText = null) {
+  async function speakAssistantMessage(msgEl, overrideText = null, opts = {}) {
     if (!msgEl) return;
     const bubbleEl = msgEl.querySelector('.copilot-msg-bubble');
     const textEl = msgEl.querySelector('.copilot-msg-text');
     if (!bubbleEl || !textEl) return;
 
+    const forceNeutral = Boolean(opts && opts.forceNeutralVoice);
     const spokenText = extractSpokenText(
       overrideText !== null ? overrideText : (msgEl.dataset.rawBody || textEl.innerText || textEl.textContent || '')
     );
@@ -170,7 +171,9 @@ window.SearchCopilotVoice = (function () {
           text: spokenText,
           mode: 'web',
           bypass_cache: true,
-          preset_id: (window.SearchCopilotPresets ? window.SearchCopilotPresets.getCurrentPresetId() : 'default')
+          preset_id: forceNeutral
+            ? 'default'
+            : (window.SearchCopilotPresets ? window.SearchCopilotPresets.getCurrentPresetId() : 'default')
         })
       });
       if (myToken !== activeTtsToken) {

@@ -161,6 +161,11 @@ window.SearchCopilotPresets = (function () {
       `).join('');
       currentPresetId = select.value || targetId;
       updatePersonalityUI();
+      try {
+        window.dispatchEvent(new CustomEvent('hecos:preset_changed', {
+          detail: { presetId: currentPresetId, preset: presetsMap[currentPresetId] || null }
+        }));
+      } catch (_e) {}
     }
 
     /** Minimal fallback shown when the API is unreachable or returns an error. */
@@ -197,8 +202,29 @@ window.SearchCopilotPresets = (function () {
       const curPreset = presetsMap[currentPresetId];
       const charName = curPreset ? (curPreset.soul_name || curPreset.name || 'Hecos AI') : 'Hecos AI';
       updatePersonalityUI();
+      try {
+        window.dispatchEvent(new CustomEvent('hecos:preset_changed', {
+          detail: { presetId: currentPresetId, preset: curPreset || null }
+        }));
+      } catch (_e) {}
       window.SearchCopilot?.appendSystemNotice?.(`Active Preset: <strong>${escapeHtml(charName)}</strong>`);
     });
+  }
+
+  function getCurrentPresetSummary() {
+    const p = presetsMap[currentPresetId] || null;
+    if (!p) {
+      return { id: currentPresetId || 'default', name: 'Hecos AI', soul_name: 'Hecos AI', icon: '🧠', model_name: 'Default', tts_voice: 'Default' };
+    }
+    return {
+      id: p.id,
+      name: p.name || p.soul_name || 'Hecos AI',
+      soul_name: p.soul_name || p.name || 'Hecos AI',
+      icon: p.icon || '🧠',
+      model_name: (p.model && p.model.model_name) ? p.model.model_name : 'System Default',
+      tts_engine: (p.voice && p.voice.tts_engine) ? p.voice.tts_engine : 'piper',
+      tts_voice: (p.voice && p.voice.tts_voice) ? p.voice.tts_voice : 'Default',
+    };
   }
 
   return {
@@ -210,6 +236,7 @@ window.SearchCopilotPresets = (function () {
     getCurrentPresetId() { return currentPresetId; },
     getActiveGlobalPresetId() { return activeGlobalPresetId; },
     getCurrentPreset() { return presetsMap[currentPresetId] || null; },
+    getCurrentPresetSummary,
     getCharacterName() {
       const p = presetsMap[currentPresetId];
       return p ? (p.soul_name || p.name || 'Hecos AI') : 'Hecos AI';

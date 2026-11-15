@@ -5,6 +5,46 @@
  */
 window.SearchResults = (function () {
 
+  function _showBanner(msg, type = 'info', duration = 3500) {
+    if (window.UnifiedToast && typeof window.UnifiedToast.show === 'function') {
+      const iconMap = {
+        success: 'fas fa-check-circle',
+        error: 'fas fa-exclamation-triangle',
+        warning: 'fas fa-exclamation-circle',
+        info: 'fas fa-info-circle'
+      };
+      window.UnifiedToast.show(msg, iconMap[type] || 'fas fa-info-circle', duration);
+      return;
+    }
+    if (typeof window.showToast === 'function') {
+      window.showToast(msg, duration, type);
+      return;
+    }
+    let banner = document.getElementById('hecos-search-banner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'hecos-search-banner';
+      banner.style.cssText = [
+        'position:fixed', 'top:66px', 'left:50%', 'transform:translate(-50%,-12px)',
+        'background:rgba(24,25,38,0.96)', 'color:#cad3f5', 'border:1px solid rgba(255,255,255,0.15)',
+        'border-radius:999px', 'padding:10px 20px', 'font-size:13px', 'font-weight:500',
+        'box-shadow:0 8px 28px rgba(0,0,0,0.45)', 'z-index:10050', 'opacity:0',
+        'pointer-events:none', 'transition:opacity 0.25s ease,transform 0.25s ease',
+        'display:inline-flex', 'align-items:center', 'gap:10px', 'max-width:min(92vw,680px)'
+      ].join(';');
+      document.body.appendChild(banner);
+    }
+    banner.textContent = msg;
+    banner.style.borderColor = type === 'error' ? 'rgba(244,63,94,0.5)' : (type === 'success' ? 'rgba(16,185,129,0.45)' : 'rgba(6,182,212,0.45)');
+    banner.style.opacity = '1';
+    banner.style.transform = 'translate(-50%,0)';
+    clearTimeout(banner._hideTimer);
+    banner._hideTimer = setTimeout(() => {
+      banner.style.opacity = '0';
+      banner.style.transform = 'translate(-50%,-12px)';
+    }, duration);
+  }
+
   function escapeHtml(str) {
     if (!str) return '';
     return String(str)
@@ -80,9 +120,6 @@ window.SearchResults = (function () {
               <i class="fas fa-external-link-alt"></i> Open
             </a>
           `}
-          <button class="btn-result-action" onclick="SearchResults.readPage('${safeUrl}')">
-            <i class="fas fa-file-alt"></i> Read with AI
-          </button>
           <button class="btn-result-action" onclick="SearchResults.copyLink('${safeUrl}')">
             <i class="fas fa-copy"></i> Copy Link
           </button>
@@ -282,9 +319,6 @@ window.SearchResults = (function () {
           <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="btn-result-action primary" download>
             <i class="fas fa-download"></i> Download / Open ${ext}
           </a>
-          <button class="btn-result-action" onclick="SearchResults.readPage('${safeUrl}')">
-            <i class="fas fa-file-alt"></i> Read with AI
-          </button>
           <button class="btn-result-action" onclick="SearchResults.copyLink('${safeUrl}')">
             <i class="fas fa-copy"></i> Copy Link
           </button>
@@ -310,6 +344,19 @@ window.SearchResults = (function () {
     }
   }
 
+  function detectRenderCategory(item) {
+    if (window.SearchFilters && typeof window.SearchFilters.classifyItemType === 'function') {
+      return window.SearchFilters.classifyItemType(item);
+    }
+    const cat = (item.category || '').toLowerCase();
+    const engId = (item.engine_id || '').toLowerCase();
+    if (cat === 'videos' || cat === 'video' || engId === 'media_videos') return 'videos';
+    if (cat === 'audio' || cat === 'music' || engId === 'media_audio') return 'audio';
+    if (cat === 'images' || cat === 'image' || engId === 'media_images') return 'images';
+    if (cat === 'files' || cat === 'packages' || engId === 'files_dorks' || Boolean(item.metadata?.extension)) return 'files';
+    return 'web';
+  }
+
   return {
     render(results, containerId = 'results-list', mode = 'clear', activeFilter = 'all') {
       const container = document.getElementById(containerId);
@@ -317,12 +364,27 @@ window.SearchResults = (function () {
 
       if (!results || results.length === 0) {
         container.className = 'results-list';
-        const isFiltered = activeFilter && activeFilter !== 'all';
+        const refineQuery = (window.SearchState && window.SearchState.refineQuery || '').trim();
+        const mediaSub = (window.SearchState && window.SearchState.mediaSubFilter) || 'all';
+        const hasRefine = Boolean(refineQuery) || (activeFilter === 'deep_media' && mediaSub !== 'all');
+        const isFiltered = hasRefine || (activeFilter && activeFilter !== 'all');
+        let titleText = 'No results found';
+        let subText = 'Try adjusting your search terms or choosing a different mode.';
+        if (hasRefine) {
+          titleText = refineQuery
+            ? `No results match "${escapeHtml(refineQuery)}"`
+            : `No ${escapeHtml(mediaSub)} results in Media pool`;
+          subText = 'Try clearing or loosening your in-results filter or reset filters below.';
+        } else if (activeFilter && activeFilter !== 'all') {
+          titleText = `No results match filter '${escapeHtml(activeFilter)}'`;
+          subText = "Try selecting 'All' tab to view all aggregated items.";
+        }
         container.innerHTML = `
           <div style="text-align:center; padding: 48px 20px; color: var(--text-dim);">
             <div style="font-size: 40px; margin-bottom: 12px; opacity:0.4;"><i class="fas fa-${isFiltered ? 'filter' : 'search'}"></i></div>
-            <div style="font-size: 15px; font-weight:600; color:var(--text-main); margin-bottom:4px;">${isFiltered ? `No results match filter '${activeFilter}'` : 'No results found'}</div>
-            <div style="font-size: 12px; color:var(--text-muted);">${isFiltered ? "Try selecting 'All' tab to view all aggregated items." : 'Try adjusting your search terms or choosing a different mode.'}</div>
+            <div style="font-size: 15px; font-weight:600; color:var(--text-main); margin-bottom:4px;">${titleText}</div>
+            <div style="font-size: 12px; color:var(--text-muted); margin-bottom:${hasRefine ? '14px' : '0'};">${subText}</div>
+            ${hasRefine ? `<button type="button" class="btn btn-sm btn-secondary" style="border-radius:6px;" onclick="if(window.resetPostSearchFilters) window.resetPostSearchFilters()"><i class="fas fa-rotate-left"></i> Reset In-Results Filters</button>` : ''}
           </div>
         `;
         return;
@@ -354,10 +416,12 @@ window.SearchResults = (function () {
       }
 
       if (activeFilter === 'deep_media') {
-        container.className = 'results-grid';
+        const allAudio = results.every(r => detectRenderCategory(r) === 'audio');
+        container.className = allAudio ? 'results-list' : 'results-grid';
         container.innerHTML = results.map(r => {
-          if (r.category === 'videos') return safeRender(renderVideoCard, r);
-          if (r.category === 'audio') return safeRender(renderAudioCard, r);
+          const kind = detectRenderCategory(r);
+          if (kind === 'videos') return safeRender(renderVideoCard, r);
+          if (kind === 'audio') return safeRender(renderAudioCard, r);
           return safeRender(renderImageCard, r);
         }).join('');
         return;
@@ -367,17 +431,19 @@ window.SearchResults = (function () {
       if (mode === 'media') {
         container.className = 'results-grid';
         container.innerHTML = results.map(r => {
-          if (r.category === 'videos') return safeRender(renderVideoCard, r);
-          if (r.category === 'audio') return safeRender(renderAudioCard, r);
+          const kind = detectRenderCategory(r);
+          if (kind === 'videos') return safeRender(renderVideoCard, r);
+          if (kind === 'audio') return safeRender(renderAudioCard, r);
           return safeRender(renderImageCard, r);
         }).join('');
       } else {
         container.className = 'results-list';
         container.innerHTML = results.map(r => {
-          if (r.category === 'images') return safeRender(renderImageCard, r);
-          if (r.category === 'videos') return safeRender(renderVideoCard, r);
-          if (r.category === 'audio') return safeRender(renderAudioCard, r);
-          if (r.category === 'files' || r.metadata?.extension) return safeRender(renderFileCard, r);
+          const kind = detectRenderCategory(r);
+          if (kind === 'images') return safeRender(renderImageCard, r);
+          if (kind === 'videos') return safeRender(renderVideoCard, r);
+          if (kind === 'audio') return safeRender(renderAudioCard, r);
+          if (kind === 'files') return safeRender(renderFileCard, r);
           return safeRender(renderStandardCard, r);
         }).join('');
       }
@@ -385,47 +451,19 @@ window.SearchResults = (function () {
 
     copyLink(url) {
       navigator.clipboard.writeText(url).then(() => {
-        alert('Link copied to clipboard!');
+        _showBanner('Link copied to clipboard!', 'success', 2500);
+      }).catch(() => {
+        _showBanner('Could not copy link to clipboard.', 'error', 3000);
       });
     },
 
     sendToChat(title, url) {
       const markdownCitation = `[${title}](${url})`;
       navigator.clipboard.writeText(markdownCitation).then(() => {
-        alert(`Citation copied for chat:\n${markdownCitation}`);
+        _showBanner(`Citation copied for chat: ${title}`, 'success', 3000);
+      }).catch(() => {
+        _showBanner('Could not copy citation to clipboard.', 'error', 3000);
       });
-    },
-
-    async readPage(url) {
-      const modal = document.getElementById('page-reader-modal');
-      const titleEl = document.getElementById('reader-modal-title');
-      const bodyEl = document.getElementById('reader-modal-body');
-      if (!modal) return;
-
-      titleEl.innerText = 'Loading page content...';
-      bodyEl.innerHTML = '<div style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Extracting and cleaning text content...</p></div>';
-      modal.classList.add('open');
-
-      try {
-        const res = await window.SearchAPI.fetchPageContent(url, 6000);
-        if (res.ok) {
-          titleEl.innerText = res.title || url;
-          bodyEl.innerHTML = `
-            <div style="margin-bottom:12px; font-size:11px; color:var(--text-dim); display:flex; gap:12px;">
-              <span><i class="fas fa-link"></i> ${escapeHtml(res.url)}</span>
-              <span><i class="fas fa-bolt"></i> ${escapeHtml(res.clean_method)}</span>
-            </div>
-            ${res.description ? `<div style="padding:10px 14px; background:rgba(255,255,255,0.04); border-radius:8px; margin-bottom:16px; font-size:12px; color:var(--accent-cyan);"><strong>Description:</strong> ${escapeHtml(res.description)}</div>` : ''}
-            <div style="white-space:pre-wrap; line-height:1.7; font-size:13px; color:var(--text-main); font-family:var(--font-mono);">${escapeHtml(res.text)}</div>
-          `;
-        } else {
-          titleEl.innerText = 'Reading Error';
-          bodyEl.innerHTML = `<div style="color:var(--accent-rose); padding:20px;">${escapeHtml(res.error || 'Unable to extract page text.')}</div>`;
-        }
-      } catch (err) {
-        titleEl.innerText = 'Network Error';
-        bodyEl.innerHTML = `<div style="color:var(--accent-rose); padding:20px;">${escapeHtml(err.message)}</div>`;
-      }
     },
 
     handleTorClick(url, title) {
@@ -444,19 +482,16 @@ window.SearchResults = (function () {
     },
 
     async openInTorBrowser(url) {
+      _showBanner('Launching Tor Browser...', 'info', 2500);
       try {
         const res = await window.SearchAPI.openTorBrowser(url);
         if (res.ok) {
-          if (typeof window.showToast === 'function') {
-            window.showToast('Launching Tor Browser...');
-          } else {
-            alert('Tor Browser launched successfully with ' + url);
-          }
+          _showBanner('Tor Browser launched with ' + url, 'success', 3500);
         } else {
-          alert('Could not launch Tor Browser: ' + (res.error || res.message) + '\n\nYou can use "Live Viewer" to view this page directly in Chrome.');
+          _showBanner('Could not launch Tor Browser: ' + (res.error || res.message || 'Unknown error'), 'error', 4500);
         }
       } catch (err) {
-        alert('Error launching Tor Browser: ' + err.message);
+        _showBanner('Error launching Tor Browser: ' + err.message, 'error', 4500);
       }
     },
 
