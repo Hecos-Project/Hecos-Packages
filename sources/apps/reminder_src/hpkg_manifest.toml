@@ -23,15 +23,15 @@ plugin_dir = "."
 readme = "README.md"
 readme_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/reminder_src/README.md"
 screenshots = []
-signature = "iXcNcgPry+FtAJG3fNniT7ibfyj+byZK8ii3CgXAwmKKnIpN3fB9+kb3acjWADbm/qPGGJe9/WqwhYdgu4ulCg=="
+signature = "kxuxc+6x3EWw95lPqVcIrAU+B7p81upV7Dl7nQLn3Wt7Utqgjfaj8ZqL1w7tEQYTla3qnvWnFefXTyFJaAoJAA=="
 tag = "REMINDER"
 target_dir = "hpm"
 type = "app"
-version = "1.0.3"
+version = "1.0.4"
 widgets = [
     { extension_path = "reminder/", id = "reminder" },
 ]
-update_date = "2026-11-03T05:56:30Z"
+update_date = "2026-11-19T15:02:40Z"
 
 [backup]
 backup_endpoint = "/api/reminders/backup"
@@ -78,27 +78,29 @@ tab_label = "Reminder"
 template_file = "templates/config/config_reminder.html"
 
 [file_hashes]
+"main.py" = "0159120448e9e50ac403b41f662bc709a87d0072ddca64a986f3752ae998a047"
+"manifest.json" = "baf72fe8699c2e6bae6de6c15757bb41868bc9d1f4ae3d6453f78a4cb6c4ce0e"
+"notifier.py" = "762fcb69b9604e86e141d4697f5a095e898adf3f9814f57f37a22156eccbade1"
+"parser.py" = "0462f0182d1cdeb0d3e43863742efa4846cc63f3671e60267cb8956970095fb2"
+"preview.png" = "0ba1f2baf424dfacd966ecaeaba1bed722427ec931ec0ab7bda5830f6b5e0568"
 "README.md" = "e4c68ddfbd9cb31e080ce9d38feaf7f5b33f301a9d1350db779da1118cecf1a5"
+"scheduler.py" = "7d181ee49a035e33bfd99ea61a151d4de38000d5d67f5bca6dfe795cf144dcbd"
+"store.py" = "d66ac74dc7215f989d175bfcda3afdfd928145f4909895e5fe64f54b2a4da091"
 "__init__.py" = "2644546d768e5b75ae3a7166c3b9abf87bff64190cc4eb9ddc7229aea831ab93"
 "locales/en.json" = "86e87b7bdf0a70a2be8942e3a424bc4719e1f5c447730e684918acf46a8132f6"
 "locales/es.json" = "fc156a5e3850fe0000ce707ca7d542c0bface0faa5fe5e8522a86573acaf7b46"
 "locales/it.json" = "4f50459786fea3bcb572095835af3536b32649a28e54ed333d419b813395a776"
-"main.py" = "0159120448e9e50ac403b41f662bc709a87d0072ddca64a986f3752ae998a047"
-"notifier.py" = "762fcb69b9604e86e141d4697f5a095e898adf3f9814f57f37a22156eccbade1"
-"parser.py" = "0462f0182d1cdeb0d3e43863742efa4846cc63f3671e60267cb8956970095fb2"
-"preview.png" = "0ba1f2baf424dfacd966ecaeaba1bed722427ec931ec0ab7bda5830f6b5e0568"
-"reminder/__init__.py" = "c808cedf3a3c00163514b02346d492fcc649f9950e9ebff1dfa2f01021acae51"
 "reminder/main.py" = "0976efae938c72a66bdae057689399319b2a83d3b530e1acc490b80a4584563e"
 "reminder/manifest.json" = "39653a0743f857b2a733824a0b45f39cef661cc23ad81adeb39d11ae06079675"
-"reminder/templates/reminder_widget.html" = "5bb2bc3fe93ceb59edd45be9c8650827e31d64866db8df0fc8b13994ff06bf5a"
-"reminder_config/__init__.py" = "2f59ef07028edb835724001e18dc4ae44a7b5ed75b1cd24ba0ca6876c4b3e5bc"
+"reminder/__init__.py" = "c808cedf3a3c00163514b02346d492fcc649f9950e9ebff1dfa2f01021acae51"
+"reminder/templates/reminder_widget.html" = "e6f58c15751bc0948a7bd303f1a6fd88fdbdb269f1e9c67c69effd81796c3e68"
 "reminder_config/config_manager.py" = "172c56490ecf0afa80038f09aa8b22165ef8edb141736d27f42d86bcd4badb23"
 "reminder_config/reminder.toml" = "a05b8018312daffd9d9231eb6ba40a359cc589d04a54cefd82936d45ed23f44e"
-"scheduler.py" = "7d181ee49a035e33bfd99ea61a151d4de38000d5d67f5bca6dfe795cf144dcbd"
-"store.py" = "d66ac74dc7215f989d175bfcda3afdfd928145f4909895e5fe64f54b2a4da091"
+"reminder_config/__init__.py" = "2f59ef07028edb835724001e18dc4ae44a7b5ed75b1cd24ba0ca6876c4b3e5bc"
 "templates/config/config_reminder.html" = "bccc2c0655393a8b04118dc76fa87ed9ed40fbc5f17f59cea67b771e7e88402a"
 "web/backup_api.py" = "64c856a5365335ed35d13e6a5911521cd5635b6e6b1eb60a119f06fbcbe5608b"
-"web/routes.py" = "cf9f60997aeef7bdf969552fc99fa6c0608da57900fa143c23ee89b6b1724b73"
+"web/routes.py" = "4d7e774b9724d826ede81ff6fc9cee72546fc50e314563e4824ccd23f8c64d13"
+"web/__init__.py" = "c23df3bfd789c920af4fad429a5758056cdf21e5634e5fb6f59b2bded98ec6b3"
 
 [[slash_commands]]
 aliases = [

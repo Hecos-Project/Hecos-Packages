@@ -8,15 +8,15 @@
         <span class="ql-chevron" id="reminder-widget-toggle"><i class="fas fa-chevron-down"></i></span>
     </div>
     
-    <div id="reminder-widget-body" class="ql-body" style="margin-top:10px;">
-        {# ── Upcoming list ── #}
-        <div id="reminder-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
+    <div id="reminder-widget-body" class="ql-body" style="margin-top:8px;">
+        {# ── Upcoming & last 3 expired list (compact 2-row items) ── #}
+        <div id="reminder-list" class="rem-list">
           <span style="color:var(--muted);font-size:0.8em;padding-left:12px;">{{ t('webui_chat_loading') }}</span>
         </div>
 
         {# ── Dual-Mode Add Form ── #}
         <form id="reminder-quick-add" onsubmit="reminderWidget.quickAdd(event)"
-              style="display:flex;flex-direction:column;gap:6px;">
+              style="display:flex;flex-direction:column;gap:5px;">
           <input id="reminder-title-input" class="ql-input" type="text" placeholder="What to remind you about..."
                  autocomplete="off" required>
           
@@ -46,6 +46,99 @@
         </form>
 
         <style>
+        .rem-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 6px;
+            max-height: 195px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+        .rem-list::-webkit-scrollbar { width: 4px; }
+        .rem-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.14);
+            border-radius: 4px;
+        }
+        .rem-item {
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 6px;
+            padding: 5px 8px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .rem-item.is-expired {
+            border-color: rgba(255, 100, 100, 0.16);
+            background: rgba(255, 80, 80, 0.04);
+        }
+        .rem-row-top,
+        .rem-row-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            min-width: 0;
+        }
+        .rem-title {
+            flex: 1;
+            min-width: 0;
+            font-size: 12px;
+            color: var(--text);
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .rem-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .rem-action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+        .rem-meta {
+            flex: 1;
+            min-width: 0;
+            font-size: 10px;
+            color: var(--muted);
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .rem-mode-pill {
+            flex-shrink: 0;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 8.5px;
+            font-weight: 700;
+            line-height: 1.3;
+            letter-spacing: 0.2px;
+            cursor: pointer;
+            outline: none;
+        }
+        .rem-more-hint {
+            font-size: 10px;
+            color: var(--muted);
+            opacity: 0.78;
+            text-align: right;
+            padding: 1px 4px;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        .rem-more-hint:hover {
+            opacity: 1;
+            color: var(--text);
+        }
         .rem-chip {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border);
@@ -64,7 +157,18 @@
 <script>
 window.reminderWidget = (function() {
   const COLLAPSED_KEY = 'hecos-rem-collapsed';
+  const MAX_EXPIRED = 3;
+  const MAX_UPCOMING = 5;
   let _collapsed = localStorage.getItem(COLLAPSED_KEY) === '1';
+
+  function _esc(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
   function _applyCollapsed(yes) {
     const body = document.getElementById('reminder-widget-body');
@@ -79,6 +183,34 @@ window.reminderWidget = (function() {
     _applyCollapsed(_collapsed);
   }
 
+  function _isExpired(r, nowMs) {
+    if (r.repeat && r.cron_expr) return false;
+    if (!r.when_iso) return false;
+    const ts = Date.parse(r.when_iso);
+    return !Number.isNaN(ts) && ts < nowMs;
+  }
+
+  function _tsOf(isoStr) {
+    if (!isoStr) return null;
+    const ts = Date.parse(isoStr);
+    return Number.isNaN(ts) ? null : ts;
+  }
+
+  function _shortDate(whenIso) {
+    if (!whenIso) return '';
+    try {
+      const d = new Date(whenIso);
+      const now = new Date();
+      const dateOpts = d.getFullYear() === now.getFullYear()
+        ? { day: '2-digit', month: '2-digit' }
+        : { day: '2-digit', month: '2-digit', year: '2-digit' };
+      return d.toLocaleDateString(undefined, dateOpts) + ' ' +
+             d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return '';
+    }
+  }
+
   function _fmt(r) {
     if (r.repeat && r.cron_expr) return '<i class="fas fa-redo"></i> ' + t('ext_reminder_recurrent');
     if (r.when_iso) {
@@ -86,18 +218,59 @@ window.reminderWidget = (function() {
         const d = new Date(r.when_iso);
         const now = new Date();
         const diff = d - now;
-        if (diff < 0)      return '<i class="fas fa-bell"></i> ' + t('ext_reminder_expired');
-        if (diff < 60000)  return '<i class="fas fa-bell"></i> <1 min';
-        if (diff < 3600000) return `<i class="fas fa-bell"></i> ${Math.round(diff/60000)}m`;
+        if (diff < 0)        return '<i class="fas fa-bell"></i> ' + t('ext_reminder_expired');
+        if (diff < 60000)    return '<i class="fas fa-bell"></i> &lt;1m';
+        if (diff < 3600000)  return `<i class="fas fa-bell"></i> ${Math.round(diff/60000)}m`;
         if (diff < 86400000) return `<i class="fas fa-bell"></i> ${Math.round(diff/3600000)}h`;
         return `<i class="fas fa-calendar-alt"></i> ${d.toLocaleDateString(undefined, {day:'2-digit',month:'2-digit'})} ${d.toLocaleTimeString(undefined, {hour:'2-digit',minute:'2-digit'})}`;
-      } catch(e) { return r.when_iso; }
+      } catch(e) { return _esc(r.when_iso); }
     }
     return '';
   }
 
+  function _selectWidgetReminders(allActive) {
+    const nowMs = Date.now();
+    const upcoming = [];
+    const expiredAll = [];
+
+    for (const r of allActive) {
+      if (_isExpired(r, nowMs)) {
+        expiredAll.push(r);
+      } else {
+        upcoming.push(r);
+      }
+    }
+
+    // Upcoming: soonest scheduled first, recurring without when_iso after
+    upcoming.sort((a, b) => {
+      const ta = _tsOf(a.when_iso);
+      const tb = _tsOf(b.when_iso);
+      if (ta === null && tb === null) return 0;
+      if (ta === null) return 1;
+      if (tb === null) return -1;
+      return ta - tb;
+    });
+
+    // Expired: keep only the latest MAX_EXPIRED (most recently expired first)
+    expiredAll.sort((a, b) => {
+      const ta = _tsOf(a.when_iso) ?? _tsOf(a.created_at) ?? 0;
+      const tb = _tsOf(b.when_iso) ?? _tsOf(b.created_at) ?? 0;
+      return tb - ta;
+    });
+
+    const visibleUpcoming = upcoming.slice(0, MAX_UPCOMING);
+    const visibleExpired = expiredAll.slice(0, MAX_EXPIRED);
+    const hiddenExpired = Math.max(0, expiredAll.length - visibleExpired.length);
+
+    return {
+      items: visibleUpcoming.concat(visibleExpired),
+      hiddenExpired,
+      nowMs,
+    };
+  }
+
   function refresh() {
-    fetch('/api/ext/reminder?n=5')
+    fetch('/api/ext/reminder/all?status=active')
       .then(r => r.json())
       .then(data => {
         const list = document.getElementById('reminder-list');
@@ -106,54 +279,59 @@ window.reminderWidget = (function() {
           list.innerHTML = `<span style="color:var(--muted);font-size:0.8em;padding-left:4px;">${t('ext_reminder_none')}</span>`;
           return;
         }
-        list.innerHTML = data.reminders.map(r => {
+
+        const { items, hiddenExpired, nowMs } = _selectWidgetReminders(data.reminders);
+
+        let html = items.map(r => {
           let isInt = r.interactive === 1;
           if (r.interactive === null || r.interactive === undefined) {
              isInt = !!(window.cfg && window.cfg.plugins && window.cfg.plugins.REMINDER && window.cfg.plugins.REMINDER.reminder_snooze_ui);
           }
-          const modePillStyle = isInt 
-            ? 'background:rgba(var(--yellow-rgb),0.1);border:1px solid rgba(var(--yellow-rgb),0.2);color:var(--yellow);padding:2px 8px;border-radius:12px;font-size:9px;font-weight:bold;'
-            : 'background:var(--glass);border:1px solid var(--border);color:var(--muted);padding:2px 8px;border-radius:12px;font-size:9px;font-weight:bold;';
+          const modePillStyle = isInt
+            ? 'background:rgba(var(--yellow-rgb),0.1);border:1px solid rgba(var(--yellow-rgb),0.25);color:var(--yellow);'
+            : 'background:var(--glass);border:1px solid var(--border);color:var(--muted);';
           const modeLabel = isInt ? 'INTERACTIVE' : 'SIMPLE';
           const nextMode = isInt ? false : true;
+          const isExp = _isExpired(r, nowMs);
+          const safeTitle = _esc(r.title);
+          const safeId = _esc(r.id);
 
-          let fullDate = '';
+          let metaHtml = '';
           if (r.when_iso) {
-            try {
-              const d = new Date(r.when_iso);
-              fullDate = d.toLocaleDateString(undefined, {day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + d.toLocaleTimeString(undefined, {hour:'2-digit',minute:'2-digit'});
-            } catch(e){}
+            const shortDate = _shortDate(r.when_iso);
+            const expColor = isExp ? 'color:#f08a8a;' : '';
+            metaHtml = `<i class="far fa-calendar-alt" style="margin-right:3px;opacity:0.75;"></i>${shortDate} <span style="opacity:0.85;margin-left:3px;${expColor}">(${_fmt(r)})</span>`;
           } else if (r.repeat) {
-            fullDate = 'Recurring'
+            metaHtml = _fmt(r);
           }
 
           return `
-          <div class="ql-item" style="border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:10px; margin-bottom:8px; display:flex; flex-direction:column; gap:6px;">
-            
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-                <span style="flex:1; font-size:13px; color:var(--text); line-height:1.4; word-break:break-word;">
-                    <i class="far fa-clock" style="color:#ffc83c; margin-right:4px;"></i> <strong>${r.title}</strong>
+          <div class="ql-item rem-item${isExp ? ' is-expired' : ''}">
+            <div class="rem-row-top">
+                <span class="rem-title" title="${safeTitle}">
+                    <i class="far fa-clock" style="color:${isExp ? '#f08a8a' : '#ffc83c'};margin-right:4px;font-size:11px;"></i><strong>${safeTitle}</strong>
                 </span>
-                <div style="display:flex; gap:8px;">
-                    <button onclick="reminderWidget.snooze('${r.id}')" title="Snooze 15 min"
-                            style="background:none;border:none;cursor:pointer;font-size:13px;color:rgba(255,255,255,0.6);padding:0;">zzz</button>
-                    <button onclick="reminderWidget.cancel('${r.id}')" title="Cancel"
-                            style="background:none;border:none;cursor:pointer;font-size:13px;color:rgba(255,80,80,0.8);padding:0;"><i class="fas fa-times"></i></button>
+                <div class="rem-actions">
+                    <button onclick="reminderWidget.snooze('${safeId}')" title="Snooze 15 min"
+                            class="rem-action-btn" style="font-size:11px;color:rgba(255,255,255,0.6);">zzz</button>
+                    <button onclick="reminderWidget.cancel('${safeId}')" title="Cancel"
+                            class="rem-action-btn" style="font-size:12px;color:rgba(255,80,80,0.85);"><i class="fas fa-times"></i></button>
                 </div>
             </div>
-            
-            <div style="font-size:10px; color:var(--muted); line-height:1.3;">
-                <i class="far fa-calendar-alt" style="margin-right:2px;"></i> ${fullDate} <span style="opacity:0.75;margin-left:4px;">(${_fmt(r)})</span>
+            <div class="rem-row-meta">
+                <span class="rem-meta">${metaHtml}</span>
+                <button onclick="reminderWidget.toggleMode('${safeId}', ${nextMode})" title="Change Mode"
+                        style="${modePillStyle}" class="rem-mode-pill reminder-mode-toggle">${modeLabel}</button>
             </div>
-            
-            <div style="display:flex; justify-content:flex-start; margin-top:4px;">
-                <button onclick="reminderWidget.toggleMode('${r.id}', ${nextMode})" title="Change Mode"
-                        style="${modePillStyle} cursor:pointer; outline:none;" class="reminder-mode-toggle">${modeLabel}</button>
-            </div>
-
           </div>
           `;
         }).join('');
+
+        if (hiddenExpired > 0) {
+          html += `<div class="rem-more-hint" onclick="window.hecosOpenConfig('#reminder')" title="Manage all reminders in Config">+${hiddenExpired} ${t('ext_reminder_expired')} · <i class="fas fa-cog"></i></div>`;
+        }
+
+        list.innerHTML = html;
       })
       .catch(() => {
         const list = document.getElementById('reminder-list');
@@ -170,7 +348,7 @@ window.reminderWidget = (function() {
     const msg   = document.getElementById('reminder-quick-msg');
     if (!title || !when) return;
     
-    const btn = e.target.querySelector('.ql-add-btn') || e.target;
+    const btn = e.target.querySelector('button[type="submit"]') || e.target.querySelector('.ql-add-btn') || e.target;
     const oldBtnHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     btn.disabled = true;
@@ -247,7 +425,6 @@ window.reminderWidget = (function() {
         const inp = document.getElementById('reminder-when-input');
         if (inp) {
             inp.value = isoString;
-            // Provide a quick visual feedback
             inp.style.backgroundColor = 'rgba(52,152,219,0.2)';
             setTimeout(() => inp.style.backgroundColor = '', 400);
         }
