@@ -1,7 +1,7 @@
 {
   "version": "1",
   "catalog_url": "https://hecos-project.github.io/store/index.json",
-  "generated_at": "2026-11-19T15:02:40Z",
+  "generated_at": "2026-11-24T02:27:44Z",
   "packages": [
     {
       "id": "org.hecos.testbuilder",
@@ -1152,8 +1152,8 @@
       "description": "Universal document reader with TTS. Fullscreen reading mode, visual PDF canvas rendering, text selection reading, word-by-word highlighting, audiobook-style controls.",
       "tags": [],
       "download_url": "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/packages/plugins/document_reader-1.0.1.hpkg",
-      "size_bytes": 880444,
-      "sha256": "8c94862ba75e999730d19ef81e78a1fb420098ce8775105342fc48b560cf5a69",
+      "size_bytes": 880689,
+      "sha256": "438db93c20e5a660c6f37c12d81b8ac856917774750c3dd26c437243e1568eaf",
       "screenshots": [
         "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/sources/plugins/document_reader_src/preview_1.png"
       ],
