@@ -3,7 +3,7 @@
  * Handles rendering the LoRA visual cards, filtering, and model compatibility.
  */
 
-window._selectedLoras = new Set();
+window._selectedLoras = window._selectedLoras instanceof Set ? window._selectedLoras : new Set();
 
 window.renderLoRAList = function(filterText) {
     var container  = document.getElementById('igen-loras-list');
@@ -107,6 +107,8 @@ window._loraCardClick = function(evt, name) {
     }
     _syncLoraSelectToHidden();
     window.renderLoRAList(document.getElementById('igen-lora-search')?.value);
+    if (typeof window.updateIgenLiveSummary === 'function') window.updateIgenLiveSummary();
+    if (typeof window.updateIgenDirtyState === 'function') window.updateIgenDirtyState();
     if (typeof _igenDebounceSave !== 'undefined') _igenDebounceSave();
 };
 
@@ -126,6 +128,8 @@ window.clearLoRASelection = function() {
     window._selectedLoras.clear();
     _syncLoraSelectToHidden();
     window.renderLoRAList(document.getElementById('igen-lora-search')?.value);
+    if (typeof window.updateIgenLiveSummary === 'function') window.updateIgenLiveSummary();
+    if (typeof window.updateIgenDirtyState === 'function') window.updateIgenDirtyState();
     if (typeof _igenDebounceSave !== 'undefined') _igenDebounceSave();
 };
 

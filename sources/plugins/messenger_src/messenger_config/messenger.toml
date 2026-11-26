@@ -1,25 +1,24 @@
-[messenger.telegram]
-enabled = true
+[messenger]
+remember_last_channel = true
+last_channel_ttl_minutes = 15
+general_override_enabled = true
+anti_hallucination_guard_enabled = true
 
-[[messenger.telegram.bots]]
-name = "test"
-enabled = true
-bot_token = "123"
-default_chat_id = ""
-is_admin = false
-group_mode = "mention"
-group_keywords = ""
+[messenger.telegram]
+enabled = false
+auto_match_persona_bot = true
+routing_override_enabled = true
 
 [messenger.whatsapp]
 enabled = true
+session_mode = "cdp"
+cdp_port = 9222
+auto_open_tab = true
+persistent_headless = false
 phone_country_code = "+39"
 send_as_single_block = true
 use_template = false
 template_id = ""
 cdp_timeout = 30
 worker_timeout = 60
-
-[messenger.discord]
-enabled = false
-webhook_url = ""
-default_channel = ""
+routing_override_enabled = true

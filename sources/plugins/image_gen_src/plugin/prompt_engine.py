@@ -52,9 +52,70 @@ def apply_enrichment(prompt: str, auto_enrich: bool, enrich_keywords: str) -> st
 
 
 def refine_flux_prompt(original_prompt: str, instructions: str) -> str:
-    # In the isolated SDK environment, we cannot use the core LLM directly yet.
-    # The Web UI handles refinement via routes.py. For CLI commands, we bypass.
-    logger.info("[PROMPT_ENGINE] Skipping Flux refinement (running in isolated mode).")
+    """
+    Optional Flux Prompt Upsampler powered by the active Hecos LLM backend.
+    Uses ONLY the user-configured, editable `flux_refiner_instructions` from image_gen.toml / UI.
+    Falls back cleanly to `original_prompt` if instructions are empty, running isolated, or LLM fails.
+    """
+    clean_instr = (instructions or "").strip()
+    if not clean_instr or not (original_prompt or "").strip():
+        return original_prompt
+
+    try:
+        import re
+        import sys
+        from hecos.core.llm import client as llm_client
+
+        cfg_mgr = getattr(sys, "hecos_config_manager", None)
+        if cfg_mgr is not None and isinstance(getattr(cfg_mgr, "config", None), dict):
+            sys_cfg = cfg_mgr.config
+        else:
+            from hecos.app.config import ConfigManager
+            sys_cfg = ConfigManager().config
+
+        try:
+            from hecos.app.model_manager import ModelManager
+            btype, mname = ModelManager.get_effective_model_info(sys_cfg)
+        except Exception:
+            btype = (sys_cfg.get("backend") or {}).get("type", "ollama")
+            mname = ((sys_cfg.get("backend") or {}).get(btype) or {}).get("model", "")
+
+        if not mname:
+            return original_prompt
+
+        backend_cfg = dict(((sys_cfg.get("backend") or {}).get(btype) or {}))
+        backend_cfg["backend_type"] = btype
+        backend_cfg["model"] = mname
+        backend_cfg["payload_control"] = {"send_tools": False}
+        backend_cfg["disable_tools"] = True
+        backend_cfg["think"] = False
+
+        llm_cfg = dict(sys_cfg.get("llm") or {})
+        llm_cfg["max_tokens"] = min(int(llm_cfg.get("max_tokens") or 300), 260)
+        llm_cfg["temperature"] = min(float(llm_cfg.get("temperature") or 0.6), 0.7)
+        llm_cfg["think"] = False
+
+        raw_out = llm_client.generate(
+            clean_instr,
+            original_prompt.strip(),
+            backend_cfg,
+            llm_cfg,
+            tools=None,
+            images=None,
+            extra_messages=None,
+        )
+        text = raw_out.get("content", "") if isinstance(raw_out, dict) else getattr(raw_out, "content", str(raw_out or ""))
+        if not text or str(text).lstrip().startswith(("⚠️", "❌", "⛔")):
+            return original_prompt
+
+        cleaned = re.sub(r"<think>[\s\S]*?</think>", "", str(text), flags=re.IGNORECASE).strip()
+        cleaned = cleaned.strip().strip('"').strip("'").strip()
+        if len(cleaned) >= 20 and len(cleaned) <= 1800:
+            logger.info(f"[PROMPT_ENGINE] Flux Prompt Upsampler refined prompt ({len(original_prompt)} -> {len(cleaned)} chars).")
+            return cleaned
+    except Exception as exc:
+        logger.warning(f"[PROMPT_ENGINE] Flux Prompt Upsampler fallback to original prompt: {exc}")
+
     return original_prompt
 
 
@@ -62,8 +123,8 @@ def build_prompt(
     raw_prompt: str, style: str, auto_enrich: bool, enrich_keywords: str,
     model: str, optimize_for_flux: bool, flux_instructions: str,
 ) -> str:
-    if optimize_for_flux and "flux" in model.lower():
-        logger.info("[PROMPT_ENGINE] Flux optimisation enabled — calling Brain refiner.")
+    if optimize_for_flux and "flux" in (model or "").lower():
+        logger.info("[PROMPT_ENGINE] Flux Prompt Upsampler enabled — refining prompt with user instructions.")
         prompt = refine_flux_prompt(raw_prompt, flux_instructions)
         return apply_style(prompt, style)
 

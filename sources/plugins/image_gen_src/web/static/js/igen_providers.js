@@ -75,6 +75,8 @@ window.onProviderChanged = async function(userTriggered, _attempt) {
     // ── Show/hide local backend panel ────────────────────────────────────────
     var localWrapper = document.getElementById('igen-local-backend-wrapper');
     if (localWrapper) localWrapper.style.display = isLocal ? 'block' : 'none';
+    var fluxParamsRow = document.getElementById('igen-flux-params-row');
+    if (fluxParamsRow) fluxParamsRow.style.display = isLocal ? '' : 'none';
     if (isLocal && _attempt === 0 && typeof window.checkSwarmUIBadgeSilent === 'function') {
         window.checkSwarmUIBadgeSilent();
     }
@@ -149,9 +151,23 @@ window.onProviderChanged = async function(userTriggered, _attempt) {
                     var matched = data.models.find(function(m) { return m.includes(currentSelection); });
                     if (matched) {
                         modelSel.value = matched;
+                    } else {
+                        // Preserve saved model even if not currently in provider list
+                        var savedOpt = document.createElement('option');
+                        savedOpt.value = currentSelection;
+                        savedOpt.textContent = currentSelection + ' (saved)';
+                        modelSel.insertBefore(savedOpt, modelSel.firstChild);
+                        modelSel.value = currentSelection;
                     }
                 }
             }
+        } else if (currentSelection) {
+            // Backend offline / returned 0 models — NEVER wipe configured model to ""!
+            var offlineOpt = document.createElement('option');
+            offlineOpt.value = currentSelection;
+            offlineOpt.textContent = currentSelection + (isLocal ? ' (SwarmUI offline — saved)' : ' (saved)');
+            modelSel.appendChild(offlineOpt);
+            modelSel.value = currentSelection;
         }
 
         // ── Fetch VAEs and LoRAs for SwarmUI ─────────────────────────────────
@@ -159,8 +175,21 @@ window.onProviderChanged = async function(userTriggered, _attempt) {
             try {
                 var vSel = document.getElementById('igen-vae');
                 var lSel = document.getElementById('igen-loras');
-                var vCur = userTriggered ? '' : vSel.value;
-                var lCur = userTriggered ? [] : Array.from(lSel.selectedOptions).map(function(o) { return o.value; });
+                var vPending = (!userTriggered && vSel && vSel.hasAttribute('data-initial-val'))
+                    ? vSel.getAttribute('data-initial-val') : null;
+                if (vSel && vSel.hasAttribute('data-initial-val')) {
+                    vSel.removeAttribute('data-initial-val');
+                }
+                var vCur = userTriggered ? '' : (vPending !== null ? vPending : (vSel ? vSel.value : ''));
+
+                var lCur = userTriggered
+                    ? []
+                    : (Array.isArray(window._igenPendingLoras)
+                        ? window._igenPendingLoras.slice()
+                        : (window._selectedLoras instanceof Set && window._selectedLoras.size > 0
+                            ? Array.from(window._selectedLoras)
+                            : Array.from((lSel || {}).selectedOptions || []).map(function(o) { return o.value; })));
+                window._igenPendingLoras = null;
 
                 var vRes = await fetch('/hecos/api/plugins/image_gen/vaes');
                 var vData = await vRes.json();
@@ -170,30 +199,51 @@ window.onProviderChanged = async function(userTriggered, _attempt) {
 
                 window._swarmui_compat = lData;
 
-                vSel.innerHTML = '<option value="">Default (Automatic)</option>';
-                if (vData.ok && vData.models) {
-                    vData.models.forEach(function(m) {
-                        var o = document.createElement('option'); o.value = o.textContent = m;
-                        vSel.appendChild(o);
-                    });
-                    if (vCur) vSel.value = vCur;
+                if (vSel) {
+                    vSel.innerHTML = '<option value="">Default (Automatic)</option>';
+                    if (vData.ok && vData.models && vData.models.length) {
+                        vData.models.forEach(function(m) {
+                            var o = document.createElement('option'); o.value = o.textContent = m;
+                            vSel.appendChild(o);
+                        });
+                    }
+                    if (vCur) {
+                        var hasV = Array.from(vSel.options).some(function(o) { return o.value === vCur; });
+                        if (!hasV) {
+                            var vo = document.createElement('option');
+                            vo.value = vCur; vo.textContent = vCur + ' (saved)';
+                            vSel.appendChild(vo);
+                        }
+                        vSel.value = vCur;
+                    }
                 }
 
-                lSel.innerHTML = '';
-                if (lData.ok && lData.loras) {
-                    // Store full lora data globally for rendering
-                    window._swarmui_loras_data = lData.loras;
-                    // Pre-populate hidden select for save/load compatibility
-                    lData.loras.forEach(function(m) {
-                        var o = document.createElement('option');
-                        o.value = m.name; o.textContent = m.name;
-                        if (lCur.includes(m.name)) o.selected = true;
-                        lSel.appendChild(o);
+                if (lSel) {
+                    lSel.innerHTML = '';
+                    var seenLoras = new Set();
+                    if (lData.ok && lData.loras && lData.loras.length) {
+                        window._swarmui_loras_data = lData.loras;
+                        lData.loras.forEach(function(m) {
+                            var o = document.createElement('option');
+                            o.value = m.name; o.textContent = m.name;
+                            if (lCur.includes(m.name)) o.selected = true;
+                            lSel.appendChild(o);
+                            seenLoras.add(m.name);
+                        });
+                    }
+                    // Preserve any saved LoRAs when SwarmUI is offline
+                    lCur.forEach(function(name) {
+                        if (name && !seenLoras.has(name)) {
+                            var o = document.createElement('option');
+                            o.value = name; o.textContent = name; o.selected = true;
+                            lSel.appendChild(o);
+                        }
                     });
                 }
 
-                window.renderLoRAList();
-                window.updateLoRACompatibility();
+                window._selectedLoras = new Set(lCur);
+                if (typeof window.renderLoRAList === 'function') window.renderLoRAList();
+                if (typeof window.updateLoRACompatibility === 'function') window.updateLoRACompatibility();
 
             } catch(ex) { console.warn('[ImageGen] Failed fetching VAEs/LoRAs:', ex); }
         }
@@ -437,6 +487,13 @@ window.onCloudEnabledChanged = function() {
 
 window._onCloudToggle = function(enabled) {
     var provSel = document.getElementById('igen-provider');
+    var mirror  = document.getElementById('igen-cloud-enabled-mirror');
+    if (mirror && mirror.checked !== !!enabled) mirror.checked = !!enabled;
+    var wrapper = document.getElementById('igen-cloud-wrapper');
+    if (wrapper) {
+        if (enabled) wrapper.classList.remove('cloud-disabled');
+        else wrapper.classList.add('cloud-disabled');
+    }
     if (!provSel) return;
 
     // Disable/enable all cloud options in the dropdown
@@ -459,7 +516,7 @@ window._onCloudToggle = function(enabled) {
     });
 
     // Only trigger provider change if NOT during a bulk reload (prevents race condition)
-    if (!_igenLoadingConfig) {
+    if (!_igenLoadingConfig && !window._igenDisableAutoSave) {
         window.onProviderChanged(true, 0);
     }
 };
@@ -472,12 +529,97 @@ window._applyCloudToggleState = function() {
 
 // ── Other helpers ────────────────────────────────────────────────────────────
 
+// ── Resolution presets & dimension helpers ───────────────────────────────────
+
+window.IGEN_RESOLUTION_PRESETS = {
+    '1:1':       [1024, 1024],
+    '3:4':       [ 896, 1152],
+    '2:3':       [ 832, 1216],
+    '9:16':      [ 768, 1344],
+    '4:3':       [1152,  896],
+    '3:2':       [1216,  832],
+    '16:9':      [1344,  768],
+    '21:9':      [1536,  640],
+    '5:4':       [1152,  896],
+    '4:5':       [ 896, 1120],
+    '1:1_hd':    [1280, 1280],
+    '2:3_hd':    [1024, 1536],
+    '3:4_hd':    [1152, 1536],
+    '9:16_hd':   [ 896, 1536],
+    '3:2_hd':    [1536, 1024],
+    '4:3_hd':    [1536, 1152],
+    '16:9_hd':   [1536,  896],
+    '1:1_fast':  [ 768,  768],
+    '3:4_fast':  [ 640,  896],
+    '16:9_fast': [ 960,  576],
+};
+
+function _updateIgenMpBadge(w, h) {
+    var badge = document.getElementById('igen-dims-mp-badge');
+    if (!badge) return;
+    var wi = parseInt(w, 10), hi = parseInt(h, 10);
+    if (wi > 0 && hi > 0) {
+        badge.textContent = ((wi * hi) / 1000000).toFixed(2) + ' MP';
+    } else {
+        badge.textContent = '';
+    }
+}
+
+function _matchResolutionPresetKey(w, h) {
+    var wi = parseInt(w, 10), hi = parseInt(h, 10);
+    var keys = Object.keys(window.IGEN_RESOLUTION_PRESETS);
+    for (var i = 0; i < keys.length; i++) {
+        var pair = window.IGEN_RESOLUTION_PRESETS[keys[i]];
+        if (pair[0] === wi && pair[1] === hi) return keys[i];
+    }
+    return 'custom';
+}
+
 window.refreshImageModels = function() { window.onProviderChanged(false, 0); };
 
-window.onAspectRatioChanged = function() {
-    var val  = document.getElementById('igen-aspect-ratio');
-    var dims = document.getElementById('igen-custom-dims');
-    if (val && dims) dims.style.display = (val.value === 'custom') ? 'block' : 'none';
+window.onAspectRatioChanged = function(userTriggered) {
+    var sel = document.getElementById('igen-aspect-ratio');
+    var wEl = document.getElementById('igen-width');
+    var hEl = document.getElementById('igen-height');
+    if (!sel) return;
+    var pair = window.IGEN_RESOLUTION_PRESETS[sel.value];
+    if (pair && wEl && hEl) {
+        wEl.value = pair[0];
+        hEl.value = pair[1];
+    }
+    if (wEl && hEl) _updateIgenMpBadge(wEl.value, hEl.value);
+    if (userTriggered && typeof window._igenDebounceSave === 'function') {
+        window._igenDebounceSave();
+    }
+};
+
+window.onCustomDimEdited = function() {
+    var sel = document.getElementById('igen-aspect-ratio');
+    var wEl = document.getElementById('igen-width');
+    var hEl = document.getElementById('igen-height');
+    if (!wEl || !hEl) return;
+    _updateIgenMpBadge(wEl.value, hEl.value);
+    if (sel) {
+        var matched = _matchResolutionPresetKey(wEl.value, hEl.value);
+        if (Array.from(sel.options).some(function(o) { return o.value === matched; })) {
+            sel.value = matched;
+        } else {
+            sel.value = 'custom';
+        }
+    }
+};
+
+window.swapIgenDimensions = function() {
+    var wEl = document.getElementById('igen-width');
+    var hEl = document.getElementById('igen-height');
+    if (!wEl || !hEl) return;
+    var tmp = wEl.value;
+    wEl.value = hEl.value;
+    hEl.value = tmp;
+    window.onCustomDimEdited();
+    if (typeof window.updateIgenLiveSummary === 'function') window.updateIgenLiveSummary();
+    if (typeof window.updateIgenDirtyState === 'function') window.updateIgenDirtyState();
+    if (typeof window._igenDebounceSave === 'function') window._igenDebounceSave();
 };
 
 window.reloadIgenPanel = async function() {
@@ -485,34 +627,45 @@ window.reloadIgenPanel = async function() {
     if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:13px;"></i> Loading...'; btn.disabled = true; }
     try {
         _igenLoadingConfig = true;
+        window._igenDisableAutoSave = true;
 
         // 1. Fetch config from server
         var res  = await fetch('/hecos/api/plugins/image_gen/config');
         var data = await res.json();
         var cfg  = data.image_gen || {};
 
-        // 2. Load presets and profiles
-        await window.loadIgenPresets(cfg.active_preset);
-        
+        // 2. Load presets dropdown FIRST so #igen-preset holds active_preset before any change can fire
+        await window.loadIgenPresets(cfg.active_preset || '');
 
-        // 3. Set initial values BEFORE rebuilding provider dropdown
-        var provSel = document.getElementById('igen-provider');
-        var modelSel = document.getElementById('igen-model');
-        if (provSel && cfg.provider) provSel.setAttribute('data-initial-val', cfg.provider);
-        if (modelSel && cfg.model)   modelSel.setAttribute('data-initial-val', cfg.model);
+        // 3. Apply scalar fields + cloud toggle + pending VAE/LoRAs before building dropdowns
+        window.applyIgenConfig(cfg, { fromPreset: false });
 
         // 4. Clear and rebuild provider dropdown + fetch models/VAEs/LoRAs
+        var provSel  = document.getElementById('igen-provider');
+        var modelSel = document.getElementById('igen-model');
+        var effectiveProv = (!cfg.cloud_enabled && cfg.provider && cfg.provider !== 'swarmui')
+            ? 'swarmui'
+            : (cfg.provider || 'swarmui');
+        if (provSel) provSel.setAttribute('data-initial-val', effectiveProv);
+        if (modelSel && cfg.model)   modelSel.setAttribute('data-initial-val', cfg.model);
         if (provSel) provSel.innerHTML = '';
         await window.onProviderChanged(false, 0);
 
-        // 5. Apply all config values (sliders, checkboxes, etc.)
-        window.applyIgenConfig(cfg);
+        // Re-apply cloud toggle disabled state onto rebuilt provider options
+        window._applyCloudToggleState();
 
-        _igenLoadingConfig = false;
+        // 5. Capture baseline for dirty indicator & refresh summary
+        if (typeof window.captureIgenPresetBaseline === 'function') {
+            await window.captureIgenPresetBaseline(cfg.active_preset || '');
+        }
+        if (typeof window.updateIgenLiveSummary === 'function') window.updateIgenLiveSummary();
+        if (typeof window.updateIgenDirtyState === 'function') window.updateIgenDirtyState();
+
     } catch(e) {
-        _igenLoadingConfig = false;
         console.error('[ImageGen] reloadIgenPanel error:', e);
     } finally {
+        _igenLoadingConfig = false;
+        window._igenDisableAutoSave = false;
         if (btn) { btn.innerHTML = '<i class="fas fa-sync-alt" style="font-size:13px;"></i> Refresh'; btn.disabled = false; }
     }
 };

@@ -1,7 +1,7 @@
 """
 MODULE: Contacts Plugin — LLM Tools
 DESCRIPTION: Exposes find_contact, add_contact, update_contact, delete_contact,
-             list_contacts, send_whatsapp_to_contact as Hecos LLM tools.
+             and list_contacts as Hecos LLM tools.
              Loaded at boot via plugin manifest (is_class_based: true, on_load: true).
 """
 
@@ -142,9 +142,18 @@ class ContactsTools:
 
     # ── Legacy Wrappers ────────────────────────────────────────────────────────
 
-    def send_whatsapp_to_contact(self, name: str, message: str) -> str:
-        """(Legacy) Sends a WhatsApp message to a contact."""
-        return self.send_message_to_contact(name, message, "whatsapp")
+    def send_whatsapp_to_contact(
+        self,
+        name: str = None,
+        message: str = "",
+        contact_id: str = None,
+        to: str = None,
+        text: str = None,
+    ) -> str:
+        """(Legacy compatibility) Sends a WhatsApp message to a contact via Messenger."""
+        target_name = (name or contact_id or to or "").strip()
+        msg_body = message if message else (text or "")
+        return self.send_message_to_contact(target_name, msg_body, "whatsapp")
 
     # ── Helpers ────────────────────────────────────────────────────────────────
 

@@ -16,28 +16,71 @@ from typing import Any, Optional
 # or naming conventions. This map normalizes them.
 
 SAMPLER_MAP = {
-    "euler":       "euler",
-    "euler_a":     "euler_ancestral",
-    "dpm++2m":     "dpmpp_2m",
-    "dpm++2s":     "dpmpp_2s_ancestral",
-    "dpm++sde":    "dpmpp_sde",
-    "dpm++2m_sde": "dpmpp_2m_sde",
-    "ddim":        "ddim",
-    "ddpm":        "ddpm",
-    "lms":         "lms",
-    "heun":        "heun",
-    "uni_pc":      "uni_pc",
-    "lcm":         "lcm",
+    "euler":                    "euler",
+    "euler_a":                  "euler_ancestral",
+    "euler_ancestral":          "euler_ancestral",
+    "heun":                     "heun",
+    "heunpp2":                  "heunpp2",
+    "dpm_2":                    "dpm_2",
+    "dpm_2_a":                  "dpm_2_ancestral",
+    "dpm_2_ancestral":          "dpm_2_ancestral",
+    "dpm++2m":                  "dpmpp_2m",
+    "dpm++_2m":                 "dpmpp_2m",
+    "dpmpp_2m":                 "dpmpp_2m",
+    "dpm++2s":                  "dpmpp_2s_ancestral",
+    "dpm++_2s_a":               "dpmpp_2s_ancestral",
+    "dpmpp_2s_ancestral":       "dpmpp_2s_ancestral",
+    "dpm++sde":                 "dpmpp_sde",
+    "dpm++_sde":                "dpmpp_sde",
+    "dpmpp_sde":                "dpmpp_sde",
+    "dpmpp_sde_gpu":            "dpmpp_sde_gpu",
+    "dpm++2m_sde":              "dpmpp_2m_sde",
+    "dpm++_2m_sde":             "dpmpp_2m_sde",
+    "dpmpp_2m_sde":             "dpmpp_2m_sde",
+    "dpmpp_2m_sde_gpu":         "dpmpp_2m_sde_gpu",
+    "dpm++_3m_sde":             "dpmpp_3m_sde",
+    "dpmpp_3m_sde":             "dpmpp_3m_sde",
+    "dpmpp_3m_sde_gpu":         "dpmpp_3m_sde_gpu",
+    "ddim":                     "ddim",
+    "ddpm":                     "ddpm",
+    "lms":                      "lms",
+    "dpm_fast":                 "dpm_fast",
+    "dpm_adaptive":             "dpm_adaptive",
+    "uni_pc":                   "uni_pc",
+    "uni_pc_bh2":               "uni_pc_bh2",
+    "lcm":                      "lcm",
+    # Modern Flow-Matching / Flux / Rectified Flow samplers in SwarmUI
+    "res_multistep":            "res_multistep",
+    "res_multistep_ancestral":  "res_multistep_ancestral",
+    "deis":                     "deis",
+    "er_sde":                   "er_sde",
+    "ipndm":                    "ipndm",
+    "ipndm_v":                  "ipndm_v",
+    "sa_solver":                "sa_solver",
+    "sa_solver_pece":           "sa_solver_pece",
+    "seeds_2":                  "seeds_2",
+    "seeds_3":                  "seeds_3",
+    "gradient_estimation":      "gradient_estimation",
+    "euler_cfg_pp":             "euler_cfg_pp",
+    "dpmpp_2m_cfg_pp":          "dpmpp_2m_cfg_pp",
+    "res_multistep_cfg_pp":     "res_multistep_cfg_pp",
 }
 
 SCHEDULER_MAP = {
-    "simple":   "simple",
-    "normal":   "normal",
-    "karras":   "karras",
-    "sgm":      "sgm_uniform",
-    "exponential": "exponential",
-    "beta":     "beta",
-    "linear":   "linear_quadratic",
+    "simple":           "simple",
+    "normal":           "normal",
+    "karras":           "karras",
+    "sgm":              "sgm_uniform",
+    "sgm_uniform":      "sgm_uniform",
+    "exponential":      "exponential",
+    "beta":             "beta",
+    "linear":           "linear_quadratic",
+    "linear_quadratic": "linear_quadratic",
+    "ddim_uniform":     "ddim_uniform",
+    "align_your_steps": "align_your_steps",
+    "turbo":            "turbo",
+    "flux2":            "flux2",
+    "kl_optimal":       "kl_optimal",
 }
 
 
@@ -65,34 +108,16 @@ def build_swarmui_params(
     scheduler: str = "normal",
     negative_prompt: str = "",
     images: int = 1,
-    # Advanced / future params
+    # Advanced / Flux / Rectified Flow params
     loras: Optional[list[dict]] = None,
     vae: Optional[str] = None,
     clip_skip: Optional[int] = None,
+    flux_guidance_scale: Optional[float] = None,
+    sigma_shift: Optional[float] = None,
     extra: Optional[dict[str, Any]] = None,
 ) -> dict:
     """
     Build the parameter dict for SwarmUI's GenerateText2Image API.
-
-    Args:
-        prompt: The text prompt for image generation.
-        model: Model name as known to SwarmUI (e.g., "sd_xl_base_1.0").
-        width: Image width in pixels.
-        height: Image height in pixels.
-        steps: Number of inference steps.
-        cfg: Classifier-free guidance scale.
-        seed: Random seed (-1 for random).
-        sampler: Sampler algorithm name.
-        scheduler: Scheduler algorithm name.
-        negative_prompt: Negative prompt text.
-        images: Number of images to generate.
-        loras: Optional list of LoRA dicts [{"name": ..., "weight": ...}].
-        vae: Optional VAE model name.
-        clip_skip: Optional CLIP skip layers count.
-        extra: Optional dict of additional raw SwarmUI parameters.
-
-    Returns:
-        Dict ready to be sent as JSON to SwarmUI API.
     """
     params: dict[str, Any] = {
         "prompt": prompt,
@@ -115,6 +140,24 @@ def build_swarmui_params(
         params["negativeprompt"] = negative_prompt.strip()
 
     # ── Advanced parameters ───────────────────────────────────────────
+
+    # Flux Guidance Scale (optional override; -1 / None lets SwarmUI use model default)
+    if flux_guidance_scale is not None:
+        try:
+            fg = float(flux_guidance_scale)
+            if fg >= 0.0:
+                params["fluxguidancescale"] = fg
+        except (TypeError, ValueError):
+            pass
+
+    # Sigma Shift (optional override for Rectified Flow / Flux / SD3; -1 / None = model default)
+    if sigma_shift is not None:
+        try:
+            ss = float(sigma_shift)
+            if ss >= 0.0:
+                params["sigmashift"] = ss
+        except (TypeError, ValueError):
+            pass
 
     # LoRA support
     if loras:
@@ -148,15 +191,8 @@ def build_swarmui_params(
 def extract_generation_metadata(params: dict, backend: str = "swarmui") -> dict:
     """
     Extract a clean metadata dict from generation params for sidecar files.
-
-    Args:
-        params: The SwarmUI params dict (as built by build_swarmui_params).
-        backend: Backend identifier string.
-
-    Returns:
-        Dict suitable for saving alongside the generated image.
     """
-    return {
+    meta = {
         "provider": backend,
         "model": params.get("model", ""),
         "prompt": params.get("prompt", ""),
@@ -171,3 +207,10 @@ def extract_generation_metadata(params: dict, backend: str = "swarmui") -> dict:
         "backend": backend,
         "source": "local",
     }
+    if "fluxguidancescale" in params:
+        meta["flux_guidance_scale"] = params["fluxguidancescale"]
+    if "sigmashift" in params:
+        meta["sigma_shift"] = params["sigmashift"]
+    if params.get("vae"):
+        meta["vae"] = params["vae"]
+    return meta

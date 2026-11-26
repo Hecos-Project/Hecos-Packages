@@ -1,2 +1,9 @@
 enabled: true
-instruction: ''
+instruction: 'When calling IMAGE_GEN__generate_image or /img, always leave provider
+  and model empty so the user''s configured preset is used. Write descriptive English
+  photography prompts in natural prose (60-110 words): specify camera/lens (e.g. candid
+  35mm film photo or 85mm f/2 portrait), authentic directional lighting, natural candid
+  pose, real environment depth, fabric textures, and natural human skin texture with
+  subtle pores and light imperfections. NEVER use CGI/3D buzzwords (''hyper-realistic'',
+  ''photorealistic'', ''flawless skin'', ''smooth synthetic skin'', ''8k'', ''masterpiece'')
+  and never write numeric codes (like ''9800'') inside the visual prompt.'

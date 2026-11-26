@@ -4,6 +4,7 @@ Reads/writes the package's own image_gen.toml.
 Fully autonomous: no hecos.core dependency.
 """
 import os
+import sys
 from pathlib import Path
 from typing import Any, Dict
 from pydantic import BaseModel, Field
@@ -70,6 +71,8 @@ class ImageGenConfig(BaseModel):
     scheduler: str = "simple"
     guidance_scale: float = 0.0
     num_inference_steps: int = 4
+    flux_guidance_scale: float = -1.0       # -1.0 = Model default/auto; >=0 overrides SwarmUI fluxguidancescale
+    sigma_shift: float = -1.0               # -1.0 = Model default/auto; >=0 overrides SwarmUI sigmashift
 
     # -- Negative Prompt -----------------------------------------------------
     enable_negative_prompt: bool = False
@@ -192,19 +195,28 @@ def get_image_gen_config() -> dict:
     return get_config().get(_ROOT_KEY, {})
 
 
+def _strip_nones(obj: Any) -> Any:
+    """Recursively remove None values (TOML does not support null)."""
+    if isinstance(obj, dict):
+        return {k: _strip_nones(v) for k, v in obj.items() if v is not None}
+    if isinstance(obj, list):
+        return [_strip_nones(item) for item in obj if item is not None]
+    return obj
+
+
 def save_config(data: dict) -> bool:
     """Saves the full config dict to image_gen.toml."""
     if _ROOT_KEY not in data:
         return False
     try:
-        incoming = data[_ROOT_KEY]
+        incoming = _strip_nones(dict(data[_ROOT_KEY]))
         existing_local = LocalConfig().model_dump(mode='json')
         existing_local.update(get_image_gen_config().get("local", {}) or {})
         if "local" in incoming and isinstance(incoming["local"], dict):
             existing_local.update(incoming["local"])
         incoming["local"] = existing_local
         obj = ImageGenConfig.model_validate(incoming)
-        return _write_toml(obj.model_dump(mode='json'))
+        return _write_toml(_strip_nones(obj.model_dump(mode='json')))
     except Exception as e:
         logger.error(f"[IMAGE_GEN_CONFIG] Validation error on save: {e}")
         return False
@@ -213,15 +225,15 @@ def save_config(data: dict) -> bool:
 def save_image_gen_section(section: dict) -> bool:
     """Saves just the [image_gen] section, merging with existing config."""
     current = get_image_gen_config()
-    if "local" in section and isinstance(section["local"], dict):
+    clean_section = _strip_nones(dict(section))
+    if "local" in clean_section and isinstance(clean_section["local"], dict):
         merged_local = current.get("local", {}).copy()
-        merged_local.update(section["local"])
-        section = dict(section)
-        section["local"] = merged_local
-    current.update(section)
+        merged_local.update(clean_section["local"])
+        clean_section["local"] = merged_local
+    current.update(clean_section)
     try:
         obj = ImageGenConfig.model_validate(current)
-        return _write_toml(obj.model_dump(mode='json'))
+        return _write_toml(_strip_nones(obj.model_dump(mode='json')))
     except Exception as e:
         logger.error(f"[IMAGE_GEN_CONFIG] Validation error on merge: {e}")
         return False
@@ -232,14 +244,68 @@ def save_image_gen_section(section: dict) -> bool:
 _SNAPSHOT_KEYS = [
     "provider", "model", "hf_provider", "aspect_ratio", "width", "height",
     "seed", "sampler", "scheduler", "guidance_scale", "num_inference_steps",
+    "flux_guidance_scale", "sigma_shift",
     "enable_negative_prompt", "negative_prompt", "auto_enrich",
     "enrich_keywords", "style", "nologo", "optimize_for_flux",
-    "show_metadata_in_chat", "active_preset", "vae", "loras",
-    "cloud_enabled", "api_key", "horde_api_key", "horde_nsfw",
-    "horde_worker_blacklist", "routing_override",
+    "flux_refiner_instructions",
+    "show_metadata_in_chat", "vae", "loras",
+    "cloud_enabled", "horde_nsfw", "horde_worker_blacklist",
+    "routing_override",
 ]
 
 _PROFILE_KEYS = _SNAPSHOT_KEYS  # backward-compat alias
+
+# Process-wide guard (shared across both 'igen_config.config_manager' and
+# 'hpm.image_gen.igen_config.config_manager' module aliases!) so the startup
+# default_preset is applied ONCE on boot and never clobbers live edits later.
+_BOOT_DEFAULT_APPLIED = False
+
+
+def _is_boot_default_applied() -> bool:
+    return bool(_BOOT_DEFAULT_APPLIED or getattr(sys, "_hecos_igen_boot_default_applied", False))
+
+
+def _mark_boot_default_applied(applied: bool = True) -> None:
+    global _BOOT_DEFAULT_APPLIED
+    _BOOT_DEFAULT_APPLIED = applied
+    try:
+        setattr(sys, "_hecos_igen_boot_default_applied", applied)
+    except Exception:
+        pass
+
+
+def _resolve_preset_by_name(name: str, cfg: dict | None = None) -> dict | None:
+    """Resolve a preset by name across BOTH user presets and built-in presets."""
+    if not name:
+        return None
+    if cfg is None:
+        cfg = get_image_gen_config()
+    user_presets = cfg.get("presets", {}) or {}
+    if name in user_presets and isinstance(user_presets[name], dict):
+        return user_presets[name]
+    try:
+        from plugin.presets import BUILTIN_PRESETS
+    except ImportError:
+        try:
+            from ..plugin.presets import BUILTIN_PRESETS
+        except ImportError:
+            BUILTIN_PRESETS = {}
+    if name in BUILTIN_PRESETS and isinstance(BUILTIN_PRESETS[name], dict):
+        return BUILTIN_PRESETS[name]
+    return None
+
+
+def get_factory_defaults() -> dict:
+    """Return clean default generation parameters for the Reset button."""
+    current = get_image_gen_config()
+    defaults = ImageGenConfig().model_dump(mode='json')
+    # Respect current cloud_enabled setting so local-only users stay on SwarmUI
+    cloud_enabled = bool(current.get("cloud_enabled", False))
+    defaults["cloud_enabled"] = cloud_enabled
+    if not cloud_enabled:
+        defaults["provider"] = "swarmui"
+        defaults["model"] = "FLUX.1-schnell"
+    return {k: defaults[k] for k in _SNAPSHOT_KEYS if k in defaults}
 
 
 # -- Default Preset ----------------------------------------------------------
@@ -250,47 +316,68 @@ def get_default_preset() -> str:
 
 
 def set_default_preset(name: str) -> bool:
-    """Mark a preset as the default auto-loaded at startup. Empty clears."""
+    """Mark a preset (built-in or custom) as the default auto-loaded at startup. Empty clears."""
     cfg = get_image_gen_config()
-    cfg["default_preset"] = name.strip()
+    clean_name = (name or "").strip()
+    if clean_name and _resolve_preset_by_name(clean_name, cfg) is None:
+        logger.error(f"[IMAGE_GEN_CONFIG] Cannot set unknown preset '{clean_name}' as default.")
+        return False
+    cfg["default_preset"] = clean_name
+    _mark_boot_default_applied(True)
     try:
         obj = ImageGenConfig.model_validate(cfg)
-        ok = _write_toml(obj.model_dump(mode='json'))
+        ok = _write_toml(_strip_nones(obj.model_dump(mode='json')))
         if ok:
-            logger.info(f"[IMAGE_GEN_CONFIG] Default preset set to '{name or '(none)'}'.")
+            logger.info(f"[IMAGE_GEN_CONFIG] Default preset set to '{clean_name or '(none)'}'.")
         return ok
     except Exception as e:
         logger.error(f"[IMAGE_GEN_CONFIG] Failed setting default preset: {e}")
         return False
 
 
-# -- Effective Config (applies default preset at startup) --------------------
+# -- Effective Config (applies default preset once on startup) ---------------
 
-def get_effective_config() -> dict:
-    """Returns image_gen config with the default preset applied.
-    Falls back to legacy default_profile for backward compat."""
+def get_effective_config(force_apply_default: bool = False) -> dict:
+    """Returns active image_gen config.
+    On first access after process startup (or when force_apply_default=True),
+    loads the configured default_preset (built-in or custom) into active config
+    so startup defaults work without clobbering live edits made later in the session.
+    """
     cfg = get_image_gen_config()
 
-    # 1. New: default_preset
-    default_preset_name = cfg.get("default_preset", "")
-    if default_preset_name:
-        preset = cfg.get("presets", {}).get(default_preset_name)
-        if preset:
-            for key in _SNAPSHOT_KEYS:
-                if key in preset:
-                    cfg[key] = preset[key]
-            logger.debug(f"[IMAGE_GEN_CONFIG] Applied default preset '{default_preset_name}'.")
-            return cfg
+    if not _is_boot_default_applied() or force_apply_default:
+        _mark_boot_default_applied(True)
+        default_preset_name = (cfg.get("default_preset") or "").strip()
+        if default_preset_name:
+            preset = _resolve_preset_by_name(default_preset_name, cfg)
+            if preset:
+                # Reset list/optional keys not present in built-in presets before merging
+                cfg.setdefault("vae", "")
+                cfg.setdefault("loras", [])
+                for key in _SNAPSHOT_KEYS:
+                    if key in preset:
+                        # Never overwrite a valid saved model with an empty string
+                        if key == "model" and not str(preset[key] or "").strip():
+                            continue
+                        cfg[key] = preset[key]
+                cfg["active_preset"] = default_preset_name
+                try:
+                    obj = ImageGenConfig.model_validate(cfg)
+                    _write_toml(_strip_nones(obj.model_dump(mode='json')))
+                except Exception:
+                    pass
+                logger.debug(f"[IMAGE_GEN_CONFIG] Applied startup default preset '{default_preset_name}'.")
+                return cfg
 
-    # 2. Legacy fallback: default_profile
-    default_profile_name = cfg.get("default_profile", "")
-    if default_profile_name:
-        profile = cfg.get("profiles", {}).get(default_profile_name)
-        if profile:
-            for key in _SNAPSHOT_KEYS:
-                if key in profile:
-                    cfg[key] = profile[key]
-            logger.debug(f"[IMAGE_GEN_CONFIG] Applied legacy default profile '{default_profile_name}'.")
+        # Legacy fallback: default_profile
+        default_profile_name = (cfg.get("default_profile") or "").strip()
+        if default_profile_name:
+            profile = (cfg.get("profiles") or {}).get(default_profile_name)
+            if profile:
+                for key in _SNAPSHOT_KEYS:
+                    if key in profile:
+                        cfg[key] = profile[key]
+                logger.debug(f"[IMAGE_GEN_CONFIG] Applied legacy default profile '{default_profile_name}'.")
 
     return cfg
 

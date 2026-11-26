@@ -14,7 +14,7 @@ on_load = true
 tag = "CONTACTS"
 icon_url = "https://raw.githubusercontent.com/Hecos-Project/Hecos-Packages/main/Hecos_module_Image_preview_square.png"
 readme = "README.md"
-signature = "bbaqhqnz+xlkymuwbsfKc7liZgoumh3vgw+lCupa4tyQBcVKhTVljdWaSTS7qu/CPTTWH88ruByI/2n8CAWaCA=="
+signature = "C43pDw5nFSMvrATfw5DwZuuinSAYPw8cFrzvO2YIvnPMfwocLZElNngROs0Ndm4dVBhw8cE+asjJk9ctSEYdAg=="
 
 [[tool_schema]]
 type = "function"
@@ -160,24 +160,6 @@ type = "object"
 type = "string"
 description = "Optional filter string."
 
-[[tool_schema]]
-type = "function"
-
-[tool_schema.function]
-name = "CONTACTS__send_whatsapp_to_contact"
-description = "Sends a WhatsApp message to a specific contact from the address book. If the contact has no whatsapp number it will fallback to their mobile phone number."
-
-[tool_schema.function.parameters]
-type = "object"
-
-[tool_schema.function.parameters.properties.contact_id]
-type = "string"
-description = "The EXACT contact ID from the address book (get it via find_contact first!). Do NOT pass a phone number here."
-
-[tool_schema.function.parameters.properties.message]
-type = "string"
-description = "The content of the message to send."
-
 [backup]
 enabled = true
 backup_endpoint = "/api/contacts/backup"
@@ -199,7 +181,6 @@ llm_tools = [
     "update_contact",
     "delete_contact",
     "list_contacts",
-    "send_whatsapp_to_contact",
 ]
 slash_commands = []
 has_widget = false
@@ -212,8 +193,8 @@ notes = ""
 [file_hashes]
 "api.py" = "c455e16d0928af1d0497e7771e3f952e47ecc8f6330ae3ebfed00fc335516ecb"
 "hooks.py" = "f72c71e0cde006223aeffd9fee0542000badc265b178724d9fd1cc8edf3b405e"
-"main.py" = "056bd7eef52c3fbbb6dca341de3f40a2b703ca4529fbdd738a3886abd60e20ed"
-"manifest.json" = "9b091099f932a427b7b3f8fcd6b473c45b8f6139e7eea8358d19ed70dd698637"
+"main.py" = "0e6ceee239b1d5dcd9023e65748e07b69aef4ec77e420632a675ac5b0439c427"
+"manifest.json" = "20e671e6a5fbac4b36e68e8c9aec653315166d5ffc9586c6f23048d9436b864b"
 "README.md" = "14d7374493eb2a29340746580a17dd7f2095f9175b742785b9f15f67c58b6ae4"
 "store.py" = "39a2a86b0e6a3d44490881b7bf156488ee23a289d5e1a80f06c032351ce12d8e"
 "__init__.py" = "670a63e9242f8ef023664a8fdd9f3785b2c0a374eeb2d727bec570d54993d111"
@@ -233,7 +214,7 @@ notes = ""
 "web_ui/templates/config_contacts.html" = "c13a3cbe0f93adbc8f9342491c318b600d19f0cfc9838f7b85ba8bc60c4c8240"
 "web_ui/templates/modules/contacts/_contacts_grid.html" = "86b8ba0bc4dcfa430bdd6d3e4e35a65ee6c13bd954ada3b880f7670682672379"
 "web_ui/templates/modules/contacts/_contacts_logic.html" = "713f852b75667f9fc9b7d05c51e42e42b9238ac827c00c6c2372eaa9ba4f48ca"
-"web_ui/templates/modules/contacts/_contacts_modal.html" = "e43625eb521f4edad5b263abbbb9d75952804f79d60b6084d4600da00bd646a3"
+"web_ui/templates/modules/contacts/_contacts_modal.html" = "9178b3bb3181efe261e594abca062e0f8c28adcec23d3e381008035d848be3be"
 "web_ui/templates/modules/contacts/_contacts_styles.html" = "4fc5d8de0e7b4910f3ea7cb5b68b4ed6dd9f847edbd8fd607a56f912cc43e7bc"
 
 [hashes]

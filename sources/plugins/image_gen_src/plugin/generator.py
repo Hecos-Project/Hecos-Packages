@@ -200,16 +200,47 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
         # ── SwarmUI-specific config ───────────────────────────────────────────
         vae                   = cfg.get("vae", "")
         loras                 = cfg.get("loras", [])
+        try:
+            flux_guidance_scale = float(cfg.get("flux_guidance_scale", -1.0))
+        except (TypeError, ValueError):
+            flux_guidance_scale = -1.0
+        try:
+            sigma_shift = float(cfg.get("sigma_shift", -1.0))
+        except (TypeError, ValueError):
+            sigma_shift = -1.0
 
         if provider_override or model_override or hf_server_override:
             logger.info(f"[GENERATOR] Active override -> provider={provider}, model={model}, hf_provider={hf_provider}")
 
-        if show_meta_chat:
-            hf_suffix = f", HF Server: `{hf_provider}`" if provider == "huggingface" else ""
-            meta_str = f"\n\n> **[Image Gen Config]** Provider: `{provider}`, Model: `{model}`, Seed: `{seed}`, CFG: `{guidance}`, Sampler: `{sampler}`, Steps: `{steps}`{hf_suffix}"
-
         final_width, final_height = resolve_dimensions(aspect_ratio, width, height)
         logger.info(f"[GENERATOR] Aspect ratio '{aspect_ratio}' -> {final_width}x{final_height}")
+
+        if show_meta_chat:
+            meta_parts = []
+            active_preset_name = (cfg.get("active_preset") or "").strip()
+            if active_preset_name:
+                meta_parts.append(f"Preset: `{active_preset_name}`")
+            meta_parts.extend([
+                f"Provider: `{provider}`",
+                f"Model: `{model}`",
+                f"Size: `{final_width}x{final_height}`",
+                f"Seed: `{seed}`",
+                f"CFG: `{guidance}`",
+                f"Steps: `{steps}`",
+                f"Sampler: `{sampler}`",
+                f"Scheduler: `{scheduler}`",
+            ])
+            if provider == "swarmui" and flux_guidance_scale >= 0.0:
+                meta_parts.append(f"FluxGuidance: `{flux_guidance_scale}`")
+            if provider == "swarmui" and sigma_shift >= 0.0:
+                meta_parts.append(f"SigmaShift: `{sigma_shift}`")
+            if vae:
+                meta_parts.append(f"VAE: `{vae}`")
+            if loras:
+                meta_parts.append(f"LoRAs: `{', '.join(str(x) for x in loras)}`")
+            if provider == "huggingface":
+                meta_parts.append(f"HF Server: `{hf_provider}`")
+            meta_str = f"\n\n> **[Image Gen Config]** " + ", ".join(meta_parts)
 
         final_prompt = build_prompt(
             raw_prompt=raw_prompt, style=style, auto_enrich=auto_enrich,
@@ -245,6 +276,8 @@ def run_generation(raw_prompt: str, provider_override: str = "", model_override:
                     horde_worker_blacklist=horde_worker_blacklist,
                     vae=vae,
                     loras=loras,
+                    flux_guidance_scale=flux_guidance_scale,
+                    sigma_shift=sigma_shift,
                 )
 
                 html_src = f"/api/images/{filename}"

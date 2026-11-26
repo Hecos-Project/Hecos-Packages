@@ -6,9 +6,9 @@
                 "/msg",
                 "/send"
             ],
-            "description": "Invia un messaggio tramite i provider configurati (Telegram, WhatsApp, Discord).",
-            "usage": "/msg <piattaforma:destinatario> <testo_del_messaggio>",
-            "example": "/msg whatsapp:+393331234567 Ciao!",
+            "description": "Sends a direct message via WhatsApp or Telegram (supports contact names from Address Book).",
+            "usage": "/msg <platform:contact_or_address> <message_text>",
+            "example": "/msg whatsapp:Rowena Hello!",
             "icon": "💬",
             "method": "msg_command",
             "requires_args": true

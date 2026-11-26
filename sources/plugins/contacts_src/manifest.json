@@ -160,26 +160,6 @@
                     }
                 }
             }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "CONTACTS__send_whatsapp_to_contact",
-                "description": "Sends a WhatsApp message to a specific contact from the address book. If the contact has no whatsapp number it will fallback to their mobile phone number.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "contact_id": {
-                            "type": "string",
-                            "description": "The EXACT contact ID from the address book (get it via find_contact first!). Do NOT pass a phone number here."
-                        },
-                        "message": {
-                            "type": "string",
-                            "description": "The content of the message to send."
-                        }
-                    }
-                }
-            }
         }
     ],
     "slash_commands": [],
@@ -190,6 +170,7 @@
         "tab_icon": "fas fa-address-book",
         "template_file": "web_ui/templates/config_contacts.html",
         "js_file": null,
+        "js_files": null,
         "css_file": null,
         "category": "CONNETTIVITÀ",
         "api_routes_file": "web_ui/routes.py",

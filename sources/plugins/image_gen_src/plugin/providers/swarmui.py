@@ -18,7 +18,7 @@ from ..local.launcher import (
     _emit_trace,
 )
 from ..local.params import build_swarmui_params, extract_generation_metadata
-from ..local.models import discover_models, get_default_model
+from ..local.models import discover_models, get_default_model, save_catalog_cache, load_catalog_cache
 from .utils import log_debug, save_image_bytes
 
 try:
@@ -116,20 +116,27 @@ class SwarmUIProvider:
         try:
             client = _get_or_create_client()
             models = client.list_models(subtype="VAE")
-            return [m.get("name", "") for m in models if m.get("name")]
+            names = [m.get("name", "") for m in models if m.get("name")]
+            if names:
+                save_catalog_cache("vaes", names)
+                return names
+            return load_catalog_cache("vaes")
         except Exception as e:
             logger.error(f"[SwarmUIProvider] get_vaes failed: {e}")
-            return []
+            return load_catalog_cache("vaes")
 
     @staticmethod
     def get_loras() -> list:
         try:
             client = _get_or_create_client()
             models = client.list_models(subtype="LoRA")
-            return [m.get("name", "") for m in models if m.get("name")]
+            names = [m.get("name", "") for m in models if m.get("name")]
+            if names:
+                return names
+            return [m.get("name", "") for m in load_catalog_cache("loras") if isinstance(m, dict) and m.get("name")]
         except Exception as e:
             logger.error(f"[SwarmUIProvider] get_loras failed: {e}")
-            return []
+            return [m.get("name", "") for m in load_catalog_cache("loras") if isinstance(m, dict) and m.get("name")]
 
     @staticmethod
     def get_models_info() -> list:
@@ -164,9 +171,12 @@ class SwarmUIProvider:
                     "trigger_phrase":      m.get("trigger_phrase", ""),
                     "lora_default_weight": m.get("lora_default_weight", ""),
                 })
-            return result
+            if result:
+                save_catalog_cache("loras", result)
+                return result
+            return load_catalog_cache("loras")
         except Exception as e:
-            return []
+            return load_catalog_cache("loras")
 
     @staticmethod
     def generate(prompt: str, width: int, height: int, model: str,
@@ -241,6 +251,8 @@ class SwarmUIProvider:
                     model = fallback_model
 
         # ── 3. Build SwarmUI params ───────────────────────────────────────
+        flux_guidance_scale = kwargs.get("flux_guidance_scale", None)
+        sigma_shift = kwargs.get("sigma_shift", None)
         params = build_swarmui_params(
             prompt=prompt,
             model=model,
@@ -255,15 +267,19 @@ class SwarmUIProvider:
             images=1,
             vae=kwargs.get("vae", ""),
             loras=kwargs.get("loras", []),
+            flux_guidance_scale=flux_guidance_scale,
+            sigma_shift=sigma_shift,
         )
 
+        fg_note = f", flux_guidance={params['fluxguidancescale']}" if "fluxguidancescale" in params else ""
+        ss_note = f", sigma_shift={params['sigmashift']}" if "sigmashift" in params else ""
         _emit_trace(
-            f"🎨 Generating with SwarmUI: model='{model}', {width}x{height}, steps={num_inference_steps}, cfg={guidance_scale}...",
+            f"🎨 Generating with SwarmUI: model='{model}', {width}x{height}, steps={num_inference_steps}, cfg={guidance_scale}{fg_note}{ss_note}...",
             level="tool",
         )
         log_debug(f"[SwarmUIProvider] Generating with params: "
                   f"model={model}, steps={num_inference_steps}, "
-                  f"cfg={guidance_scale}, size={width}x{height}")
+                  f"cfg={guidance_scale}{fg_note}{ss_note}, sampler={params.get('sampler')}/{params.get('scheduler')}, size={width}x{height}")
 
         # ── 4. Generate ───────────────────────────────────────────────────
         try:

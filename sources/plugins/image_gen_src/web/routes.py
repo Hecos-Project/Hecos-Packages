@@ -84,11 +84,14 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
                 except Exception as e:
                     logger.error(f"[ImageGen] Failed to write routing override: {e}")
 
+            # Strip None values so TOML serialization never fails on empty numeric fields
+            igen_incoming = {k: v for k, v in igen_incoming.items() if v is not None}
+
             # Merge (including deep merge for [local] sub-dict)
             existing = cfg.get("image_gen", {})
             if "local" in igen_incoming and isinstance(igen_incoming["local"], dict):
                 merged_local = (existing.get("local") or {}).copy()
-                merged_local.update(igen_incoming["local"])
+                merged_local.update({k: v for k, v in igen_incoming["local"].items() if v is not None})
                 igen_incoming["local"] = merged_local
             existing.update(igen_incoming)
             cfg["image_gen"] = existing
@@ -302,90 +305,202 @@ def init_plugin_routes(app, cfg_mgr, root_dir, logger, get_sm=None):
             logger.error(f"[ImageGen] refine_prompt error: {exc}")
             return jsonify({"ok": False, "error": str(exc)}), 500
 
-    # --- 4. Preset Manager ---
+    # --- 4. Preset Manager (Full Core-Style CRUD) ---
 
     @app.route("/hecos/api/plugins/image_gen/presets", methods=["GET"])
     def list_presets():
         try:
             from plugin.presets import BUILTIN_PRESETS
             igen_cfg = get_config().get("image_gen", {})
-            user_presets = igen_cfg.get("presets", {})
-            default_preset = igen_cfg.get("default_preset", "")
+            user_presets = igen_cfg.get("presets", {}) or {}
+            default_preset = igen_cfg.get("default_preset", "") or ""
+            active_preset = igen_cfg.get("active_preset", "") or ""
+
+            def _entry(name: str, data: dict, builtin: bool) -> dict:
+                loras = data.get("loras") or []
+                return {
+                    "name": name,
+                    "builtin": builtin,
+                    "description": data.get("_description", "" if builtin else "Custom preset"),
+                    "provider": data.get("provider", ""),
+                    "model": data.get("model", ""),
+                    "aspect_ratio": data.get("aspect_ratio", "1:1"),
+                    "width": data.get("width", 1024),
+                    "height": data.get("height", 1024),
+                    "num_inference_steps": data.get("num_inference_steps", 20),
+                    "guidance_scale": data.get("guidance_scale", 0.0),
+                    "sampler": data.get("sampler", "euler"),
+                    "scheduler": data.get("scheduler", "simple"),
+                    "loras_count": len(loras) if isinstance(loras, list) else 0,
+                    "is_local": bool(data.get("_local", data.get("provider") == "swarmui")),
+                    "is_default": (name == default_preset),
+                }
+
             result = []
             for name, data in BUILTIN_PRESETS.items():
-                result.append({
-                    "name": name, 
-                    "builtin": True, 
-                    "description": data.get("_description", ""), 
-                    "provider": data.get("provider", ""), 
-                    "model": data.get("model", ""),
-                    "is_local": data.get("_local", False),
-                    "is_default": (name == default_preset)
-                })
+                result.append(_entry(name, data, builtin=True))
             for name, data in user_presets.items():
-                result.append({
-                    "name": name, 
-                    "builtin": False, 
-                    "description": data.get("_description", "User preset"), 
-                    "provider": data.get("provider", ""), 
-                    "model": data.get("model", ""),
-                    "is_local": data.get("_local", False),
-                    "is_default": (name == default_preset)
-                })
-            return jsonify({"ok": True, "presets": result})
+                if isinstance(data, dict):
+                    result.append(_entry(name, data, builtin=False))
+
+            return jsonify({
+                "ok": True,
+                "presets": result,
+                "active_preset": active_preset,
+                "default_preset": default_preset,
+            })
+        except Exception as exc:
+            logger.error(f"[ImageGen] list_presets error: {exc}")
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/presets/defaults", methods=["GET"])
+    def get_preset_defaults():
+        try:
+            from igen_config.config_manager import get_factory_defaults
+            return jsonify({"ok": True, "config": get_factory_defaults()})
         except Exception as exc:
             return jsonify({"ok": False, "error": str(exc)}), 500
 
     @app.route("/hecos/api/plugins/image_gen/presets/load/<path:name>", methods=["GET"])
     def load_preset(name):
         try:
-            from plugin.presets import get_preset
+            from plugin.presets import get_preset, is_builtin_preset
             igen_cfg = get_config().get("image_gen", {})
-            user_presets = igen_cfg.get("presets", {})
-            default_preset = igen_cfg.get("default_preset", "")
+            user_presets = igen_cfg.get("presets", {}) or {}
+            default_preset = igen_cfg.get("default_preset", "") or ""
             preset = get_preset(name, user_presets)
             if preset is None:
                 return jsonify({"ok": False, "error": f"Preset '{name}' not found"}), 404
             clean = {k: v for k, v in preset.items() if not k.startswith("_")}
-            return jsonify({"ok": True, "name": name, "config": clean})
+            return jsonify({
+                "ok": True,
+                "name": name,
+                "builtin": is_builtin_preset(name),
+                "is_default": (name == default_preset),
+                "description": preset.get("_description", ""),
+                "config": clean,
+            })
         except Exception as exc:
             return jsonify({"ok": False, "error": str(exc)}), 500
 
     @app.route("/hecos/api/plugins/image_gen/presets/save", methods=["POST"])
     def save_preset():
         try:
-            data = request.json or {}
-            name = data.get("name", "").strip()
-            config_snapshot = data.get("config", {})
+            data = request.get_json(silent=True) or {}
+            name = (data.get("name") or "").strip()
+            config_snapshot = data.get("config") or {}
+            description = (data.get("description") or "").strip()
+            overwrite = data.get("overwrite", True)
+            set_active = data.get("set_active", True)
+
             if not name:
                 return jsonify({"ok": False, "error": "Preset name is required"}), 400
-            from plugin.presets import save_user_preset
-            ok = save_user_preset(name, config_snapshot)
-            return jsonify({"ok": ok, "name": name})
+
+            from plugin.presets import save_user_preset_ex
+            ok, msg = save_user_preset_ex(
+                name,
+                config_snapshot,
+                description=description,
+                overwrite=bool(overwrite),
+                set_active=bool(set_active),
+            )
+            if not ok:
+                status = 409 if "already exists" in msg.lower() else 400
+                return jsonify({"ok": False, "error": msg}), status
+            return jsonify({"ok": True, "name": msg})
         except Exception as exc:
+            logger.error(f"[ImageGen] save_preset error: {exc}")
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/presets/rename", methods=["POST"])
+    def rename_preset():
+        try:
+            data = request.get_json(silent=True) or {}
+            old_name = (data.get("old_name") or "").strip()
+            new_name = (data.get("new_name") or "").strip()
+            from plugin.presets import rename_user_preset
+            ok, msg = rename_user_preset(old_name, new_name)
+            if not ok:
+                status = 409 if "already exists" in msg.lower() else 400
+                return jsonify({"ok": False, "error": msg}), status
+            return jsonify({"ok": True, "old_name": old_name, "new_name": msg})
+        except Exception as exc:
+            logger.error(f"[ImageGen] rename_preset error: {exc}")
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/presets/duplicate", methods=["POST"])
+    def duplicate_preset_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            source_name = (data.get("source_name") or "").strip()
+            new_name = (data.get("new_name") or "").strip()
+            from plugin.presets import duplicate_preset
+            ok, msg = duplicate_preset(source_name, new_name)
+            if not ok:
+                status = 409 if "already exists" in msg.lower() else 400
+                return jsonify({"ok": False, "error": msg}), status
+            return jsonify({"ok": True, "source_name": source_name, "name": msg})
+        except Exception as exc:
+            logger.error(f"[ImageGen] duplicate_preset error: {exc}")
             return jsonify({"ok": False, "error": str(exc)}), 500
 
     @app.route("/hecos/api/plugins/image_gen/presets/delete/<path:name>", methods=["DELETE"])
     def delete_preset(name):
         try:
-            from plugin.presets import delete_user_preset
-            ok = delete_user_preset(name)
+            from plugin.presets import delete_user_preset_ex
+            ok, msg, cleared_default = delete_user_preset_ex(name)
             if not ok:
-                return jsonify({"ok": False, "error": f"Cannot delete '{name}'"}), 400
-            return jsonify({"ok": True, "deleted": name})
+                return jsonify({"ok": False, "error": msg}), 400
+            return jsonify({"ok": True, "deleted": msg, "cleared_default": cleared_default})
         except Exception as exc:
+            logger.error(f"[ImageGen] delete_preset error: {exc}")
             return jsonify({"ok": False, "error": str(exc)}), 500
-
 
     @app.route("/hecos/api/plugins/image_gen/presets/set-default", methods=["POST"])
     def set_default_preset_route():
         try:
-            data = request.json or {}
-            name = data.get("name", "").strip()
+            data = request.get_json(silent=True) or {}
+            name = (data.get("name") or "").strip()
             from igen_config.config_manager import set_default_preset
             ok = set_default_preset(name)
-            return jsonify({"ok": ok, "default": name})
+            if not ok:
+                return jsonify({"ok": False, "error": f"Preset '{name}' not found"}), 404
+            return jsonify({"ok": True, "default": name})
         except Exception as exc:
+            logger.error(f"[ImageGen] set_default_preset error: {exc}")
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/presets/export/<path:name>", methods=["GET"])
+    def export_preset_route(name):
+        try:
+            from plugin.presets import export_preset
+            payload = export_preset(name)
+            if payload is None:
+                return jsonify({"ok": False, "error": f"Preset '{name}' not found"}), 404
+            return jsonify({"ok": True, "preset": payload})
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route("/hecos/api/plugins/image_gen/presets/import", methods=["POST"])
+    def import_preset_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            payload = data.get("preset") if isinstance(data.get("preset"), dict) else data
+            name = (payload.get("name") or "").strip()
+            config_snapshot = payload.get("config") if isinstance(payload.get("config"), dict) else {}
+            description = (payload.get("description") or "").strip()
+            auto_rename = bool(data.get("auto_rename", True))
+
+            if not config_snapshot:
+                return jsonify({"ok": False, "error": "Invalid preset file: missing 'config' object"}), 400
+
+            from plugin.presets import import_user_preset
+            ok, msg = import_user_preset(name, config_snapshot, description=description, auto_rename=auto_rename)
+            if not ok:
+                return jsonify({"ok": False, "error": msg}), 400
+            return jsonify({"ok": True, "name": msg})
+        except Exception as exc:
+            logger.error(f"[ImageGen] import_preset error: {exc}")
             return jsonify({"ok": False, "error": str(exc)}), 500
 
     # --- 4b. Global Config Profiles ---

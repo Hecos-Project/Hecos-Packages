@@ -1,50 +1,131 @@
 {
     "tag": "MESSENGER",
     "name": "Messenger",
-    "version": "1.1.0",
-    "description": "Send and receive messages via Telegram, WhatsApp, and Discord.\n\n**Guida ai Comandi Rapidi:**\n- `/msg <piattaforma>:<destinatario> <testo>`: Invia un messaggio diretto scavalcando l'IA. Es: `/msg whatsapp:+393331234567 Ciao!`\n- `/send`: Alias esatto di `/msg`.\n",
+    "version": "2.4.3",
+    "description": "Modular messaging hub for WhatsApp and Telegram with smart Contacts resolution, Persona-aware multi-bot Telegram selection, photo & document delivery, deterministic WhatsApp Web 2026 stanza verification, and 15-minute follow-up channel continuity.\n\n**Quick Commands:**\n- `/msg <platform>:<contact_or_address> <text>`: Direct send bypassing AI (e.g. `/msg whatsapp:Rowena Hello!`).\n- `/send`: Alias of `/msg`.\n",
     "lazy_load": false,
     "is_class_based": true,
     "commands": {
-        "send_message": "Sends a text message to a contact or channel on the specified platform.",
-        "send_photo": "Sends a photo to a contact or channel on Telegram.",
-        "list_accounts": "Lists all connected and configured messaging accounts and their status.",
-        "check_connection": "Checks the connectivity status of one or all configured messaging providers.",
-        "force_send": "Forces sending a message by explicitly pressing 'Enter' on the host machine."
+        "check_connection": "Checks live connectivity and readiness of WhatsApp and Telegram.",
+        "list_accounts": "Lists configured WhatsApp and Telegram accounts and active delivery methods.",
+        "send_document": "Sends a document or file (PDF, HTML, DOCX, ZIP, audio, video) on Telegram or WhatsApp.",
+        "send_message": "Sends a text message (and optional attachments) to a contact name or address on WhatsApp or Telegram.",
+        "send_photo": "Sends a photo or image file ('latest' or [[IMG:filename]]) on Telegram or WhatsApp."
     },
     "tool_schema": [
         {
             "type": "function",
             "function": {
                 "name": "MESSENGER__send_message",
-                "description": "Sends a text message to a contact or group on a specified messaging platform. Supported platforms: 'telegram', 'whatsapp', 'discord'. Use this when the user says 'manda un messaggio', 'send a message', 'scrivi a', 'write to', 'message on telegram/whatsapp/discord'. The 'to' field must include the platform prefix, e.g.: 'telegram:@username', 'telegram:123456789', 'discord:#channel-name', 'whatsapp:+393331234567'.",
+                "description": "Sends a text message (and optional attachments) on WhatsApp or Telegram. Automatically resolves contact names from Hecos Contacts! ALWAYS invoke this tool before claiming a message was sent. Once it returns ✅, do NOT call it again with the same message.",
                 "parameters": {
-                    "type": "object",
                     "required": [
-                        "to",
                         "text"
                     ],
+                    "type": "object",
                     "properties": {
                         "to": {
                             "type": "string",
-                            "description": "The recipient, including platform prefix. Examples: 'telegram:@myuser', 'telegram:123456789', 'whatsapp:+393331234567', 'discord:#general'. If the user does not specify a platform and only one is configured, default to that one."
+                            "description": "Target recipient: 'group:<GroupName>' for a WhatsApp or Telegram group/channel (e.g. 'group:Hecos'), a Contact name from Address Book (e.g. 'Rowena', or 'admin' when messaging the user privately), 'last' for an immediate follow-up within 15 minutes, or direct address ('whatsapp:+393331234567', 'telegram:@channel', 'telegram:123456789')."
                         },
                         "text": {
                             "type": "string",
-                            "description": "The message body to send. Can be a single line or multi-line text. Preserve formatting if the user specifies it."
+                            "description": "Message body to send (single-line or multi-line), written naturally in first-person staying strictly in character."
                         },
                         "platform": {
                             "type": "string",
-                            "description": "Optional: explicit platform override ('telegram', 'whatsapp', 'discord'). Use this if the 'to' field does not contain a prefix.",
                             "enum": [
-                                "telegram",
                                 "whatsapp",
-                                "discord"
-                            ]
+                                "telegram"
+                            ],
+                            "description": "Target messaging platform: 'whatsapp' (also when user says 'wazzap' / 'whatsapp web') or 'telegram'. Omit on immediate follow-up messages so Messenger reuses the verified recent channel."
                         },
-                        "is_app_open": {
-                            "type": "boolean",
-                            "description": "Set to true if the user tells you WhatsApp or the target app is already open on their desktop. Significantly speeds up the sending procedure."
+                        "bot_name": {
+                            "type": "string",
+                            "description": "Optional Telegram bot identifier (e.g. 'Urania', 'hecos'). Omit to automatically select the bot matching your active persona."
+                        },
+                        "attachments": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "description": "Optional list of file paths or filenames to attach with the message."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "MESSENGER__send_photo",
+                "description": "Sends a photo or image file to a contact or channel on Telegram or WhatsApp. When sending a newly captured/created selfie or photo: call IMAGE_GEN__generate_image first, then call MESSENGER__send_photo with image_path='latest' (or the [[IMG:filename]]). NEVER use EXECUTOR__write_file to fake .jpg files!",
+                "parameters": {
+                    "required": [],
+                    "type": "object",
+                    "properties": {
+                        "to": {
+                            "type": "string",
+                            "description": "Contact name (e.g. 'admin' for the user, 'Rowena'), 'last' for follow-ups, or platform address ('telegram:@channel', 'whatsapp:+393331234567')."
+                        },
+                        "image_path": {
+                            "type": "string",
+                            "description": "Pass 'latest' to send the most recently created photo/image, or the bare filename from [[IMG:filename.png]], or an existing image path on disk."
+                        },
+                        "caption": {
+                            "type": "string",
+                            "description": "Optional caption sent with the photo. Write naturally in first-person staying strictly in character (e.g. 'a photo of me' / 'my selfie'); NEVER mention AI, generation, or tools."
+                        },
+                        "platform": {
+                            "type": "string",
+                            "enum": [
+                                "whatsapp",
+                                "telegram"
+                            ],
+                            "description": "Target platform ('telegram' or 'whatsapp'). Omit on immediate follow-ups to reuse the verified recent channel."
+                        },
+                        "bot_name": {
+                            "type": "string",
+                            "description": "Optional Telegram bot identifier (e.g. 'Urania', 'hecos'). Omit to auto-match your active persona."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "MESSENGER__send_document",
+                "description": "Sends a document or file (PDF, HTML, DOCX, TXT, ZIP, audio, video) to a contact or channel on Telegram or WhatsApp.",
+                "parameters": {
+                    "required": [
+                        "file_path"
+                    ],
+                    "type": "object",
+                    "properties": {
+                        "to": {
+                            "type": "string",
+                            "description": "Contact name (e.g. 'admin', 'Rowena'), 'last' for follow-ups, or platform address."
+                        },
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path or filename of the document/file to send (e.g. PDF path from DOCS__generate_pdf, or 'latest' for the newest generated document)."
+                        },
+                        "caption": {
+                            "type": "string",
+                            "description": "Optional caption accompanying the document, written naturally in character."
+                        },
+                        "platform": {
+                            "type": "string",
+                            "enum": [
+                                "whatsapp",
+                                "telegram"
+                            ],
+                            "description": "Target platform ('telegram' or 'whatsapp')."
+                        },
+                        "bot_name": {
+                            "type": "string",
+                            "description": "Optional Telegram bot identifier ('Urania', 'hecos'). Omit to auto-match active persona."
                         }
                     }
                 }
@@ -54,7 +135,7 @@
             "type": "function",
             "function": {
                 "name": "MESSENGER__list_accounts",
-                "description": "Returns the list of all configured messaging accounts with their status (connected, disabled, error). Use this when the user asks 'which messaging accounts do I have?', 'quali account ho configurato?', 'show messenger status'.",
+                "description": "Returns configured WhatsApp and Telegram accounts and their active delivery methods.",
                 "parameters": {
                     "type": "object",
                     "properties": {}
@@ -65,57 +146,17 @@
             "type": "function",
             "function": {
                 "name": "MESSENGER__check_connection",
-                "description": "Tests the connection to one or all configured messaging providers and returns the live status. Use this when the user says 'check messenger', 'testa la connessione', 'is telegram connected?'.",
+                "description": "Tests live connectivity for WhatsApp and/or Telegram and reports readiness.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "platform": {
                             "type": "string",
-                            "description": "Optional: which platform to test ('telegram', 'whatsapp', 'discord'). If omitted, all configured providers are tested.",
                             "enum": [
-                                "telegram",
                                 "whatsapp",
-                                "discord"
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "MESSENGER__force_send",
-                "description": "Presses 'Enter' on the host machine to force sending a message if it got stuck in the text input box (especially useful for WhatsApp). Use this when the user says 'invialo', 'premi invio', 'send it again', or asks to manually trigger the send command.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {}
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "MESSENGER__send_photo",
-                "description": "Sends a photo to a contact or channel on Telegram. Use this when the user asks to send an image (e.g., generated by image_gen) to a chat or channel. Supported platform: 'telegram'.",
-                "parameters": {
-                    "type": "object",
-                    "required": [
-                        "to",
-                        "image_path"
-                    ],
-                    "properties": {
-                        "to": {
-                            "type": "string",
-                            "description": "The recipient, including platform prefix. Example: 'telegram:@mychannel' or 'telegram:123456789'."
-                        },
-                        "image_path": {
-                            "type": "string",
-                            "description": "The absolute path to the local image file to send."
-                        },
-                        "caption": {
-                            "type": "string",
-                            "description": "Optional: Text caption to attach to the image."
+                                "telegram"
+                            ],
+                            "description": "Optional platform to check ('whatsapp' or 'telegram'). Omit to check all."
                         }
                     }
                 }
@@ -124,18 +165,18 @@
     ],
     "slash_commands": [
         {
-            "id": "msg",
-            "manifest_version": "1.1.0",
             "aliases": [
                 "/msg",
                 "/send"
             ],
-            "description": "Invia un messaggio tramite i provider configurati (Telegram, WhatsApp, Discord).",
-            "usage": "/msg <piattaforma:destinatario> <testo_del_messaggio>",
-            "example": "/msg whatsapp:+393331234567 Ciao, questo \u00e8 un test!",
-            "icon": "\ud83d\udcac",
+            "description": "Sends a direct message via WhatsApp or Telegram (supports contact names from Address Book).",
+            "example": "/msg whatsapp:Rowena Hello, this is a test!",
+            "icon": "💬",
+            "id": "msg",
+            "manifest_version": "1.1.0",
             "method": "msg_command",
-            "requires_args": true
+            "requires_args": true,
+            "usage": "/msg <platform:contact_or_address> <message_text>"
         }
     ],
     "icon": "fa-paper-plane",
@@ -145,8 +186,9 @@
         "tab_icon": "fa-paper-plane",
         "template_file": "web/templates/config_messenger.html",
         "js_file": null,
+        "js_files": null,
         "css_file": null,
-        "category": "CONNETTIVIT\u00c0",
+        "category": "CONNETTIVITÀ",
         "api_routes_file": "web/routes.py",
         "config_api_get": "/hecos/api/plugins/messenger/config",
         "config_api_post": "/hecos/api/plugins/messenger/config"

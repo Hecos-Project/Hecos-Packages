@@ -1,17 +1,139 @@
-<!-- MESSENGER CONFIG PANEL -->
+<!-- MESSENGER CONFIG PANEL (v2.1 — Modular Architecture + Contextual Overrides & Follow-up Memory) -->
 <div id="tab-messenger" class="panel">
 
-    <div style="margin-bottom: 20px;">
-        <h2><i class="fas fa-paper-plane" style="color:var(--accent); margin-right:10px;"></i> {{ t('ext_messenger_title', default='Messenger Configuration') }}</h2>
+    <style>
+        .msg-mode-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 12px 0 16px 0;
+        }
+        .msg-mode-card {
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            background: var(--bg0);
+            cursor: pointer;
+            transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+        }
+        .msg-mode-card:hover {
+            border-color: rgba(0, 212, 255, 0.5);
+        }
+        .msg-mode-card.is-selected {
+            border-color: #25d366;
+            background: rgba(37, 211, 102, 0.07);
+            box-shadow: 0 0 0 1px rgba(37, 211, 102, 0.25);
+        }
+        .msg-mode-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .msg-mode-title {
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .msg-mode-desc {
+            font-size: 11.5px;
+            line-height: 1.45;
+            color: var(--muted);
+            margin: 0;
+        }
+        .msg-active-banner {
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin: 12px 0 16px 0;
+            border-left: 4px solid #25d366;
+            background: rgba(37, 211, 102, 0.08);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .msg-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text);
+        }
+        .msg-override-box {
+            margin-top: 18px;
+            padding: 14px;
+            border-radius: 10px;
+            background: var(--bg0);
+            border: 1px solid var(--border);
+        }
+        .msg-override-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+        .msg-override-textarea {
+            width: 100%;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.45;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg1, rgba(0, 0, 0, 0.2));
+            color: var(--text);
+            resize: vertical;
+        }
+        .msg-reset-btn {
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            cursor: pointer;
+        }
+        .msg-reset-btn:hover {
+            color: var(--text);
+            border-color: var(--accent);
+        }
+        @media (max-width: 768px) {
+            .msg-mode-grid {
+                grid-template-columns: 1fr;
+            }
+            .msg-active-banner {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:20px;">
+        <h2 style="margin:0;"><i class="fas fa-paper-plane" style="color:var(--accent); margin-right:10px;"></i> {{ t('ext_messenger_title', default='Messenger Configuration') }}</h2>
+        <button class="btn" id="messenger-refresh-status-btn" onclick="refreshMessengerLiveStatus()" style="border-radius:10px; padding:6px 14px; font-size:12px;">
+            <i class="fas fa-sync-alt"></i> {{ t('ext_messenger_refresh_status', default='Verify Live Status') }}
+        </button>
     </div>
 
     <!-- ── Info Templates ────────────────────────────────────────────────── -->
-    <div class="card" style="border-left: 4px solid var(--accent); background: rgba(var(--accent-rgb), 0.05); display: flex; align-items: center; justify-content: space-between;">
+    <div class="card" style="border-left: 4px solid var(--accent); background: rgba(var(--accent-rgb), 0.05); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
         <div>
             <div style="font-weight: 500; margin-bottom: 4px;"><i class="fas fa-file-alt" style="color:var(--accent); margin-right:6px;"></i> {{ t('ext_messenger_templates_title', default='Template Management') }}</div>
             <p style="font-size: 12px; color: var(--muted); margin: 0;">
-                {{ t('ext_messenger_templates_desc_1', default='Create pre-defined messages for WhatsApp, Telegram, and Discord.') }}<br>
-                {{ t('ext_messenger_templates_desc_2', default='You can set a template as Default to automatically format Hecos responses.') }}
+                {{ t('ext_messenger_templates_desc_1', default='Create pre-defined message headers and footers for WhatsApp and Telegram.') }}<br>
+                {{ t('ext_messenger_templates_desc_2', default='You can set a template as Default to automatically format Hecos messages.') }}
             </p>
         </div>
         <button class="btn" style="border-radius:20px; padding:6px 16px; background:linear-gradient(135deg, #00d4ff, #6366f1); border:none; color:white; font-weight:600;" onclick="showTab('templates'); if(typeof TemplateManager !== 'undefined') TemplateManager.init();">
@@ -19,35 +141,17 @@
         </button>
     </div>
 
+    <!-- ═══ WHATSAPP PROVIDER ════════════════════════════════════════════════ -->
     <div class="card">
-        <div class="card-title"><i class="fab fa-telegram-plane"></i> {{ t('ext_messenger_telegram_title', default='Telegram (Recommended)') }}</div>
-        <p style="font-size:12px; color:#888; margin-bottom:16px;">
-            {{ t('ext_messenger_telegram_desc', default='Use the official Telegram API to send messages quickly and reliably. Create a bot via @BotFather.') }}
-        </p>
-
-        <div class="field">
-            <label>{{ t('ext_messenger_telegram_enable', default='Enable Telegram Provider') }}</label>
-            <label class="switch is-small">
-                <input type="checkbox" id="telegram-enabled" onchange="saveMessengerConfig()">
-                <span class="slider"></span>
-            </label>
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+            <div class="card-title" style="margin-bottom:0;">
+                <i class="fab fa-whatsapp" style="color:#25d366;"></i> WhatsApp
+            </div>
+            <span id="whatsapp-live-pill" class="msg-status-pill">⏳ {{ t('ext_messenger_checking', default='Checking...') }}</span>
         </div>
 
-        <div id="telegram-bots-container" style="margin-top:16px;"></div>
-
-        <button class="btn" style="margin-top:10px; border-radius:12px; background:rgba(0,212,255,0.1); color:#00d4ff; border:1px dashed #00d4ff;" onclick="addTelegramBot()">
-            <i class="fas fa-plus"></i> Add new Bot
-        </button>
-    </div>
-
-    <div class="card">
-        <div class="card-title"><i class="fab fa-whatsapp"></i> WhatsApp <span class="p-tag" style="background: rgba(255,200,0,0.2); color: #ffcc00; font-size:9px; vertical-align:middle; margin-left:10px;">BETA</span></div>
-        <p style="font-size:12px; color:#888; margin-bottom:16px;">
-            {{ t('ext_messenger_whatsapp_desc_1', default='Hecos supports sending via both the official Desktop App and WhatsApp Web.') }}
-            <br><br>
-            <strong style="color:var(--text);">{{ t('ext_messenger_whatsapp_option1_label', default='Option 1 (Recommended):') }}</strong> {{ t('ext_messenger_whatsapp_option1', default='Install the official WhatsApp App for Windows and log in. Hecos will detect the app and send messages much faster without opening new tabs.') }}
-            <br>
-            <strong style="color:var(--text);">{{ t('ext_messenger_whatsapp_option2_label', default='Option 2:') }}</strong> {{ t('ext_messenger_whatsapp_option2', default='If the App is not installed, Hecos will automatically open a tab in your browser on WhatsApp Web. Make sure you have already scanned the QR code to keep the session active.') }}
+        <p style="font-size:12px; color:var(--muted); margin:10px 0 14px 0;">
+            {{ t('ext_messenger_whatsapp_intro', default='Hecos resolves contacts from your Address Book and sends messages and attachments through WhatsApp Web. Select below which delivery method you want Hecos to use:') }}
         </p>
 
         <div class="field">
@@ -58,13 +162,122 @@
             </label>
         </div>
 
+        <!-- Explicit Active Method Awareness Banner -->
+        <div id="whatsapp-active-banner" class="msg-active-banner">
+            <div style="flex:1; min-width:220px;">
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.6px; color:#25d366; font-weight:700; margin-bottom:3px;">
+                    <i class="fas fa-satellite-dish"></i> {{ t('ext_messenger_whatsapp_active_method_label', default='Active Delivery Method') }}
+                </div>
+                <div id="whatsapp-active-method-name" style="font-size:13.5px; font-weight:700; color:var(--text); margin-bottom:3px;">—</div>
+                <div id="whatsapp-active-method-how" style="font-size:11.5px; color:var(--muted); line-height:1.4;">—</div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn" type="button" id="whatsapp-open-session-btn" onclick="openWhatsAppSession()" style="border-radius:10px; background:rgba(37,211,102,0.15); color:#25d366; border:1px solid rgba(37,211,102,0.4); font-weight:600; font-size:12px; padding:7px 12px;">
+                    <i class="fas fa-external-link-alt"></i> {{ t('ext_messenger_whatsapp_open_session_btn', default='Open / Link WhatsApp Web') }}
+                </button>
+            </div>
+        </div>
+
+        <!-- User-Selectable Delivery Mode Cards -->
+        <label style="display:block; font-weight:600; font-size:12.5px; margin-bottom:6px;">
+            {{ t('ext_messenger_whatsapp_choose_method', default='Select How Messages Are Sent:') }}
+        </label>
+        <input type="hidden" id="whatsapp-session-mode" value="cdp">
+
+        <div class="msg-mode-grid">
+            <!-- Mode 1: Shared User Browser (CDP) -->
+            <div class="msg-mode-card is-selected" id="wa-card-cdp" onclick="selectWhatsAppMode('cdp')">
+                <div class="msg-mode-card-header">
+                    <div class="msg-mode-title">
+                        <i class="fab fa-chrome" style="color:#00d4ff;"></i>
+                        {{ t('ext_messenger_wa_mode_cdp_title', default='1. Shared User Browser (CDP)') }}
+                    </div>
+                    <input type="radio" name="wa_mode_radio" id="wa-radio-cdp" checked style="pointer-events:none;">
+                </div>
+                <p class="msg-mode-desc">
+                    {{ t('ext_messenger_wa_mode_cdp_desc', default='Connects to your already-open Chrome/Edge via remote debugging port (default 9222). You see the chat open and send live inside your browser. Uses zero extra RAM, but requires your browser to run with CDP enabled.') }}
+                </p>
+            </div>
+
+            <!-- Mode 2: Dedicated Isolated Hecos Session -->
+            <div class="msg-mode-card" id="wa-card-persistent" onclick="selectWhatsAppMode('persistent_profile')">
+                <div class="msg-mode-card-header">
+                    <div class="msg-mode-title">
+                        <i class="fas fa-server" style="color:#25d366;"></i>
+                        {{ t('ext_messenger_wa_mode_dedicated_title', default='2. Dedicated Hecos Session (Isolated)') }}
+                    </div>
+                    <input type="radio" name="wa_mode_radio" id="wa-radio-persistent" style="pointer-events:none;">
+                </div>
+                <p class="msg-mode-desc">
+                    {{ t('ext_messenger_wa_mode_dedicated_desc', default='Manages a separate Chromium instance with its own persistent profile (hecos/data/whatsapp_session). Works even when your personal browser is closed and never touches your tabs. Scan the QR code once via "Open / Link WhatsApp Web".') }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Mode-specific options: CDP -->
+        <div id="wa-options-cdp" style="background:var(--bg0); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+            <div style="font-weight:600; font-size:12px; color:#00d4ff; margin-bottom:10px;">
+                <i class="fas fa-plug"></i> {{ t('ext_messenger_wa_cdp_opts_title', default='Shared Browser (CDP) Settings') }}
+            </div>
+            <div class="field" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <div>
+                    <label style="margin-bottom:2px;">{{ t('ext_messenger_wa_cdp_port', default='Chrome Remote Debugging Port') }}</label>
+                    <div style="font-size:11px; color:var(--muted);">{{ t('ext_messenger_wa_cdp_port_desc', default='Port passed to --remote-debugging-port (standard Hecos port: 9222).') }}</div>
+                </div>
+                <input type="number" id="whatsapp-cdp-port" placeholder="9222" min="1024" max="65534" onchange="saveMessengerConfig()" style="width:90px;">
+            </div>
+            <div class="field" style="margin-bottom:0;">
+                <label>{{ t('ext_messenger_wa_auto_open_tab', default='Auto-open WhatsApp Web tab if closed') }}</label>
+                <label class="switch is-small">
+                    <input type="checkbox" id="whatsapp-auto-open-tab" onchange="saveMessengerConfig()">
+                    <span class="slider"></span>
+                </label>
+                <small style="color:var(--muted); font-size:11px; display:block; margin-top:4px;">
+                    {{ t('ext_messenger_wa_auto_open_tab_desc', default='Automatically opens https://web.whatsapp.com in a new tab if no WhatsApp Web tab is currently open.') }}
+                </small>
+            </div>
+        </div>
+
+        <!-- Mode-specific options: Dedicated Profile -->
+        <div id="wa-options-dedicated" style="display:none; background:var(--bg0); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+            <div style="font-weight:600; font-size:12px; color:#25d366; margin-bottom:10px;">
+                <i class="fas fa-shield-alt"></i> {{ t('ext_messenger_wa_dedicated_opts_title', default='Dedicated Hecos Session Settings') }}
+            </div>
+            <div class="field" style="margin-bottom:0;">
+                <label>{{ t('ext_messenger_wa_headless_label', default='Run invisible in background (Headless)') }}</label>
+                <label class="switch is-small">
+                    <input type="checkbox" id="whatsapp-persistent-headless" onchange="saveMessengerConfig()">
+                    <span class="slider"></span>
+                </label>
+                <small style="color:var(--muted); font-size:11px; display:block; margin-top:4px;">
+                    {{ t('ext_messenger_wa_headless_desc', default='Enable ONLY after you have already scanned the QR code once. When off, you will see the dedicated WhatsApp window on screen.') }}
+                </small>
+            </div>
+        </div>
+
+        <!-- Common WhatsApp Options -->
+        <div class="field">
+            <label>{{ t('ext_messenger_whatsapp_country_code', default='Default International Prefix') }}</label>
+            <input type="text" id="whatsapp-phone-country-code" placeholder="+39" autocomplete="off" onchange="saveMessengerConfig()">
+            <small style="color:#666; font-size:11px;">{{ t('ext_messenger_whatsapp_country_code_desc', default='Added automatically to numbers saved in Contacts without a country prefix (e.g. +39 for Italy).') }}</small>
+        </div>
+
+        <div class="field">
+            <label>{{ t('ext_messenger_whatsapp_single_block', default='Send multi-line text as a single message (Recommended)') }}</label>
+            <label class="switch is-small">
+                <input type="checkbox" id="whatsapp-send-as-single-block" onchange="saveMessengerConfig()">
+                <span class="slider"></span>
+            </label>
+            <small style="color:#666; font-size:11px; display:block; margin-top:4px;">{{ t('ext_messenger_whatsapp_single_block_desc', default='Keeps multi-line messages, poems, and templates inside one single WhatsApp bubble instead of multiple separate messages.') }}</small>
+        </div>
+
         <div class="field">
             <label>{{ t('ext_messenger_whatsapp_use_template', default='Use specific template') }}</label>
             <label class="switch is-small">
                 <input type="checkbox" id="whatsapp-use-template" onchange="document.getElementById('whatsapp-template-container').style.display = this.checked ? 'block' : 'none'; saveMessengerConfig();">
                 <span class="slider"></span>
             </label>
-            <small style="color:#666; font-size:11px; display:block; margin-top:4px;">{{ t('ext_messenger_whatsapp_use_template_desc', default='Forces the use of a specific template, ignoring the Default one.') }}</small>
+            <small style="color:#666; font-size:11px; display:block; margin-top:4px;">{{ t('ext_messenger_whatsapp_use_template_desc', default='Wraps outgoing WhatsApp messages with the selected template.') }}</small>
         </div>
 
         <div class="field" id="whatsapp-template-container" style="display:none; margin-left:15px; padding-left:15px; border-left:2px solid var(--accent);">
@@ -74,29 +287,51 @@
             </select>
         </div>
 
-        <div class="field">
-            <label>{{ t('ext_messenger_whatsapp_country_code', default='Default International Prefix') }}</label>
-            <input type="text" id="whatsapp-phone-country-code" placeholder="+39" autocomplete="off" onchange="saveMessengerConfig()">
-            <small style="color:#666; font-size:11px;">{{ t('ext_messenger_whatsapp_country_code_desc', default='Automatically added to numbers typed without a prefix (e.g., +39 for Italy).') }}</small>
+        <!-- Global Group Signature Prefix ([Urania], [Pippo], or Off) -->
+        <div style="background:rgba(37,211,102,0.05); border:1px solid rgba(37,211,102,0.25); border-radius:10px; padding:12px 14px; margin-top:12px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <div>
+                    <label style="margin-bottom:2px; font-weight:600;">
+                        <i class="fas fa-signature" style="color:#25d366; margin-right:5px;"></i>
+                        {{ t('ext_messenger_wa_sig_enable', default='Show [Signature] prefix in WhatsApp groups') }}
+                    </label>
+                    <div style="font-size:11px; color:var(--muted); line-height:1.4;">
+                        {{ t('ext_messenger_wa_sig_enable_desc', default='Prepends a bold *[Name]* tag at the top of group messages (turn OFF if your Template already includes a signature).') }}
+                    </div>
+                </div>
+                <label class="switch is-small" style="margin:0;">
+                    <input type="checkbox" id="whatsapp-group-sig-enabled" onchange="updateWhatsAppSignatureUI(); saveMessengerConfig();">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div id="whatsapp-group-sig-options" style="margin-top:12px; padding-top:10px; border-top:1px dashed rgba(37,211,102,0.25); display:grid; grid-template-columns: 1.2fr 1fr; gap:10px; align-items:end;">
+                <div>
+                    <label style="font-size:11.5px; color:var(--muted); margin-bottom:4px; display:block;">
+                        {{ t('ext_messenger_wa_sig_mode_label', default='Signature Name Source') }}
+                    </label>
+                    <select id="whatsapp-group-sig-mode" class="config-input" onchange="updateWhatsAppSignatureUI(); saveMessengerConfig();">
+                        <option value="auto">{{ t('ext_messenger_wa_sig_mode_auto', default='Automatic (Active Soul / Persona, e.g. Urania, Hecos)') }}</option>
+                        <option value="custom">{{ t('ext_messenger_wa_sig_mode_custom', default='Custom Name (type any name below)') }}</option>
+                    </select>
+                </div>
+                <div id="whatsapp-group-sig-custom-wrap" style="display:none;">
+                    <label style="font-size:11.5px; color:var(--muted); margin-bottom:4px; display:block;">
+                        {{ t('ext_messenger_wa_sig_text_label', default='Custom Signature Name') }}
+                    </label>
+                    <input type="text" id="whatsapp-group-sig-text" class="config-input" placeholder="{{ t('ext_messenger_wa_sig_text_placeholder', default='e.g. Urania, Pippo, Admin...') }}" onchange="saveMessengerConfig()">
+                </div>
+            </div>
         </div>
 
-        <div class="field">
-            <label>{{ t('ext_messenger_whatsapp_single_block', default='Send as single block (Recommended)') }}</label>
-            <label class="switch is-small">
-                <input type="checkbox" id="whatsapp-send-as-single-block" onchange="saveMessengerConfig()">
-                <span class="slider"></span>
-            </label>
-            <small style="color:#666; font-size:11px; display:block; margin-top:4px;">{{ t('ext_messenger_whatsapp_single_block_desc', default='Send multi-line texts and templates in a single message (instead of splitting into multiple continuous messages).') }}</small>
-        </div>
-
-        <!-- TIMEOUTS for WhatsApp -->
-        <div style="margin-top:20px; padding-top:15px; border-top:1px dashed var(--border);">
-            <label style="display:block; margin-bottom:10px; font-weight:600;"><i class="fas fa-stopwatch"></i> {{ t('ext_messenger_whatsapp_timeouts_title', default='Timeouts (WhatsApp Web CDP)') }}</label>
+        <!-- Timeouts -->
+        <div style="margin-top:18px; padding-top:14px; border-top:1px dashed var(--border);">
+            <label style="display:block; margin-bottom:10px; font-weight:600;"><i class="fas fa-stopwatch"></i> {{ t('ext_messenger_whatsapp_timeouts_title', default='Timeouts') }}</label>
 
             <div class="field" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
                 <div>
-                    <label style="margin-bottom:2px;">{{ t('ext_messenger_whatsapp_cdp_timeout', default='CDP Connect Timeout') }}</label>
-                    <div style="font-size:11px; color:var(--muted);">{{ t('ext_messenger_whatsapp_cdp_timeout_desc', default='Max time to connect to Chrome debug port.') }}</div>
+                    <label style="margin-bottom:2px;">{{ t('ext_messenger_whatsapp_cdp_timeout', default='Navigation / Sync Timeout') }}</label>
+                    <div style="font-size:11px; color:var(--muted);">{{ t('ext_messenger_whatsapp_cdp_timeout_desc', default='Max wait time for browser attachment and chat loading.') }}</div>
                 </div>
                 <div style="display:flex; align-items:center; gap:5px;">
                     <input type="number" id="whatsapp-cdp-timeout" placeholder="30" min="5" max="120" onchange="saveMessengerConfig()" style="width:70px;">
@@ -106,8 +341,8 @@
 
             <div class="field" style="display:flex; align-items:center; justify-content:space-between;">
                 <div>
-                    <label style="margin-bottom:2px;">{{ t('ext_messenger_whatsapp_worker_timeout', default='Worker Execution Timeout') }}</label>
-                    <div style="font-size:11px; color:var(--muted);">{{ t('ext_messenger_whatsapp_worker_timeout_desc', default='Max total time to complete the sending process.') }}</div>
+                    <label style="margin-bottom:2px;">{{ t('ext_messenger_whatsapp_worker_timeout', default='Total Send Timeout') }}</label>
+                    <div style="font-size:11px; color:var(--muted);">{{ t('ext_messenger_whatsapp_worker_timeout_desc', default='Max total execution time for sending a message or attachment.') }}</div>
                 </div>
                 <div style="display:flex; align-items:center; gap:5px;">
                     <input type="number" id="whatsapp-worker-timeout" placeholder="60" min="10" max="300" onchange="saveMessengerConfig()" style="width:70px;">
@@ -115,39 +350,242 @@
                 </div>
             </div>
         </div>
+
+        <!-- Dedicated WhatsApp Groups Directory -->
+        <div style="margin-top:22px; padding-top:18px; border-top:1px dashed var(--border);">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+                <div style="font-weight:700; font-size:13.5px; color:var(--text);">
+                    <i class="fas fa-users" style="color:#25d366; margin-right:6px;"></i>
+                    {{ t('ext_messenger_wa_groups_title', default='WhatsApp Groups Directory (Outbound, Signature & Auto-Reply)') }}
+                </div>
+                <button class="btn" type="button" id="whatsapp-scan-groups-btn" onclick="scanWhatsAppGroups()" style="border-radius:10px; padding:6px 12px; font-size:11.5px; background:rgba(37,211,102,0.14); color:#25d366; border:1px solid rgba(37,211,102,0.4); font-weight:600;">
+                    <i class="fas fa-search"></i> {{ t('ext_messenger_wa_scan_groups_btn', default='Scan Groups from WhatsApp Web') }}
+                </button>
+            </div>
+            <p style="font-size:11.5px; color:var(--muted); margin:0 0 12px 0;">
+                {{ t('ext_messenger_wa_groups_desc', default='Register WhatsApp groups here so AI personas can send messages, photos, and documents by group name, optionally sign messages as *[Persona]*, and listen/reply in authorized groups.') }}
+            </p>
+
+            <!-- Scanned WhatsApp Groups Quick-Add Bar -->
+            <div id="whatsapp-discovered-box" style="display:none; background:rgba(37,211,102,0.07); border:1px solid rgba(37,211,102,0.3); border-radius:10px; padding:10px 12px; margin-bottom:12px;">
+                <div style="font-size:11px; font-weight:700; color:#25d366; margin-bottom:6px;">
+                    <i class="fas fa-radar"></i> {{ t('ext_messenger_wa_discovered_label', default='Groups Found on WhatsApp Web (Click to Add):') }}
+                </div>
+                <div id="whatsapp-discovered-list" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+            </div>
+
+            <div id="whatsapp-groups-container"></div>
+
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-top:8px;">
+                <button class="btn" type="button" style="border-radius:12px; background:rgba(37,211,102,0.12); color:#25d366; border:1px dashed #25d366;" onclick="addWhatsAppGroup()">
+                    <i class="fas fa-plus"></i> {{ t('ext_messenger_wa_add_group', default='Add WhatsApp Group') }}
+                </button>
+                <div style="display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted);">
+                    <span>Inbound Poll Interval:</span>
+                    <input type="number" id="whatsapp-inbound-poll" min="4" max="120" placeholder="8" onchange="saveMessengerConfig()" style="width:62px;">
+                    <span>s</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- WhatsApp Specific AI Routing Override -->
+        <div class="msg-override-box" style="border-left: 3px solid #25d366;">
+            <div class="msg-override-header">
+                <div style="font-weight:600; font-size:12.5px; color:var(--text);">
+                    <i class="fas fa-robot" style="color:#25d366; margin-right:6px;"></i>
+                    {{ t('ext_messenger_wa_override_title', default='WhatsApp AI Routing Instructions (Override)') }}
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button type="button" class="msg-reset-btn" onclick="resetMessengerDefault('whatsapp')">
+                        <i class="fas fa-undo"></i> {{ t('ext_messenger_reset_default', default='Reset to Default') }}
+                    </button>
+                    <label class="switch is-small" style="margin:0;">
+                        <input type="checkbox" id="whatsapp-routing-override-enabled" onchange="saveMessengerConfig()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <p style="font-size:11.5px; color:var(--muted); margin:0 0 8px 0;">
+                {{ t('ext_messenger_wa_override_desc', default='Included automatically in dynamic routing rules whenever WhatsApp is enabled. Customize how the AI handles WhatsApp requests.') }}
+            </p>
+            <textarea id="whatsapp-routing-override" class="msg-override-textarea" rows="4" onchange="saveMessengerConfig()"></textarea>
+        </div>
     </div>
 
+    <!-- ═══ TELEGRAM PROVIDER ════════════════════════════════════════════════ -->
     <div class="card">
-        <div class="card-title"><i class="fab fa-discord"></i> Discord</div>
-        <p style="font-size:12px; color:#888; margin-bottom:16px;">
-            {{ t('ext_messenger_discord_desc', default='Send messages to a Discord server by configuring an Incoming Webhook. Does not require creating a Web Bot.') }}
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+            <div class="card-title" style="margin-bottom:0;">
+                <i class="fab fa-telegram-plane" style="color:#00d4ff;"></i> {{ t('ext_messenger_telegram_title', default='Telegram (Official Bot API)') }}
+            </div>
+            <span id="telegram-live-pill" class="msg-status-pill">⏳ {{ t('ext_messenger_checking', default='Checking...') }}</span>
+        </div>
+
+        <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">
+            {{ t('ext_messenger_telegram_desc', default='Sends and receives messages, photos, documents, and voice notes directly via the official Telegram HTTPS Bot API. Create bots with @BotFather.') }}
         </p>
 
         <div class="field">
-            <label>{{ t('ext_messenger_discord_enable', default='Enable Discord Provider') }}</label>
+            <label>{{ t('ext_messenger_telegram_enable', default='Enable Telegram Provider') }}</label>
             <label class="switch is-small">
-                <input type="checkbox" id="discord-enabled" onchange="saveMessengerConfig()">
+                <input type="checkbox" id="telegram-enabled" onchange="saveMessengerConfig()">
                 <span class="slider"></span>
             </label>
         </div>
 
-        <div class="field">
-            <label>{{ t('ext_messenger_discord_webhook', default='Discord Webhook URL') }}</label>
-            <input type="password" id="discord-webhook-url" placeholder="https://discord.com/api/webhooks/..." autocomplete="off" onchange="saveMessengerConfig()">
-            <small style="color:#666; font-size:11px;">{{ t('ext_messenger_discord_webhook_desc', default='Copy the URL from Server Settings → Integrations → Webhooks.') }}</small>
+        <div class="field" style="background:rgba(0,212,255,0.06); border:1px solid rgba(0,212,255,0.22); border-radius:10px; padding:12px 14px; margin-top:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <div>
+                    <label style="margin-bottom:3px; font-weight:600;">
+                        <i class="fas fa-user-astronaut" style="color:#00d4ff; margin-right:5px;"></i>
+                        {{ t('ext_messenger_tg_persona_match', default='Auto-select Bot matching active Persona / Soul') }}
+                    </label>
+                    <div style="font-size:11.5px; color:var(--muted); line-height:1.4;">
+                        {{ t('ext_messenger_tg_persona_match_desc', default='Automatically sends from the bot matching the active AI persona (e.g. speaking with Urania uses the Urania bot; speaking with Hecos uses the hecos bot), falling back to Primary Bot otherwise.') }}
+                    </div>
+                </div>
+                <label class="switch is-small" style="margin:0;">
+                    <input type="checkbox" id="telegram-auto-match-persona" onchange="saveMessengerConfig()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div id="telegram-bots-container" style="margin-top:16px;"></div>
+
+        <button class="btn" type="button" style="margin-top:10px; border-radius:12px; background:rgba(0,212,255,0.1); color:#00d4ff; border:1px dashed #00d4ff;" onclick="addTelegramBot()">
+            <i class="fas fa-plus"></i> {{ t('ext_messenger_telegram_add_bot', default='Add new Bot') }}
+        </button>
+
+        <!-- Dedicated Telegram Groups & Channels Directory -->
+        <div style="margin-top:22px; padding-top:18px; border-top:1px dashed var(--border);">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+                <div style="font-weight:700; font-size:13.5px; color:var(--text);">
+                    <i class="fas fa-users-cog" style="color:#00d4ff; margin-right:6px;"></i>
+                    {{ t('ext_messenger_tg_groups_title', default='Telegram Groups & Channels Directory') }}
+                </div>
+            </div>
+            <p style="font-size:11.5px; color:var(--muted); margin:0 0 12px 0;">
+                {{ t('ext_messenger_tg_groups_desc', default='Register your Telegram groups and channels here (with optional voice/STT aliases like "ecos" for "Hecos") so AI personas send directly to the right group without polluting personal Contacts.') }}
+            </p>
+
+            <!-- Auto-Discovered Groups Quick-Add Bar -->
+            <div id="telegram-discovered-box" style="display:none; background:rgba(37,211,102,0.07); border:1px solid rgba(37,211,102,0.3); border-radius:10px; padding:10px 12px; margin-bottom:12px;">
+                <div style="font-size:11px; font-weight:700; color:#25d366; margin-bottom:6px;">
+                    <i class="fas fa-radar"></i> {{ t('ext_messenger_tg_discovered_label', default='Auto-Detected Groups / Channels (Click to Add):') }}
+                </div>
+                <div id="telegram-discovered-list" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+            </div>
+
+            <div id="telegram-groups-container"></div>
+
+            <button class="btn" type="button" style="margin-top:6px; border-radius:12px; background:rgba(168,85,247,0.12); color:#c084fc; border:1px dashed #a855f7;" onclick="addTelegramGroup()">
+                <i class="fas fa-plus"></i> {{ t('ext_messenger_tg_add_group', default='Add Group / Channel') }}
+            </button>
+        </div>
+
+        <!-- Telegram Specific AI Routing Override -->
+        <div class="msg-override-box" style="border-left: 3px solid #00d4ff;">
+            <div class="msg-override-header">
+                <div style="font-weight:600; font-size:12.5px; color:var(--text);">
+                    <i class="fas fa-robot" style="color:#00d4ff; margin-right:6px;"></i>
+                    {{ t('ext_messenger_tg_override_title', default='Telegram AI Routing Instructions (Override)') }}
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button type="button" class="msg-reset-btn" onclick="resetMessengerDefault('telegram')">
+                        <i class="fas fa-undo"></i> {{ t('ext_messenger_reset_default', default='Reset to Default') }}
+                    </button>
+                    <label class="switch is-small" style="margin:0;">
+                        <input type="checkbox" id="telegram-routing-override-enabled" onchange="saveMessengerConfig()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <p style="font-size:11.5px; color:var(--muted); margin:0 0 8px 0;">
+                {{ t('ext_messenger_tg_override_desc', default='Included automatically in dynamic routing rules whenever Telegram is enabled. Customize how the AI handles Telegram bots and media.') }}
+            </p>
+            <textarea id="telegram-routing-override" class="msg-override-textarea" rows="4" onchange="saveMessengerConfig()"></textarea>
         </div>
     </div>
 
-    <!-- ═══ ROUTING OVERRIDE ══════════════════════════════════════════════════ -->
+    <!-- ═══ GENERAL ROUTING, FOLLOW-UP CONTINUITY & ANTI-HALLUCINATION ═══════ -->
     <div class="card">
-        <div class="card-title"><i class="fas fa-route"></i> {{ t('ext_messenger_routing_title', default='Routing Instructions (Override)') }}</div>
-        <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">
-            {{ t('ext_messenger_routing_desc', default='These system instructions tell the AI how to use the Messenger. Modify them to alter its behavior. Leave blank to use manifest defaults.') }}
+        <div class="card-title">
+            <i class="fas fa-route" style="color:var(--accent);"></i>
+            {{ t('ext_messenger_routing_title', default='General AI Routing, Follow-up Memory & Safety Guard') }}
+        </div>
+        <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">
+            {{ t('ext_messenger_routing_desc', default='Transparent, user-editable rules controlling follow-up channel continuity, clarification questions when a recipient/platform is ambiguous, and anti-hallucination protection.') }}
         </p>
-        <div class="field">
-            <textarea id="messenger-routing-override" rows="6" placeholder="..."
-                    onchange="window.updateConfig('routing_overrides.overrides.MESSENGER', this.value)"
-                    style="width:100%; font-family:monospace; font-size:12px; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg0); color:var(--text); resize:vertical;"></textarea>
+
+        <!-- 1. Follow-up Channel Continuity Window -->
+        <div style="background:var(--bg0); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:10px; padding:14px; margin-bottom:16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
+                <div style="font-weight:600; font-size:12.5px; color:var(--text);">
+                    <i class="fas fa-history" style="color:var(--accent); margin-right:6px;"></i>
+                    {{ t('ext_messenger_followup_title', default='Follow-up Channel Memory ("Send another one")') }}
+                </div>
+                <label class="switch is-small" style="margin:0;">
+                    <input type="checkbox" id="messenger-remember-last-channel" onchange="saveMessengerConfig()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <p style="font-size:11.5px; color:var(--muted); margin:0 0 12px 0;">
+                {{ t('ext_messenger_followup_desc', default='Remembers the last verified recipient and platform so immediate follow-up prompts stay on the same channel (e.g. WhatsApp instead of switching to Telegram). When expired or unsure, Hecos asks "To whom and on which platform?" instead of guessing.') }}
+            </p>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <label style="font-size:12px; margin:0;">{{ t('ext_messenger_followup_ttl_label', default='Follow-up Memory Window (minutes)') }}</label>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <input type="number" id="messenger-last-channel-ttl" min="1" max="180" placeholder="15" onchange="saveMessengerConfig()" style="width:75px;">
+                    <span style="font-size:12px; color:var(--muted); font-weight:600;">min</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. General Cross-Platform Routing Override -->
+        <div class="msg-override-box" style="margin-top:0; margin-bottom:16px; border-left:3px solid #a855f7;">
+            <div class="msg-override-header">
+                <div style="font-weight:600; font-size:12.5px; color:var(--text);">
+                    <i class="fas fa-compass" style="color:#a855f7; margin-right:6px;"></i>
+                    {{ t('ext_messenger_general_override_title', default='General Messenger Routing Instructions (Override)') }}
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button type="button" class="msg-reset-btn" onclick="resetMessengerDefault('general')">
+                        <i class="fas fa-undo"></i> {{ t('ext_messenger_reset_default', default='Reset to Default') }}
+                    </button>
+                    <label class="switch is-small" style="margin:0;">
+                        <input type="checkbox" id="messenger-general-override-enabled" onchange="saveMessengerConfig()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <p style="font-size:11.5px; color:var(--muted); margin:0 0 8px 0;">
+                {{ t('ext_messenger_general_override_desc', default='Global Messenger rules combined with active WhatsApp/Telegram overrides and synced live to hecos/hpm/messenger/routing_override.yaml.') }}
+            </p>
+            <textarea id="messenger-general-override" class="msg-override-textarea" rows="6" onchange="saveMessengerConfig()"></textarea>
+        </div>
+
+        <!-- 3. Configurable Anti-Hallucination Guard -->
+        <div class="msg-override-box" style="margin-top:0; border-left:3px solid #f59e0b;">
+            <div class="msg-override-header">
+                <div style="font-weight:600; font-size:12.5px; color:var(--text);">
+                    <i class="fas fa-shield-virus" style="color:#f59e0b; margin-right:6px;"></i>
+                    {{ t('ext_messenger_guard_title', default='Anti-Hallucination Guard (Simulated Send Protection)') }}
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button type="button" class="msg-reset-btn" onclick="resetMessengerDefault('guard')">
+                        <i class="fas fa-undo"></i> {{ t('ext_messenger_reset_default', default='Reset to Default') }}
+                    </button>
+                    <label class="switch is-small" style="margin:0;">
+                        <input type="checkbox" id="messenger-anti-hallucination-enabled" onchange="saveMessengerConfig()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <p style="font-size:11.5px; color:var(--muted); margin:0 0 8px 0;">
+                {{ t('ext_messenger_guard_desc', default='Intercepts plain-text responses where the AI claims a message was sent without invoking MESSENGER, forcing either a real tool execution or an honest clarification question.') }}
+            </p>
+            <textarea id="messenger-anti-hallucination-prompt" class="msg-override-textarea" rows="4" onchange="saveMessengerConfig()"></textarea>
         </div>
     </div>
 
@@ -155,20 +593,98 @@
 
 <script>
     let telegramBots = [];
+    let telegramGroups = [];
+    let discoveredTelegramChats = [];
+    let whatsappGroups = [];
+    let discoveredWhatsAppGroups = [];
+    let messengerUiDefaults = {};
+
+    const MSG_I18N = {
+        modeDedicatedTitle: {{ t('ext_messenger_wa_banner_dedicated_title', default='Method 2: Dedicated Hecos Isolated Session (Port __PORT__)') | tojson }},
+        modeDedicatedHeadless: {{ t('ext_messenger_wa_banner_dedicated_headless', default='Messages are sent via an isolated Chromium profile (hecos/data/whatsapp_session) running invisibly in the background (headless), even when your personal browser is closed.') | tojson }},
+        modeDedicatedVisible: {{ t('ext_messenger_wa_banner_dedicated_visible', default='Messages are sent via a dedicated isolated Chromium window (hecos/data/whatsapp_session), independent from your personal browser.') | tojson }},
+        modeCdpTitle: {{ t('ext_messenger_wa_banner_cdp_title', default='Method 1: Shared User Browser (CDP Port __PORT__)') | tojson }},
+        modeCdpAutoTab: {{ t('ext_messenger_wa_banner_cdp_autotab', default='Messages are sent by attaching to your open browser on CDP port __PORT__ (if WhatsApp Web is not open, Hecos opens the tab automatically).') | tojson }},
+        modeCdpManualTab: {{ t('ext_messenger_wa_banner_cdp_manual', default='Messages are sent only when a WhatsApp Web tab is already open in your browser on CDP port __PORT__.') | tojson }}
+    };
+
+    function updateWhatsAppModeUI(mode) {
+        const cleanMode = (mode === "persistent_profile") ? "persistent_profile" : "cdp";
+        document.getElementById("whatsapp-session-mode").value = cleanMode;
+
+        const cdpCard = document.getElementById("wa-card-cdp");
+        const dedCard = document.getElementById("wa-card-persistent");
+        const cdpRadio = document.getElementById("wa-radio-cdp");
+        const dedRadio = document.getElementById("wa-radio-persistent");
+        const cdpOpts = document.getElementById("wa-options-cdp");
+        const dedOpts = document.getElementById("wa-options-dedicated");
+
+        const portVal = parseInt(document.getElementById("whatsapp-cdp-port").value) || 9222;
+        const autoTab = document.getElementById("whatsapp-auto-open-tab").checked;
+        const isHeadless = document.getElementById("whatsapp-persistent-headless").checked;
+
+        const nameEl = document.getElementById("whatsapp-active-method-name");
+        const howEl = document.getElementById("whatsapp-active-method-how");
+
+        if (cleanMode === "persistent_profile") {
+            cdpCard.classList.remove("is-selected");
+            dedCard.classList.add("is-selected");
+            cdpRadio.checked = false;
+            dedRadio.checked = true;
+            cdpOpts.style.display = "none";
+            dedOpts.style.display = "block";
+
+            nameEl.textContent = MSG_I18N.modeDedicatedTitle.replace("__PORT__", String(portVal + 1));
+            howEl.textContent = isHeadless ? MSG_I18N.modeDedicatedHeadless : MSG_I18N.modeDedicatedVisible;
+        } else {
+            cdpCard.classList.add("is-selected");
+            dedCard.classList.remove("is-selected");
+            cdpRadio.checked = true;
+            dedRadio.checked = false;
+            cdpOpts.style.display = "block";
+            dedOpts.style.display = "none";
+
+            nameEl.textContent = MSG_I18N.modeCdpTitle.replace("__PORT__", String(portVal));
+            howEl.textContent = (autoTab ? MSG_I18N.modeCdpAutoTab : MSG_I18N.modeCdpManualTab).replace("__PORT__", String(portVal));
+        }
+    }
+
+    function selectWhatsAppMode(mode) {
+        updateWhatsAppModeUI(mode);
+        saveMessengerConfig();
+    }
+
+    function resetMessengerDefault(section) {
+        if (!messengerUiDefaults) return;
+        if (section === "whatsapp" && messengerUiDefaults.whatsapp_routing_override) {
+            document.getElementById("whatsapp-routing-override").value = messengerUiDefaults.whatsapp_routing_override;
+            document.getElementById("whatsapp-routing-override-enabled").checked = true;
+        } else if (section === "telegram" && messengerUiDefaults.telegram_routing_override) {
+            document.getElementById("telegram-routing-override").value = messengerUiDefaults.telegram_routing_override;
+            document.getElementById("telegram-routing-override-enabled").checked = true;
+        } else if (section === "general" && messengerUiDefaults.general_override) {
+            document.getElementById("messenger-general-override").value = messengerUiDefaults.general_override;
+            document.getElementById("messenger-general-override-enabled").checked = true;
+        } else if (section === "guard" && messengerUiDefaults.anti_hallucination_prompt) {
+            document.getElementById("messenger-anti-hallucination-prompt").value = messengerUiDefaults.anti_hallucination_prompt;
+            document.getElementById("messenger-anti-hallucination-enabled").checked = true;
+        }
+        saveMessengerConfig();
+    }
 
     function renderTelegramBots() {
         const container = document.getElementById("telegram-bots-container");
         container.innerHTML = "";
-        
+
         telegramBots.forEach((bot, index) => {
             const botHtml = `
             <div style="background:var(--bg0); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:12px; position:relative;">
-                <button class="btn" style="position:absolute; top:16px; right:16px; background:rgba(255,50,50,0.1); color:#ff5555; border:none; padding:4px 8px; border-radius:8px; font-size:12px;" onclick="removeTelegramBot(${index})"><i class="fas fa-trash"></i></button>
-                
+                <button class="btn" type="button" style="position:absolute; top:16px; right:16px; background:rgba(255,50,50,0.1); color:#ff5555; border:none; padding:4px 8px; border-radius:8px; font-size:12px;" onclick="removeTelegramBot(${index})"><i class="fas fa-trash"></i></button>
+
                 <div style="display:flex; gap:16px; align-items:center; margin-bottom:12px;">
                     <div style="flex:1;">
-                        <label style="font-size:11px; color:#888;">Identifier Name (e.g. admin, urania)</label>
-                        <input type="text" class="config-input" value="${bot.name || ''}" oninput="telegramBots[${index}].name = this.value; saveMessengerConfig()" placeholder="bot_name">
+                        <label style="font-size:11px; color:#888;">Identifier Name (e.g. hecos, Urania)</label>
+                        <input type="text" class="config-input" value="${bot.name || ''}" onchange="telegramBots[${index}].name = this.value; saveMessengerConfig()" placeholder="bot_name">
                     </div>
                     <div style="display:flex; flex-direction:column; align-items:center; margin-right: 40px;">
                         <label style="font-size:11px; color:#888;">Enabled</label>
@@ -181,18 +697,18 @@
 
                 <div class="field">
                     <label>Bot Token</label>
-                    <input type="password" class="config-input" value="${bot.bot_token || ''}" oninput="telegramBots[${index}].bot_token = this.value; saveMessengerConfig()" placeholder="123456:ABC...">
+                    <input type="password" class="config-input" value="${bot.bot_token || ''}" onchange="telegramBots[${index}].bot_token = this.value; saveMessengerConfig()" placeholder="123456:ABC...">
                 </div>
-                
+
                 <div class="field">
-                    <label>Default Chat ID (Admin or Group)</label>
-                    <input type="text" class="config-input" value="${bot.default_chat_id || ''}" oninput="telegramBots[${index}].default_chat_id = this.value; saveMessengerConfig()" placeholder="@channel or 12345678">
+                    <label>Default Chat ID (Admin User ID or @Channel)</label>
+                    <input type="text" class="config-input" value="${bot.default_chat_id || ''}" onchange="telegramBots[${index}].default_chat_id = this.value; saveMessengerConfig()" placeholder="@channel or 12345678">
                 </div>
-                
+
                 <div style="display:flex; gap:16px; align-items:center; margin-bottom:12px; background:rgba(var(--accent-rgb), 0.05); padding:10px; border-radius:8px; border-left:3px solid var(--accent);">
                     <div style="flex:1;">
                         <div style="font-weight:600; font-size:12px; color:var(--text); margin-bottom:4px;">Admin Privileges</div>
-                        <div style="font-size:10px; color:var(--muted);">If enabled, this bot can execute Remote Access Pro commands and will reject messages from Chat IDs other than the Default one above. Ideal for private bots.</div>
+                        <div style="font-size:10px; color:var(--muted);">Allows Remote Access Pro commands and ignores incoming messages from Chat IDs other than Default Chat ID.</div>
                     </div>
                     <div>
                         <label class="switch is-small">
@@ -204,8 +720,8 @@
 
                 <div style="display:flex; gap:16px; align-items:center; margin-bottom:12px; background:var(--bg1); padding:10px; border-radius:8px; border-left:3px solid #ffcc00;">
                     <div style="flex:1;">
-                        <div style="font-weight:600; font-size:12px; color:var(--text); margin-bottom:4px;">Primary Bot (Default)</div>
-                        <div style="font-size:10px; color:var(--muted);">If enabled, this bot will be used as the default for sending Telegram messages when no specific bot is requested. (Only one can be primary)</div>
+                        <div style="font-weight:600; font-size:12px; color:var(--text); margin-bottom:4px;">Primary Bot (Default Outbound)</div>
+                        <div style="font-size:10px; color:var(--muted);">Used automatically when sending Telegram messages without specifying a bot name.</div>
                     </div>
                     <div>
                         <label class="switch is-small">
@@ -214,7 +730,7 @@
                         </label>
                     </div>
                 </div>
-                
+
                 ${!bot.is_admin ? `
                 <div style="background:rgba(168,85,247,0.05); border:1px solid rgba(168,85,247,0.2); border-radius:8px; padding:12px;">
                     <div style="font-weight:600; font-size:12px; color:#a855f7; margin-bottom:8px;"><i class="fas fa-users"></i> Group Rules (Public Bot)</div>
@@ -228,12 +744,12 @@
                     </div>
                     <div class="field">
                         <label>Keywords (comma separated)</label>
-                        <input type="text" class="config-input" value="${bot.group_keywords || ''}" oninput="telegramBots[${index}].group_keywords = this.value; saveMessengerConfig()" placeholder="urania,hecos,ai">
+                        <input type="text" class="config-input" value="${bot.group_keywords || ''}" onchange="telegramBots[${index}].group_keywords = this.value; saveMessengerConfig()" placeholder="urania,hecos,ai">
                     </div>
                 </div>
                 ` : ''}
             </div>`;
-            container.insertAdjacentHTML('beforeend', botHtml);
+            container.insertAdjacentHTML("beforeend", botHtml);
         });
     }
 
@@ -243,7 +759,7 @@
             enabled: true,
             bot_token: "",
             default_chat_id: "",
-            is_admin: telegramBots.length === 0, // Il primo bot di solito è admin
+            is_admin: telegramBots.length === 0,
             is_primary: telegramBots.length === 0,
             group_mode: "mention",
             group_keywords: "urania,hecos"
@@ -253,9 +769,9 @@
     }
 
     function setPrimaryBot(index) {
-        // Only one bot can be primary
-        const isChecked = telegramBots[index].is_primary = !telegramBots[index].is_primary;
-        if (isChecked) {
+        const nextVal = !telegramBots[index].is_primary;
+        telegramBots[index].is_primary = nextVal;
+        if (nextVal) {
             telegramBots.forEach((b, i) => {
                 if (i !== index) b.is_primary = false;
             });
@@ -264,95 +780,560 @@
     }
 
     function removeTelegramBot(index) {
-        if(confirm("Are you sure you want to delete this bot?")) {
+        if (confirm("Are you sure you want to delete this Telegram bot?")) {
             telegramBots.splice(index, 1);
             renderTelegramBots();
+            renderTelegramGroups();
             saveMessengerConfig();
         }
+    }
+
+    function renderDiscoveredTelegramChats() {
+        const box = document.getElementById("telegram-discovered-box");
+        const listEl = document.getElementById("telegram-discovered-list");
+        if (!box || !listEl) return;
+
+        const existingIds = new Set(
+            telegramGroups.map(g => String(g.chat_id || "").trim().toLowerCase().replace(/^@/, "")).filter(Boolean)
+        );
+        const unadded = (discoveredTelegramChats || []).filter(ch => {
+            const cid = String(ch.chat_id || "").trim().toLowerCase();
+            const uname = String(ch.username || "").trim().toLowerCase().replace(/^@/, "");
+            return cid && !existingIds.has(cid) && (!uname || !existingIds.has(uname));
+        });
+
+        if (unadded.length === 0) {
+            box.style.display = "none";
+            listEl.innerHTML = "";
+            return;
+        }
+
+        box.style.display = "block";
+        listEl.innerHTML = "";
+        unadded.forEach((ch) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "btn";
+            btn.style.cssText = "border-radius:999px; padding:4px 10px; font-size:11px; background:rgba(37,211,102,0.16); color:#25d366; border:1px solid rgba(37,211,102,0.4);";
+            const handle = ch.username ? `@${ch.username}` : ch.chat_id;
+            btn.innerHTML = `<i class="fas fa-plus-circle"></i> ${ch.title || handle} <span style="opacity:0.75;">(${handle})</span>`;
+            btn.onclick = () => {
+                telegramGroups.push({
+                    name: (ch.title || ch.username || "Group").split(/[—\-|]/)[0].trim(),
+                    enabled: true,
+                    chat_id: ch.username ? `@${ch.username}` : String(ch.chat_id),
+                    aliases: "",
+                    preferred_bot: ""
+                });
+                renderTelegramGroups();
+                renderDiscoveredTelegramChats();
+                saveMessengerConfig();
+            };
+            listEl.appendChild(btn);
+        });
+    }
+
+    function renderTelegramGroups() {
+        const container = document.getElementById("telegram-groups-container");
+        if (!container) return;
+        container.innerHTML = "";
+
+        telegramGroups.forEach((grp, idx) => {
+            const botOptions = ['<option value="">Auto (Active Persona / Primary Bot)</option>']
+                .concat(telegramBots.map(b => `<option value="${b.name}" ${grp.preferred_bot === b.name ? 'selected' : ''}>${b.name}</option>`))
+                .join("");
+
+            const html = `
+            <div style="background:var(--bg0); border:1px solid var(--border); border-left:3px solid #a855f7; border-radius:12px; padding:14px; margin-bottom:10px; position:relative;">
+                <button class="btn" type="button" style="position:absolute; top:12px; right:12px; background:rgba(255,50,50,0.1); color:#ff5555; border:none; padding:4px 8px; border-radius:8px; font-size:12px;" onclick="removeTelegramGroup(${idx})"><i class="fas fa-trash"></i></button>
+
+                <div style="display:flex; gap:12px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:160px;">
+                        <label style="font-size:11px; color:#888;">Group / Channel Name (e.g. Hecos)</label>
+                        <input type="text" class="config-input" value="${grp.name || ''}" onchange="telegramGroups[${idx}].name = this.value; saveMessengerConfig()" placeholder="Hecos">
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:center; margin-right:36px;">
+                        <label style="font-size:11px; color:#888;">Enabled</label>
+                        <label class="switch is-small" style="margin-top:4px;">
+                            <input type="checkbox" ${grp.enabled !== false ? 'checked' : ''} onchange="telegramGroups[${idx}].enabled = this.checked; saveMessengerConfig()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="field" style="margin-bottom:10px;">
+                    <label style="font-size:11.5px;">Chat ID or @Username (e.g. @hecos_project or -1003708995593)</label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" class="config-input" id="tg-group-chatid-${idx}" value="${grp.chat_id || ''}" onchange="telegramGroups[${idx}].chat_id = this.value; renderDiscoveredTelegramChats(); saveMessengerConfig()" placeholder="@channel_username or -1001234567890" style="flex:1;">
+                        <button type="button" class="btn" onclick="verifyTelegramGroupChat(${idx})" style="border-radius:8px; padding:7px 12px; font-size:11.5px; background:rgba(0,212,255,0.12); color:#00d4ff; border:1px solid rgba(0,212,255,0.35); white-space:nowrap;">
+                            <i class="fas fa-check-circle"></i> Verify
+                        </button>
+                    </div>
+                    <div id="tg-group-verify-msg-${idx}" style="font-size:11px; margin-top:4px; color:var(--muted);"></div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap:10px;">
+                    <div>
+                        <label style="font-size:11px; color:#888;">Voice / STT Aliases (comma separated)</label>
+                        <input type="text" class="config-input" value="${grp.aliases || ''}" onchange="telegramGroups[${idx}].aliases = this.value; saveMessengerConfig()" placeholder="ecos, ekos, hecos project">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; color:#888;">Outbound Bot</label>
+                        <select class="config-input" onchange="telegramGroups[${idx}].preferred_bot = this.value; saveMessengerConfig()">
+                            ${botOptions}
+                        </select>
+                    </div>
+                </div>
+            </div>`;
+            container.insertAdjacentHTML("beforeend", html);
+        });
+    }
+
+    function addTelegramGroup() {
+        telegramGroups.push({
+            name: "",
+            enabled: true,
+            chat_id: "",
+            aliases: "",
+            preferred_bot: ""
+        });
+        renderTelegramGroups();
+    }
+
+    function removeTelegramGroup(index) {
+        telegramGroups.splice(index, 1);
+        renderTelegramGroups();
+        renderDiscoveredTelegramChats();
+        saveMessengerConfig();
+    }
+
+    async function verifyTelegramGroupChat(index) {
+        const inputEl = document.getElementById(`tg-group-chatid-${index}`);
+        const msgEl = document.getElementById(`tg-group-verify-msg-${index}`);
+        if (!inputEl || !msgEl) return;
+        const val = inputEl.value.trim();
+        msgEl.style.color = "var(--muted)";
+        msgEl.textContent = "⏳ Verifying on Telegram...";
+        try {
+            const res = await fetch("/hecos/api/plugins/messenger/telegram/resolve-chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ chat_id: val })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                msgEl.style.color = "#25d366";
+                msgEl.textContent = `✅ Found ${data.type}: "${data.title}" (ID: ${data.chat_id} · Bot '${data.bot_used}' status: ${data.bot_status})`;
+                if (!telegramGroups[index].name && data.title) {
+                    telegramGroups[index].name = data.title.split(/[—\-|]/)[0].trim();
+                    renderTelegramGroups();
+                    saveMessengerConfig();
+                }
+            } else {
+                msgEl.style.color = "#ff6b6b";
+                msgEl.textContent = `❌ ${data.error || "Chat not found"}`;
+            }
+        } catch (err) {
+            msgEl.style.color = "#ff6b6b";
+            msgEl.textContent = "❌ Network error while verifying chat.";
+        }
+    }
+
+    function applyPillState(el, info) {
+        if (!el || !info) return;
+        const st = info.state || "UNKNOWN";
+        const map = {
+            "ONLINE":      { icon: "✅", bg: "rgba(37,211,102,0.18)", color: "#25d366" },
+            "READY":       { icon: "🟢", bg: "rgba(0,212,255,0.16)",  color: "#00d4ff" },
+            "DEGRADED":    { icon: "🟡", bg: "rgba(255,204,0,0.18)",  color: "#ffcc00" },
+            "DISABLED":    { icon: "⛔", bg: "rgba(150,150,150,0.15)", color: "#aaa" },
+            "OFFLINE":     { icon: "❌", bg: "rgba(255,80,80,0.18)",  color: "#ff6b6b" },
+            "MISSING_DEP": { icon: "⚠️", bg: "rgba(255,140,0,0.2)",   color: "#ffa500" },
+            "ERROR":       { icon: "❌", bg: "rgba(255,80,80,0.18)",  color: "#ff6b6b" }
+        };
+        const style = map[st] || { icon: "❓", bg: "rgba(255,255,255,0.1)", color: "var(--text)" };
+        el.style.background = style.bg;
+        el.style.color = style.color;
+        el.textContent = `${style.icon} ${st}: ${info.summary || ""}`;
+        el.title = info.summary || st;
+    }
+
+    async function refreshMessengerLiveStatus() {
+        const waPill = document.getElementById("whatsapp-live-pill");
+        const tgPill = document.getElementById("telegram-live-pill");
+        if (waPill) waPill.textContent = "⏳ Checking...";
+        if (tgPill) tgPill.textContent = "⏳ Checking...";
+        try {
+            const res = await fetch("/hecos/api/plugins/messenger/status");
+            const data = await res.json();
+            if (data.ok && data.providers) {
+                applyPillState(waPill, data.providers.whatsapp);
+                applyPillState(tgPill, data.providers.telegram);
+                if (data.providers.telegram && data.providers.telegram.details && data.providers.telegram.details.discovered_chats) {
+                    discoveredTelegramChats = data.providers.telegram.details.discovered_chats;
+                    renderDiscoveredTelegramChats();
+                }
+            }
+        } catch (err) {
+            console.warn("Messenger live status check failed:", err);
+        }
+    }
+
+    async function openWhatsAppSession() {
+        const btn = document.getElementById("whatsapp-open-session-btn");
+        const origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening...';
+        try {
+            const res = await fetch("/hecos/api/plugins/messenger/whatsapp/open-session", { method: "POST" });
+            const data = await res.json();
+            if (data.ok) {
+                if (typeof hecos !== "undefined" && hecos.showToast) {
+                    hecos.showToast(data.message || "WhatsApp Web session opened.", "success");
+                }
+            } else {
+                const msg = data.error || "Failed to open WhatsApp Web session.";
+                if (typeof hecos !== "undefined" && hecos.showToast) {
+                    hecos.showToast(msg, "error");
+                } else {
+                    alert(msg);
+                }
+            }
+        } catch (err) {
+            console.error("Error opening WhatsApp session:", err);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+            refreshMessengerLiveStatus();
+        }
+    }
+
+    async function scanWhatsAppGroups() {
+        const btn = document.getElementById("whatsapp-scan-groups-btn");
+        const origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning...';
+        try {
+            const res = await fetch("/hecos/api/plugins/messenger/whatsapp/scan-groups", { method: "POST" });
+            const data = await res.json();
+            if (data.ok) {
+                discoveredWhatsAppGroups = data.groups || [];
+                renderDiscoveredWhatsAppGroups();
+                if (typeof hecos !== "undefined" && hecos.showToast) {
+                    hecos.showToast(`Found ${discoveredWhatsAppGroups.length} WhatsApp group(s).`, "success");
+                }
+            } else {
+                const err = data.error || "Could not scan WhatsApp groups.";
+                if (typeof hecos !== "undefined" && hecos.showToast) {
+                    hecos.showToast(err, "error");
+                } else {
+                    alert(err);
+                }
+            }
+        } catch (exc) {
+            console.error("Scan WhatsApp groups error:", exc);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+
+    function renderDiscoveredWhatsAppGroups() {
+        const box = document.getElementById("whatsapp-discovered-box");
+        const listEl = document.getElementById("whatsapp-discovered-list");
+        if (!box || !listEl) return;
+
+        const existingTitles = new Set(
+            whatsappGroups.map(g => String(g.group_title || g.name || "").replace(/\s+/g, " ").trim().toLowerCase()).filter(Boolean)
+        );
+        const unadded = (discoveredWhatsAppGroups || []).filter(g => {
+            const t = String(g.title || "").replace(/\s+/g, " ").trim().toLowerCase();
+            return t && !existingTitles.has(t);
+        });
+
+        if (unadded.length === 0) {
+            box.style.display = "none";
+            listEl.innerHTML = "";
+            return;
+        }
+
+        box.style.display = "block";
+        listEl.innerHTML = "";
+        unadded.forEach((g) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "btn";
+            btn.style.cssText = "border-radius:999px; padding:4px 10px; font-size:11px; background:rgba(37,211,102,0.16); color:#25d366; border:1px solid rgba(37,211,102,0.4);";
+            const meta = g.last_activity ? ` <span style="opacity:0.75;">(${g.last_activity})</span>` : "";
+            btn.innerHTML = `<i class="fas fa-plus-circle"></i> ${g.title}${meta}`;
+                btn.onclick = () => {
+                whatsappGroups.push({
+                    name: g.title,
+                    enabled: true,
+                    group_title: g.raw_title || g.title,
+                    aliases: "",
+                    signature_mode: "global",
+                    custom_signature: "",
+                    sign_persona: true,
+                    inbound_mode: "mention",
+                    inbound_keywords: "urania, hecos, haicos",
+                    default_persona: ""
+                });
+                renderWhatsAppGroups();
+                renderDiscoveredWhatsAppGroups();
+                saveMessengerConfig();
+            };
+            listEl.appendChild(btn);
+        });
+    }
+
+    function updateWhatsAppSignatureUI() {
+        const enabledEl = document.getElementById("whatsapp-group-sig-enabled");
+        const optsEl = document.getElementById("whatsapp-group-sig-options");
+        const modeEl = document.getElementById("whatsapp-group-sig-mode");
+        const customWrapEl = document.getElementById("whatsapp-group-sig-custom-wrap");
+        if (!enabledEl || !optsEl || !modeEl || !customWrapEl) return;
+
+        optsEl.style.display = enabledEl.checked ? "grid" : "none";
+        customWrapEl.style.display = (modeEl.value === "custom") ? "block" : "none";
+    }
+
+    function renderWhatsAppGroups() {
+        const container = document.getElementById("whatsapp-groups-container");
+        if (!container) return;
+        container.innerHTML = "";
+
+        whatsappGroups.forEach((grp, idx) => {
+            const safeName = (grp.name || "").replace(/"/g, "&quot;");
+            const safeTitle = (grp.group_title || "").replace(/"/g, "&quot;");
+            const safeAliases = (grp.aliases || "").replace(/"/g, "&quot;");
+            const safeKws = (grp.inbound_keywords || "urania, hecos, haicos").replace(/"/g, "&quot;");
+            const safePersona = (grp.default_persona || "").replace(/"/g, "&quot;");
+            const safeCustomSig = (grp.custom_signature || "").replace(/"/g, "&quot;");
+            const inbMode = grp.inbound_mode || "mention";
+            let sigMode = grp.signature_mode || "global";
+            if (sigMode === "global" && grp.sign_persona === false) {
+                sigMode = "off";
+            }
+
+            const html = `
+            <div style="background:var(--bg0); border:1px solid var(--border); border-left:3px solid #25d366; border-radius:12px; padding:14px; margin-bottom:10px; position:relative;">
+                <button class="btn" type="button" style="position:absolute; top:12px; right:12px; background:rgba(255,50,50,0.1); color:#ff5555; border:none; padding:4px 8px; border-radius:8px; font-size:12px;" onclick="removeWhatsAppGroup(${idx})"><i class="fas fa-trash"></i></button>
+
+                <div style="display:flex; gap:12px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:150px;">
+                        <label style="font-size:11px; color:#888;">Short Name (e.g. Hecos, Famiglia)</label>
+                        <input type="text" class="config-input" value="${safeName}" onchange="whatsappGroups[${idx}].name = this.value; saveMessengerConfig()" placeholder="Hecos">
+                    </div>
+                    <div style="flex:1.4; min-width:180px;">
+                        <label style="font-size:11px; color:#888;">Exact WhatsApp Group Title</label>
+                        <input type="text" class="config-input" value="${safeTitle}" onchange="whatsappGroups[${idx}].group_title = this.value; renderDiscoveredWhatsAppGroups(); saveMessengerConfig()" placeholder="Exact header title in WhatsApp Web">
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:center; margin-right:36px;">
+                        <label style="font-size:11px; color:#888;">Enabled</label>
+                        <label class="switch is-small" style="margin-top:4px;">
+                            <input type="checkbox" ${grp.enabled !== false ? 'checked' : ''} onchange="whatsappGroups[${idx}].enabled = this.checked; saveMessengerConfig()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: ${sigMode === 'custom' ? '1.1fr 1fr 0.9fr' : '1.3fr 1fr'}; gap:10px; margin-bottom:10px; align-items:end;">
+                    <div>
+                        <label style="font-size:11px; color:#888;">Voice / STT Aliases (comma separated)</label>
+                        <input type="text" class="config-input" value="${safeAliases}" onchange="whatsappGroups[${idx}].aliases = this.value; saveMessengerConfig()" placeholder="haicos, ecos, ekos">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; color:#25d366; font-weight:600;"><i class="fas fa-signature"></i> Group Signature *[Name]*</label>
+                        <select class="config-input" onchange="whatsappGroups[${idx}].signature_mode = this.value; whatsappGroups[${idx}].sign_persona = (this.value !== 'off'); renderWhatsAppGroups(); saveMessengerConfig()">
+                            <option value="global" ${sigMode === 'global' ? 'selected' : ''}>Use Global WhatsApp Setting</option>
+                            <option value="off" ${sigMode === 'off' ? 'selected' : ''}>Off (No [Signature] Prefix)</option>
+                            <option value="auto" ${sigMode === 'auto' ? 'selected' : ''}>Auto (Active Soul: Urania / Hecos)</option>
+                            <option value="custom" ${sigMode === 'custom' ? 'selected' : ''}>Custom Name for this Group</option>
+                        </select>
+                    </div>
+                    ${sigMode === 'custom' ? `
+                    <div>
+                        <label style="font-size:11px; color:#888;">Custom Signature</label>
+                        <input type="text" class="config-input" value="${safeCustomSig}" onchange="whatsappGroups[${idx}].custom_signature = this.value; saveMessengerConfig()" placeholder="e.g. Pippo, Urania">
+                    </div>
+                    ` : ''}
+                </div>
+
+                <div style="background:rgba(0,212,255,0.05); border:1px solid rgba(0,212,255,0.2); border-radius:8px; padding:10px 12px;">
+                    <div style="display:grid; grid-template-columns: 1.2fr 1fr 0.9fr; gap:10px;">
+                        <div>
+                            <label style="font-size:11px; color:#00d4ff; font-weight:600;"><i class="fas fa-ear-listen"></i> Inbound Auto-Reply Mode</label>
+                            <select class="config-input" onchange="whatsappGroups[${idx}].inbound_mode = this.value; saveMessengerConfig()">
+                                <option value="off" ${inbMode === 'off' ? 'selected' : ''}>Off (Outbound Send Only)</option>
+                                <option value="mention" ${inbMode === 'mention' ? 'selected' : ''}>Only on @mention (@urania / @hecos)</option>
+                                <option value="keyword" ${inbMode === 'keyword' ? 'selected' : ''}>On Keywords</option>
+                                <option value="all" ${inbMode === 'all' ? 'selected' : ''}>All Member Messages (+ @mention from phone)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:11px; color:#888;">Trigger Keywords</label>
+                            <input type="text" class="config-input" value="${safeKws}" onchange="whatsappGroups[${idx}].inbound_keywords = this.value; saveMessengerConfig()" placeholder="urania, hecos, haicos">
+                        </div>
+                        <div>
+                            <label style="font-size:11px; color:#888;">Default Persona</label>
+                            <input type="text" class="config-input" value="${safePersona}" onchange="whatsappGroups[${idx}].default_persona = this.value; saveMessengerConfig()" placeholder="Auto (or Urania / hecos)">
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            container.insertAdjacentHTML("beforeend", html);
+        });
+    }
+
+    function addWhatsAppGroup() {
+        whatsappGroups.push({
+            name: "",
+            enabled: true,
+            group_title: "",
+            aliases: "",
+            signature_mode: "global",
+            custom_signature: "",
+            sign_persona: true,
+            inbound_mode: "mention",
+            inbound_keywords: "urania, hecos, haicos",
+            default_persona: ""
+        });
+        renderWhatsAppGroups();
+    }
+
+    function removeWhatsAppGroup(index) {
+        whatsappGroups.splice(index, 1);
+        renderWhatsAppGroups();
+        renderDiscoveredWhatsAppGroups();
+        saveMessengerConfig();
     }
 
     async function loadMessengerConfig() {
         try {
             const res = await fetch("/hecos/api/plugins/messenger/config");
             const data = await res.json();
+            if (data.defaults) {
+                messengerUiDefaults = data.defaults;
+            }
             if (data.ok && data.config) {
                 const cfg = data.config;
+
+                document.getElementById("messenger-remember-last-channel").checked = cfg.remember_last_channel !== false;
+                document.getElementById("messenger-last-channel-ttl").value = cfg.last_channel_ttl_minutes || 15;
+                document.getElementById("messenger-general-override-enabled").checked = cfg.general_override_enabled !== false;
+                document.getElementById("messenger-general-override").value = cfg.general_override || "";
+                document.getElementById("messenger-anti-hallucination-enabled").checked = cfg.anti_hallucination_guard_enabled !== false;
+                document.getElementById("messenger-anti-hallucination-prompt").value = cfg.anti_hallucination_prompt || "";
+
                 if (cfg.telegram) {
                     document.getElementById("telegram-enabled").checked = cfg.telegram.enabled || false;
+                    document.getElementById("telegram-auto-match-persona").checked = cfg.telegram.auto_match_persona_bot !== false;
+                    document.getElementById("telegram-routing-override-enabled").checked = cfg.telegram.routing_override_enabled !== false;
+                    document.getElementById("telegram-routing-override").value = cfg.telegram.routing_override || "";
                     telegramBots = cfg.telegram.bots || [];
+                    telegramGroups = cfg.telegram.groups || [];
                     renderTelegramBots();
+                    renderTelegramGroups();
                 }
                 if (cfg.whatsapp) {
-                    document.getElementById("whatsapp-enabled").checked = cfg.whatsapp.enabled || false;
-                    document.getElementById("whatsapp-phone-country-code").value = cfg.whatsapp.phone_country_code || "+39";
-                    document.getElementById("whatsapp-send-as-single-block").checked = cfg.whatsapp.send_as_single_block !== false;
-                    document.getElementById("whatsapp-cdp-timeout").value = cfg.whatsapp.cdp_timeout || 30;
-                    document.getElementById("whatsapp-worker-timeout").value = cfg.whatsapp.worker_timeout || 60;
-                    
+                    const wa = cfg.whatsapp;
+                    document.getElementById("whatsapp-enabled").checked = wa.enabled || false;
+                    document.getElementById("whatsapp-cdp-port").value = wa.cdp_port || 9222;
+                    document.getElementById("whatsapp-auto-open-tab").checked = wa.auto_open_tab !== false;
+                    document.getElementById("whatsapp-persistent-headless").checked = wa.persistent_headless || false;
+                    document.getElementById("whatsapp-phone-country-code").value = wa.phone_country_code || "+39";
+                    document.getElementById("whatsapp-send-as-single-block").checked = wa.send_as_single_block !== false;
+                    document.getElementById("whatsapp-group-sig-enabled").checked = wa.group_signature_enabled !== false;
+                    document.getElementById("whatsapp-group-sig-mode").value = wa.group_signature_mode || "auto";
+                    document.getElementById("whatsapp-group-sig-text").value = wa.group_signature_text || "";
+                    updateWhatsAppSignatureUI();
+                    document.getElementById("whatsapp-cdp-timeout").value = wa.cdp_timeout || 30;
+                    document.getElementById("whatsapp-worker-timeout").value = wa.worker_timeout || 60;
+                    document.getElementById("whatsapp-inbound-poll").value = wa.inbound_poll_seconds || 8;
+                    document.getElementById("whatsapp-routing-override-enabled").checked = wa.routing_override_enabled !== false;
+                    document.getElementById("whatsapp-routing-override").value = wa.routing_override || "";
+                    whatsappGroups = wa.groups || [];
+                    renderWhatsAppGroups();
+
+                    updateWhatsAppModeUI(wa.session_mode || "cdp");
+
                     const useTemplateCb = document.getElementById("whatsapp-use-template");
-                    useTemplateCb.checked = cfg.whatsapp.use_template || false;
-                    useTemplateCb.dispatchEvent(new Event('change'));
-                    
-                    // Fetch and populate templates
+                    useTemplateCb.checked = wa.use_template || false;
+                    document.getElementById("whatsapp-template-container").style.display = useTemplateCb.checked ? "block" : "none";
+
                     try {
                         const tplRes = await fetch("/api/templates/?channel=whatsapp");
                         const tplData = await tplRes.json();
                         const sel = document.getElementById("whatsapp-template-id");
                         if (tplData.ok && tplData.templates) {
                             sel.innerHTML = '<option value="">-- No template --</option>';
-                            for (let t of tplData.templates) {
-                                let opt = document.createElement("option");
+                            for (const t of tplData.templates) {
+                                const opt = document.createElement("option");
                                 opt.value = t.id;
                                 opt.textContent = t.name + (t.is_default ? " (Default)" : "");
-                                if (cfg.whatsapp.template_id === t.id) opt.selected = true;
+                                if (wa.template_id === t.id) opt.selected = true;
                                 sel.appendChild(opt);
                             }
                         } else {
                             sel.innerHTML = '<option value="">Cannot load templates</option>';
                         }
-                    } catch (e) {
-                        console.warn("Modulo templates non installato o API non raggiungibile", e);
+                    } catch (tplErr) {
                         document.getElementById("whatsapp-template-id").innerHTML = '<option value="">Templates module not installed</option>';
                     }
                 }
-                if (cfg.discord) {
-                    document.getElementById("discord-enabled").checked = cfg.discord.enabled || false;
-                    document.getElementById("discord-webhook-url").value = cfg.discord.webhook_url || "";
-                }
             }
 
-            // Populate routing override
-            try {
-                const r = await fetch("/hecos/api/config");
-                const d = await r.json();
-                if (d.ok && d.config && d.config.routing_overrides && d.config.routing_overrides.overrides) {
-                    document.getElementById("messenger-routing-override").value = d.config.routing_overrides.overrides.MESSENGER || "";
-                }
-            } catch(e) {}
-
-        } catch (e) {
-            console.error("Errore caricamento config messenger", e);
+            refreshMessengerLiveStatus();
+        } catch (err) {
+            console.error("Error loading Messenger configuration:", err);
         }
     }
 
     async function saveMessengerConfig() {
+        const modeVal = document.getElementById("whatsapp-session-mode").value || "cdp";
+        updateWhatsAppModeUI(modeVal);
+        updateWhatsAppSignatureUI();
+
+        const ttlRaw = parseInt(document.getElementById("messenger-last-channel-ttl").value);
+        const ttlMinutes = (!isNaN(ttlRaw) && ttlRaw >= 1) ? Math.min(180, ttlRaw) : 15;
+        const pollRaw = parseInt(document.getElementById("whatsapp-inbound-poll").value);
+        const waPollSec = (!isNaN(pollRaw) && pollRaw >= 4) ? Math.min(120, pollRaw) : 8;
+
         const payload = {
+            remember_last_channel: document.getElementById("messenger-remember-last-channel").checked,
+            last_channel_ttl_minutes: ttlMinutes,
+            general_override_enabled: document.getElementById("messenger-general-override-enabled").checked,
+            general_override: document.getElementById("messenger-general-override").value,
+            anti_hallucination_guard_enabled: document.getElementById("messenger-anti-hallucination-enabled").checked,
+            anti_hallucination_prompt: document.getElementById("messenger-anti-hallucination-prompt").value,
             telegram: {
                 enabled: document.getElementById("telegram-enabled").checked,
-                bots: telegramBots
+                auto_match_persona_bot: document.getElementById("telegram-auto-match-persona").checked,
+                bots: telegramBots,
+                groups: telegramGroups,
+                routing_override_enabled: document.getElementById("telegram-routing-override-enabled").checked,
+                routing_override: document.getElementById("telegram-routing-override").value
             },
             whatsapp: {
                 enabled: document.getElementById("whatsapp-enabled").checked,
-                phone_country_code: document.getElementById("whatsapp-phone-country-code").value,
+                session_mode: modeVal,
+                cdp_port: parseInt(document.getElementById("whatsapp-cdp-port").value) || 9222,
+                auto_open_tab: document.getElementById("whatsapp-auto-open-tab").checked,
+                persistent_headless: document.getElementById("whatsapp-persistent-headless").checked,
+                phone_country_code: document.getElementById("whatsapp-phone-country-code").value || "+39",
                 send_as_single_block: document.getElementById("whatsapp-send-as-single-block").checked,
                 use_template: document.getElementById("whatsapp-use-template").checked,
                 template_id: document.getElementById("whatsapp-template-id").value,
+                group_signature_enabled: document.getElementById("whatsapp-group-sig-enabled").checked,
+                group_signature_mode: document.getElementById("whatsapp-group-sig-mode").value || "auto",
+                group_signature_text: document.getElementById("whatsapp-group-sig-text").value || "",
                 cdp_timeout: parseInt(document.getElementById("whatsapp-cdp-timeout").value) || 30,
-                worker_timeout: parseInt(document.getElementById("whatsapp-worker-timeout").value) || 60
-            },
-            discord: {
-                enabled: document.getElementById("discord-enabled").checked,
-                webhook_url: document.getElementById("discord-webhook-url").value
+                worker_timeout: parseInt(document.getElementById("whatsapp-worker-timeout").value) || 60,
+                inbound_poll_seconds: waPollSec,
+                groups: whatsappGroups,
+                routing_override_enabled: document.getElementById("whatsapp-routing-override-enabled").checked,
+                routing_override: document.getElementById("whatsapp-routing-override").value
             }
         };
 
@@ -364,14 +1345,19 @@
             });
             const data = await res.json();
             if (!data.ok) {
-                hecos.showToast("Errore nel salvataggio: " + data.error, "error");
+                if (typeof hecos !== "undefined" && hecos.showToast) {
+                    hecos.showToast("Save error: " + data.error, "error");
+                }
+            } else {
+                refreshMessengerLiveStatus();
             }
-        } catch (e) {
-            console.error("Errore salvataggio", e);
-            hecos.showToast("Errore di rete durante il salvataggio", "error");
+        } catch (err) {
+            console.error("Save error:", err);
+            if (typeof hecos !== "undefined" && hecos.showToast) {
+                hecos.showToast("Network error while saving Messenger settings", "error");
+            }
         }
     }
 
-    // Load config on mount
     loadMessengerConfig();
 </script>

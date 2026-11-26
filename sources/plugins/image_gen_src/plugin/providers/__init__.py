@@ -54,7 +54,9 @@ def generate_image(prompt: str, provider: str, model: str, width: int, height: i
                    hf_provider: str = "hf-inference",
                    horde_nsfw: bool = True,
                    horde_worker_blacklist: str = "",
-                   vae: str = "", loras: list = None) -> str:
+                   vae: str = "", loras: list = None,
+                   flux_guidance_scale: float = -1.0,
+                   sigma_shift: float = -1.0) -> str:
     """
     Main entry point. Returns the filename of the saved image, raises Exception on failure.
     Note: prompt enrichment should be applied BEFORE calling this (via prompt_engine.py).
@@ -75,6 +77,10 @@ def generate_image(prompt: str, provider: str, model: str, width: int, height: i
             elif provider == "swarmui":
                 extra_kwargs["vae"] = vae
                 extra_kwargs["loras"] = loras or []
+                if flux_guidance_scale is not None and float(flux_guidance_scale) >= 0.0:
+                    extra_kwargs["flux_guidance_scale"] = float(flux_guidance_scale)
+                if sigma_shift is not None and float(sigma_shift) >= 0.0:
+                    extra_kwargs["sigma_shift"] = float(sigma_shift)
             filename = cls.generate(
                 prompt=prompt, width=width, height=height, model=model, api_key=api_key,
                 negative_prompt=negative_prompt, guidance_scale=guidance_scale,

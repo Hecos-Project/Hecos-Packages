@@ -10,7 +10,9 @@ Responsibilities:
   - Cached with TTL to avoid hammering the API
 """
 
+import json
 import time
+from pathlib import Path
 from typing import Optional
 
 try:
@@ -84,18 +86,60 @@ def invalidate_cache():
     _cache_timestamp = 0.0
 
 
+# ── Disk Catalog Cache (survives SwarmUI offline / standby) ──────────────
+
+def _get_catalog_cache_path() -> Path:
+    try:
+        import hecos
+        data_dir = Path(hecos.__file__).parent / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        return data_dir / "swarmui_catalog_cache.json"
+    except Exception:
+        return Path(__file__).parent / "swarmui_catalog_cache.json"
+
+
+def save_catalog_cache(section: str, items: list) -> None:
+    """Persist last discovered SwarmUI catalog section (models/vaes/loras) to disk."""
+    if not items:
+        return
+    path = _get_catalog_cache_path()
+    try:
+        data = {}
+        if path.exists():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(data, dict):
+                    data = {}
+            except Exception:
+                data = {}
+        data[section] = items
+        data["updated_at"] = time.time()
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        logger.debug(f"[LOCAL_MODELS] Failed saving catalog cache ({section}): {e}")
+
+
+def load_catalog_cache(section: str) -> list:
+    """Load last discovered SwarmUI catalog section from disk (fallback when SwarmUI is offline)."""
+    path = _get_catalog_cache_path()
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        val = data.get(section, []) if isinstance(data, dict) else []
+        return val if isinstance(val, list) else []
+    except Exception as e:
+        logger.debug(f"[LOCAL_MODELS] Failed loading catalog cache ({section}): {e}")
+        return []
+
+
 # ── Public API ────────────────────────────────────────────────────────────
 
 def discover_models(client, force_refresh: bool = False) -> list[dict]:
     """
     Fetch the list of available models from SwarmUI.
-
-    Args:
-        client: A SwarmUIClient instance.
-        force_refresh: If True, ignore cache and re-query.
-
-    Returns:
-        List of model dicts with 'name' and 'title' keys.
+    Falls back to last known disk cache when SwarmUI is offline so the UI
+    never loses the user's configured model or saves blank models into presets.
     """
     global _model_cache, _cache_timestamp
 
@@ -104,13 +148,19 @@ def discover_models(client, force_refresh: bool = False) -> list[dict]:
 
     try:
         models = client.list_models()
-        _model_cache = models
-        _cache_timestamp = time.time()
-        logger.info(f"[LOCAL_MODELS] Discovered {len(models)} model(s) from SwarmUI")
-        return models
+        if models:
+            _model_cache = models
+            _cache_timestamp = time.time()
+            save_catalog_cache("models", models)
+            logger.info(f"[LOCAL_MODELS] Discovered {len(models)} model(s) from SwarmUI")
+            return models
+        return _model_cache or load_catalog_cache("models")
     except Exception as e:
         logger.error(f"[LOCAL_MODELS] Model discovery failed: {e}")
-        return _model_cache or []
+        cached = _model_cache or load_catalog_cache("models")
+        if cached:
+            logger.info(f"[LOCAL_MODELS] Using cached catalog ({len(cached)} model(s)) while SwarmUI is offline")
+        return cached
 
 
 def detect_architecture(model_name: str) -> str:

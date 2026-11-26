@@ -1,385 +1,518 @@
 """
-MODULE: Messenger Plugin — Main Entry Point
-DESCRIPTION: Exposes MessengerTools to the Hecos agent loop.
-             Tools: send_message, list_accounts, check_connection, force_send.
-             Providers (Telegram, WhatsApp, Discord) are loaded lazily
-             from the dispatcher on first use.
+MODULE: Messenger Plugin — Main Entry Point (v2.2 Modular Architecture)
+DESCRIPTION: Thin facade exposing MessengerTools to the Hecos agent loop:
+             - Smart contact & 15-minute follow-up resolution
+             - Persona-aware Telegram multi-bot selection
+             - Smart media & document resolution ([[IMG:...]], 'latest', magic-byte check)
+             - Per-turn & 3-minute anti-duplicate / anti-burst protection
 """
 
 from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, Optional
+
 from hecos.core.logging import logger
 
 try:
     from hecos.core.i18n import translator
 except ImportError:
     class _DummyTranslator:
-        def t(self, key, **kwargs): return key
+        def t(self, key: str, **kwargs: Any) -> str:
+            return kwargs.get("default", key)
+
     translator = _DummyTranslator()
 
-from .messenger_config.config_manager import get_config_obj
-from . import dispatcher
+from .core.inbound_router import InboundRouter
+from .core.media_resolver import resolve_attachment_path, resolve_photo_path
+from .core.registry import registry
+from .core.resolver import resolve_target
+from .core.session_memory import (
+    check_burst_guard,
+    record_outbound_attempt,
+    record_verified_send,
+)
+from .core.templates_bridge import apply_message_template
+from .messenger_config.config_manager import (
+    MessengerConfig,
+    get_config_obj,
+    sync_routing_override_yaml,
+)
+from .providers import register_default_providers
+
+register_default_providers(registry)
+_inbound_router = InboundRouter(registry)
+
+
+def _is_pre_dispatch_validation_error(msg: str) -> bool:
+    """Returns True when a failure occurred before any network/browser dispatch took place."""
+    low = (msg or "").lower()
+    return any(
+        tok in low
+        for tok in (
+            "not found in configuration",
+            "not found. available enabled bots",
+            "is disabled",
+            "no recipient specified",
+            "attachment file(s) not found",
+            "invalid whatsapp phone number",
+        )
+    )
 
 
 class MessengerTools:
-    """
-    Hecos Messenger Plugin — send messages via Telegram, WhatsApp, and Discord.
-    """
+    """Hecos Messenger LLM Tools — send messages, photos, and documents via WhatsApp and Telegram."""
 
-    def __init__(self):
-        self.tag    = "MESSENGER"
-        self.desc   = "Send messages via Telegram, WhatsApp, and Discord."
+    def __init__(self) -> None:
+        self.tag = "MESSENGER"
+        self.desc = "Send and receive messages, photos, and documents via WhatsApp and Telegram."
         self.status = "ONLINE"
-        self._cfg   = None
-        # Pre-callbacks registrati da altri plugin (es. Remote Access Pro).
-        # {name: callable(text) -> str | None}
-        # Se il callable restituisce una stringa, questa viene inviata come risposta
-        # e il messaggio NON viene passato all'AI.
-        self._pre_callbacks: dict = {}
+        self._cfg: Optional[MessengerConfig] = None
 
-    def register_pre_callback(self, name: str, fn) -> None:
-        """Registra un pre-callback che intercetta i messaggi in ingresso.
-        Se fn(text) restituisce una stringa non-None, quella viene usata come risposta."""
-        self._pre_callbacks[name] = fn
-        logger.info("MESSENGER", f"Pre-callback '{name}' registrato.")
-
-    def _require_config(self):
-        if self._cfg is None:
-            self._cfg = get_config_obj()
+    def _require_config(self) -> MessengerConfig:
+        self._cfg = get_config_obj()
         return self._cfg
 
-    def send_message(self, to: str, text: str, platform: str = None, skip_default_template: bool = False, is_app_open: bool = False, bot_name: str = None, attachments: list = None) -> str:
+    def register_pre_callback(self, name: str, fn: Any) -> None:
+        """Registers an inbound message pre-callback interceptor."""
+        _inbound_router.register_pre_callback(name, fn)
+
+    # ── Primary LLM Tools ─────────────────────────────────────────────────────
+
+    def send_message(
+        self,
+        to: str = "",
+        text: str = "",
+        platform: Optional[str] = None,
+        bot_name: Optional[str] = None,
+        attachments: Optional[list[str]] = None,
+        skip_default_template: bool = False,
+        # Flexible fallback parameter names for local text-mode models
+        name: Optional[str] = None,
+        contact_id: Optional[str] = None,
+        message: Optional[str] = None,
+        is_app_open: bool = False,
+    ) -> str:
         """
-        Send a message to a contact or channel.
-        Use 'contact:Nome Contatto' as the 'to' target to dynamically resolve the address.
-        Optionally specify 'bot_name' to select which configured bot sends the message (e.g., 'urania').
-        Optionally specify 'attachments' as a list of absolute file paths to send alongside the text.
+        Sends a text message (and optional file attachments) to a contact name or direct address
+        on WhatsApp or Telegram. Automatically resolves contact names from Hecos Contacts.
         """
         cfg = self._require_config()
+        effective_to = (to or name or contact_id or "").strip()
+        effective_text = text if text else (message or "")
+
+        if not effective_text and not attachments:
+            return "❌ Message text cannot be empty."
+
+        resolved_files: list[str] = []
+        if attachments:
+            for raw_att in attachments:
+                apath, aerr = resolve_attachment_path(str(raw_att))
+                if aerr or not apath:
+                    return f"❌ {aerr}"
+                resolved_files.append(apath)
+
         try:
-            plat, recipient = dispatcher.parse_target(to, platform)
-        except ValueError as e:
-            return f"❌ {e}"
+            resolved = resolve_target(
+                to=effective_to,
+                platform=platform,
+                root_cfg=cfg,
+                bot_name=bot_name,
+                reg=registry,
+            )
+        except ValueError as exc:
+            return f"❌ {exc}"
 
-        # If a specific bot_name was requested, encode it in the recipient for the dispatcher
-        if bot_name and plat == "telegram" and ":" not in recipient:
-            recipient = f"{bot_name}:{recipient}"
+        provider = registry.get(resolved.platform)
+        if not provider:
+            return f"❌ Provider '{resolved.platform}' is not registered."
 
-        # Check explicit template via config
-        explicit_template_id = ""
-        if plat == "whatsapp":
-            if getattr(cfg.whatsapp, "use_template", False):
-                explicit_template_id = getattr(cfg.whatsapp, "template_id", "")
-            else:
-                skip_default_template = True
+        kind = "media" if resolved_files else "text"
+        sig_key = ("|".join(resolved_files) + "|" + effective_text) if resolved_files else effective_text
+        burst_block = check_burst_guard(resolved.platform, resolved.recipient, sig_key, kind=kind)
+        if burst_block:
+            logger.warning("MESSENGER", f"Blocked duplicate/burst [{resolved.platform}] {resolved.recipient}: {burst_block}")
+            return burst_block
 
-        # Try to apply template wrapper if not skipped
-        if not skip_default_template:
-            try:
-                from hecos.hpm.templates.store import list_templates, get_template
-                
-                template_to_apply = None
-                if explicit_template_id:
-                    template_to_apply = get_template(explicit_template_id)
-                else:
-                    for t in list_templates(channel=plat):
-                        if t.get("is_default"):
-                            template_to_apply = t
-                            break
+        pcfg = provider.get_provider_config(cfg)
+        formatted_text = apply_message_template(
+            platform=resolved.platform,
+            text=effective_text,
+            provider_cfg=pcfg,
+            skip_default_template=skip_default_template,
+        )
 
-                if template_to_apply:
-                    h = template_to_apply.get("header", "").strip()
-                    f = template_to_apply.get("footer", "").strip()
-                    parts = []
-                    if h: parts.append(h)
-                    parts.append(text)
-                    if f: parts.append(f)
-                    text = "\n\n".join(parts)
-            except Exception as e:
-                logger.warning("MESSENGER", f"Error applying template: {e}")
+        logger.info(
+            "MESSENGER",
+            f"Dispatching → [{resolved.platform}] {resolved.recipient}"
+            + (f" (contact: {resolved.contact_name})" if resolved.contact_name else "")
+            + (f" (attachments: {len(resolved_files)})" if resolved_files else ""),
+        )
 
-        return dispatcher.dispatch_send(plat, recipient, text, cfg, is_app_open, attachments=attachments)
+        if resolved_files:
+            res = provider.send_media(
+                pcfg,
+                resolved.recipient,
+                file_paths=resolved_files,
+                caption=formatted_text,
+                bot_name=resolved.bot_name,
+                contact_name=resolved.contact_name,
+            )
+        else:
+            res = provider.send_text(
+                pcfg,
+                resolved.recipient,
+                formatted_text,
+                bot_name=resolved.bot_name,
+                contact_name=resolved.contact_name,
+            )
 
-    def resolve_contact_address(self, name: str, platform: str) -> str:
+        if res.ok or not _is_pre_dispatch_validation_error(res.message):
+            record_outbound_attempt(resolved.platform, res.recipient or resolved.recipient, sig_key, res.ok, kind=kind)
+
+        if res.ok and getattr(cfg, "remember_last_channel", True):
+            record_verified_send(
+                platform=resolved.platform,
+                recipient=res.recipient or resolved.recipient,
+                contact_name=resolved.contact_name,
+                raw_query=effective_to,
+                bot_name=resolved.bot_name,
+            )
+
+        return res.format_for_agent()
+
+    def send_photo(
+        self,
+        to: str = "",
+        image_path: str = "",
+        caption: str = "",
+        platform: Optional[str] = None,
+        bot_name: Optional[str] = None,
+        file_path: str = "",
+        path: str = "",
+    ) -> str:
         """
-        Looks up a contact in the address book and returns their platform-specific address (e.g., chat ID).
-        Does NOT send a message. Use this to verify addresses before sending.
+        Sends a photo or image file (`[[IMG:filename]]`, `/api/images/...`, `'latest'`, or full path)
+        to a contact or channel on Telegram or WhatsApp. Validates real binary image headers.
         """
-        try:
-            from hecos.hpm.contacts import store
-            resolution = store.resolve_for_platform(name, platform)
-            if not resolution:
-                return f"⚠️ No '{platform}' address found for contact '{name}'."
-            c = resolution["contact"]
-            return f"✅ Resolved '{name}' ({c['display_name']}) → {platform} address: {resolution['address']} (field_type: {resolution['field_type']})"
-        except ImportError:
-            return "⚠️ Contacts plugin is not available."
-        except Exception as e:
-            return f"⚠️ Error resolving contact: {e}"
-
-    def send_photo(self, to: str, image_path: str, caption: str = "") -> str:
-        """
-        Send a photo to a contact or channel (Telegram only for now).
-        If a Telegram listener is already running for the target bot, routes
-        through that active connection to avoid asyncio event loop conflicts.
-        """
-        import os
         cfg = self._require_config()
+        raw_img = (image_path or file_path or path or "latest").strip()
+
+        resolved_img, img_err = resolve_photo_path(raw_img)
+        if img_err or not resolved_img:
+            return f"❌ {img_err}"
+
         try:
-            plat, recipient = dispatcher.parse_target(to, "telegram")
-        except ValueError as e:
-            return f"❌ {e}"
+            resolved = resolve_target(
+                to=to,
+                platform=platform,
+                root_cfg=cfg,
+                bot_name=bot_name,
+                reg=registry,
+            )
+        except ValueError as exc:
+            return f"❌ {exc}"
 
-        if plat != "telegram":
-            return "❌ send_photo is currently only supported on telegram."
+        provider = registry.get(resolved.platform)
+        if not provider:
+            return f"❌ Provider '{resolved.platform}' is not registered."
 
-        # Parse optional 'botname:chat_id' format inside the recipient
-        bot_name = None
-        if ":" in recipient:
-            parts = recipient.split(":", 1)
-            bot_name = parts[0].strip()
-            recipient = parts[1].strip()
+        burst_block = check_burst_guard(resolved.platform, resolved.recipient, resolved_img, kind="media")
+        if burst_block:
+            logger.warning("MESSENGER", f"Blocked duplicate photo [{resolved.platform}] {resolved.recipient}: {burst_block}")
+            return burst_block
 
-        if not os.path.isfile(image_path):
-            return f"❌ Errore: file immagine non trovato ({image_path})"
+        pcfg = provider.get_provider_config(cfg)
+        formatted_caption = (
+            apply_message_template(platform=resolved.platform, text=caption, provider_cfg=pcfg)
+            if caption and caption.strip()
+            else ""
+        )
 
-        from .adapters import telegram as tg
+        res = provider.send_media(
+            pcfg,
+            resolved.recipient,
+            file_paths=[resolved_img],
+            caption=formatted_caption,
+            bot_name=resolved.bot_name,
+            contact_name=resolved.contact_name,
+        )
 
-        # ── Resolve bot and chat_id ───────────────────────────────────────────
-        # If no explicit bot_name pick the first configured admin bot.
-        if not bot_name:
-            for b in (cfg.telegram.bots or []):
-                if b.enabled and b.bot_token:
-                    bot_name = b.name
-                    break
+        if res.ok or not _is_pre_dispatch_validation_error(res.message):
+            record_outbound_attempt(resolved.platform, res.recipient or resolved.recipient, resolved_img, res.ok, kind="media")
 
-        # If recipient is empty, fall back to that bot's default_chat_id
-        if not recipient and bot_name:
-            for b in (cfg.telegram.bots or []):
-                if b.name == bot_name and b.default_chat_id:
-                    recipient = str(b.default_chat_id)
-                    break
+        if res.ok and getattr(cfg, "remember_last_channel", True):
+            record_verified_send(
+                platform=resolved.platform,
+                recipient=res.recipient or resolved.recipient,
+                contact_name=resolved.contact_name,
+                raw_query=to,
+                bot_name=resolved.bot_name,
+            )
 
-        if not recipient:
-            return "❌ Impossibile determinare il destinatario. Specifica 'telegram:<chat_id>'."
+        return res.format_for_agent()
 
-        # ── Prefer the already-running listener loop ──────────────────────────
-        # send_reply_photo injects into the existing polling event loop,
-        # avoiding asyncio.run() conflicts.
-        try:
-            active = tg._active_bots.get(bot_name) if bot_name else None
-            if active and active.get("loop") and not active["loop"].is_closed():
-                tg.send_reply_photo(bot_name, recipient, image_path, caption or "")
-                return f"✅ Foto inviata a `{recipient}` via `{bot_name}`."
-        except Exception as e:
-            logger.warning("MESSENGER", f"send_photo via listener failed, falling back: {e}")
-
-        # ── Fallback: fresh bot connection ────────────────────────────────────
-        try:
-            return tg.send_photo(cfg.telegram, recipient, image_path, caption, bot_name=bot_name)
-        except Exception as e:
-            return f"❌ Errore durante l'invio della foto: {e}"
-
-    def msg_command(self, args: str) -> str:
+    def send_document(
+        self,
+        to: str = "",
+        file_path: str = "",
+        caption: str = "",
+        platform: Optional[str] = None,
+        bot_name: Optional[str] = None,
+        document_path: str = "",
+        path: str = "",
+    ) -> str:
         """
-        Direct command invoked via /msg <target> <text>
+        Sends a document or file (PDF, HTML, DOCX, TXT, ZIP, audio, video) to a contact or channel
+        on Telegram or WhatsApp.
         """
-        if not args or " " not in args:
-            return "❌ Errore: Sintassi '/msg <piattaforma:destinatario> <testo>'. Esempio: '/msg telegram:@utente ciao'"
-        
-        target, text = args.split(" ", 1)
-        return self.send_message(to=target, text=text)
+        cfg = self._require_config()
+        raw_doc = (file_path or document_path or path or "").strip()
+
+        resolved_doc, doc_err = resolve_attachment_path(raw_doc)
+        if doc_err or not resolved_doc:
+            return f"❌ {doc_err}"
+
+        try:
+            resolved = resolve_target(
+                to=to,
+                platform=platform,
+                root_cfg=cfg,
+                bot_name=bot_name,
+                reg=registry,
+            )
+        except ValueError as exc:
+            return f"❌ {exc}"
+
+        provider = registry.get(resolved.platform)
+        if not provider:
+            return f"❌ Provider '{resolved.platform}' is not registered."
+
+        burst_block = check_burst_guard(resolved.platform, resolved.recipient, resolved_doc, kind="media")
+        if burst_block:
+            return burst_block
+
+        pcfg = provider.get_provider_config(cfg)
+        formatted_doc_caption = (
+            apply_message_template(platform=resolved.platform, text=caption, provider_cfg=pcfg)
+            if caption and caption.strip()
+            else ""
+        )
+
+        res = provider.send_media(
+            pcfg,
+            resolved.recipient,
+            file_paths=[resolved_doc],
+            caption=formatted_doc_caption,
+            bot_name=resolved.bot_name,
+            contact_name=resolved.contact_name,
+            force_document=True,
+        )
+
+        if res.ok or not _is_pre_dispatch_validation_error(res.message):
+            record_outbound_attempt(resolved.platform, res.recipient or resolved.recipient, resolved_doc, res.ok, kind="media")
+
+        if res.ok and getattr(cfg, "remember_last_channel", True):
+            record_verified_send(
+                platform=resolved.platform,
+                recipient=res.recipient or resolved.recipient,
+                contact_name=resolved.contact_name,
+                raw_query=to,
+                bot_name=resolved.bot_name,
+            )
+
+        return res.format_for_agent()
+
+    # Alias for local models guessing send_file
+    send_file = send_document
 
     def list_accounts(self) -> str:
+        """Lists all configured messaging providers, accounts, and active delivery methods."""
         cfg = self._require_config()
-        lines = [translator.t("ext_messenger_accounts_title") + "\n"]
-
-        # Telegram
-        tg_status = "✅ Abilitato" if getattr(cfg.telegram, 'enabled', False) else "⛔ Disabilitato"
-        lines.append(f"📨 **Telegram**: {tg_status}")
-        if getattr(cfg.telegram, 'enabled', False) and getattr(cfg.telegram, 'bots', []):
-            for b in cfg.telegram.bots:
-                tk = getattr(b, 'bot_token', "")
-                b_status = "✅" if getattr(b, 'enabled', False) else "⛔"
-                tk_str = f"***{tk[-6:]}" if tk else "non impostato"
-                lines.append(f"  └─ {b_status} {b.name} (Token: {tk_str})")
-        elif getattr(cfg.telegram, 'enabled', False):
-            lines.append("  └─ (Nessun bot configurato)")
-
-        # WhatsApp
-        wa_status = "✅ Abilitato [BETA]" if getattr(cfg.whatsapp, 'enabled', False) else "⛔ Disabilitato"
-        lines.append(f"💬 **WhatsApp**: {wa_status}")
-
-        # Discord
-        dc_status = "✅ Abilitato" if getattr(cfg.discord, 'enabled', False) else "⛔ Disabilitato"
-        dc_w = getattr(cfg.discord, 'webhook_url', "")
-        dc_wh = "(webhook configurato)" if dc_w else "(nessun webhook)"
-        lines.append(f"🔵 **Discord**: {dc_status} {dc_wh}")
-
+        title = translator.t("ext_messenger_accounts_title", default="Configured messaging accounts:")
+        lines = [title + "\n"]
+        for provider in registry.all():
+            pcfg = provider.get_provider_config(cfg)
+            lines.extend(provider.describe_accounts(pcfg))
         return "\n".join(lines)
 
-    def check_connection(self, platform: str = None) -> str:
+    def check_connection(self, platform: Optional[str] = None) -> str:
+        """Checks live connectivity and readiness of one or all messaging providers."""
         cfg = self._require_config()
-        results = dispatcher.dispatch_check(platform, cfg)
+        state_icons = {
+            "ONLINE": "✅",
+            "READY": "🟢",
+            "DEGRADED": "🟡",
+            "DISABLED": "⛔",
+            "OFFLINE": "❌",
+            "MISSING_DEP": "⚠️",
+            "ERROR": "❌",
+        }
 
         if platform:
-            status = results.get(platform.lower(), "UNKNOWN")
-            icon = "✅" if "ONLINE" in status or "BETA" in status else "❌"
-            return f"{icon} **{platform.capitalize()}**: {status}"
+            provider = registry.get(platform)
+            if not provider:
+                return f"❌ Unknown platform '{platform}'. Supported: {', '.join(registry.names())}."
+            health = provider.check_health(provider.get_provider_config(cfg))
+            icon = state_icons.get(health.state, "❓")
+            method_str = f" [{health.method_used}]" if health.method_used else ""
+            return f"{icon} **{provider.display_name}** ({health.state}){method_str}: {health.summary}"
 
-        lines = [translator.t("ext_messenger_check_title") + "\n"]
-        icons = {"ONLINE": "✅", "BETA": "🟡", "DISABLED": "⛔", "NOT": "⚠️", "ERROR": "❌"}
-        for pname, st in results.items():
-            icon = next((v for k, v in icons.items() if k in st.upper()), "❓")
-            lines.append(f"{icon} **{pname.capitalize()}**: {st}")
-
+        title = translator.t("ext_messenger_check_title", default="Connection status for messaging services:")
+        lines = [title + "\n"]
+        for provider in registry.all():
+            health = provider.check_health(provider.get_provider_config(cfg))
+            icon = state_icons.get(health.state, "❓")
+            method_str = f" — _{health.method_used}_" if health.method_used else ""
+            lines.append(f"{icon} **{provider.display_name}** (`{health.state}`){method_str}: {health.summary}")
         return "\n".join(lines)
 
-    def force_send(self) -> str:
+    def resolve_contact_address(self, name: str, platform: Optional[str] = None) -> str:
+        """Resolves a contact name from Hecos Contacts without sending a message."""
+        cfg = self._require_config()
         try:
-            import pyautogui  # type: ignore
-            pyautogui.press('enter')
-            return "✅ Ho simulato la pressione del tasto Invio (Forzatura invio)."
-        except ImportError:
-            return "❌ Impossibile forzare l'invio: pyautogui non è installato."
-        except Exception as e:
-            return f"❌ Errore durante force_send: {e}"
+            resolved = resolve_target(to=f"contact:{name}", platform=platform, root_cfg=cfg, reg=registry)
+            return (
+                f"✅ Resolved '{name}' ({resolved.contact_name}) → "
+                f"{resolved.platform} address: `{resolved.recipient}`"
+            )
+        except ValueError as exc:
+            return f"⚠️ {exc}"
+
+    def msg_command(self, args: str) -> str:
+        """Slash command handler invoked via `/msg <target> <text>` or `/send <target> <text>`."""
+        if not args or " " not in args.strip():
+            return (
+                "❌ Usage: `/msg <platform:recipient_or_contact> <message>`\n"
+                "Examples:\n"
+                "- `/msg whatsapp:Rowena Hello!`\n"
+                "- `/msg whatsapp:+393331234567 Hello!`\n"
+                "- `/msg telegram:Urania:1292135505 Hello!`"
+            )
+        target, body = args.strip().split(" ", 1)
+        return self.send_message(to=target.strip(), text=body.strip())
+
+    # ── Compatibility Aliases for Local Text-Mode LLMs ────────────────────────
+
+    def send_whatsapp_to_contact(
+        self,
+        to: str = "",
+        text: str = "",
+        name: str = "",
+        contact_id: str = "",
+        query: str = "",
+        id: str = "",
+        message: str = "",
+    ) -> str:
+        target = (to or name or contact_id or query or id or "").strip()
+        body = text if text else (message or "")
+        return self.send_message(to=target, text=body, platform="whatsapp")
+
+    def send_telegram_to_contact(
+        self,
+        to: str = "",
+        text: str = "",
+        name: str = "",
+        contact_id: str = "",
+        message: str = "",
+        bot_name: Optional[str] = None,
+    ) -> str:
+        target = (to or name or contact_id or "").strip()
+        body = text if text else (message or "")
+        return self.send_message(to=target, text=body, platform="telegram", bot_name=bot_name)
+
+    def send_to_contact(
+        self,
+        name: str = "",
+        message: str = "",
+        platform: Optional[str] = None,
+        to: str = "",
+        text: str = "",
+        bot_name: Optional[str] = None,
+        attachments: Optional[list[str]] = None,
+    ) -> str:
+        target = (name or to or "").strip()
+        body = message if message else (text or "")
+        return self.send_message(
+            to=target,
+            text=body,
+            platform=platform,
+            bot_name=bot_name,
+            attachments=attachments,
+        )
 
 
-# ── Singleton ──────────────────────────────────────────────────────────────────
+# ── Singleton & Plugin Lifecycle Hooks ────────────────────────────────────────
+
 tools = MessengerTools()
 
 
-def info():
+def info() -> dict[str, str]:
     return {"tag": tools.tag, "desc": tools.desc}
 
 
-def status():
+def status() -> str:
     return tools.status
 
 
-def on_load(config: dict = None):
-    """Called by the plugin loader when Hecos starts."""
-    # Register i18n translations from the plugin's own locales/ directory.
-    # The module scanner usually does this automatically, but calling it here
-    # guarantees translations are available on every on_load() invocation
-    # (including hot-reloads triggered by config saves).
+def on_load(config: Optional[dict[str, Any]] = None) -> None:
+    """Initializes or hot-reloads the Messenger plugin, routing_override.yaml, and active listeners."""
     try:
-        from pathlib import Path as _Path
         from hecos.core.i18n.translator import register_package_locales
-        _locales_dir = str(_Path(__file__).parent / "locales")
-        register_package_locales(_locales_dir)
+        locales_dir = str(Path(__file__).parent / "locales")
+        register_package_locales(locales_dir)
     except Exception:
-        pass  # Non-critical: fall back to key strings if i18n is unavailable
+        pass
 
+    register_default_providers(registry)
     tools._cfg = get_config_obj()
     cfg = tools._cfg
-    enabled_providers = [
-        p for p in ("telegram", "whatsapp", "discord")
-        if getattr(getattr(cfg, p, None), "enabled", False)
-    ]
+    sync_routing_override_yaml(cfg)
 
-    if enabled_providers:
-        logger.info("MESSENGER", f"Plugin loaded — active providers: {', '.join(enabled_providers)}")
-        tools.status = "ONLINE"
-        
-        # Avvia i listener in background per i provider che lo supportano
-        if "telegram" in enabled_providers:
-            try:
-                from .adapters import telegram as tg
-                def on_msg(platform, chat_id, text, bot_name=None):
-                    try:
-                        # ── Built-in Commands & Remote Access Pro ────────────
-                        if text and text.strip().startswith("/"):
-                            cmd = text.strip().lower()
-                            if cmd == "/id" or cmd == "/getid":
-                                if bot_name:
-                                    tg.send_reply(bot_name, chat_id, f"🆔 Il tuo ID Telegram (Chat ID) è:\n\n`{chat_id}`")
-                                    # Auto-save to contacts
-                                    try:
-                                        from hecos.hpm.contacts import store as contact_store
-                                        existing = contact_store.find_by_platform_value("telegram_id", chat_id)
-                                        if not existing:
-                                            # We don't have the full sender name here from the adapter easily,
-                                            # but we can try looking up by standard telegram field if they have it
-                                            tg.send_reply(bot_name, chat_id, "ℹ️ ID generato. Aggiungilo alla tua rubrica per abilitare l'invio messaggi verso di te.")
-                                    except Exception as ce:
-                                        logger.warning("MESSENGER", f"Failed to auto-save chat_id: {ce}")
-                                return
-
-                            try:
-                                from hecos.hpm.remote_access_pro.main import handle_remote_command
-                                result = handle_remote_command(text)
-                                if result is not None:
-                                    logger.info("MESSENGER", f"[RAP] Comando '{text.split()[0]}' gestito direttamente.")
-                                    if bot_name:
-                                        tg.send_reply(bot_name, chat_id, result)
-                                    return
-                            except ImportError:
-                                pass
-                            except Exception as rap_err:
-                                logger.error("MESSENGER", f"[RAP] Errore: {rap_err}")
-
-                        # ── Fallback: AI ─────────────────────────────────────
-                        from hecos.core.processing.processore import process_exchange
-                        logger.info("MESSENGER", f"Routing message from {platform}:{chat_id} to Hecos AI...")
-
-                        video_response, clean_voice = process_exchange(text, voice_status="telegram", sm=None)
-                        reply = clean_voice or video_response or "..."
-
-                        # ── Rilevamento immagini e documenti (tutti i file nella risposta) ──
-                        import re, os
-                        FILE_RE = re.compile(r'([A-Za-z]:[/\\][^\s"\'<>]+?\.[a-zA-Z0-9]{2,5})')
-                        all_paths = FILE_RE.findall(reply)
-                        real_files = [p for p in all_paths if os.path.isfile(p)]
-                        if real_files:
-                            # Build caption: reply text with all file paths stripped out
-                            caption = FILE_RE.sub('', reply).strip()
-                            if bot_name:
-                                # Send the text caption first (only if there's something to say)
-                                if caption:
-                                    tg.send_reply(bot_name, chat_id, caption)
-                                # Then send each file with the correct method
-                                for fp in real_files:
-                                    ext = os.path.splitext(fp)[1].lower()
-                                    if ext in ['.png', '.jpg', '.jpeg', '.webp', '.gif']:
-                                        tg.send_reply_photo(bot_name, chat_id, fp)
-                                    elif ext in ['.mp4', '.mov', '.avi', '.mkv', '.webm']:
-                                        tg.send_reply_video(bot_name, chat_id, fp)
-                                    else:
-                                        tg.send_reply_document(bot_name, chat_id, fp)
-                            return
-
-                        if bot_name:
-                            tg.send_reply(bot_name, chat_id, reply)
-
-                    except Exception as e:
-                        logger.error("MESSENGER", f"Error routing message to AI: {e}")
-                        try:
-                            if bot_name:
-                                tg.send_reply(bot_name, chat_id, f"⚠️ Errore interno di Hecos: {e}")
-                        except Exception:
-                            pass
-
-                tg.start_listener(cfg.telegram, message_callback=on_msg)
-
-            except Exception as e:
-                logger.error("MESSENGER", f"Errore avvio listener Telegram: {e}")
-    else:
-        logger.info("MESSENGER", "Plugin loaded — no providers configured (disabled mode).")
+    enabled = registry.enabled_providers(cfg)
+    if not enabled:
+        for prov in registry.all():
+            prov.stop_listener()
         tools.status = "DEGRADED"
+        logger.info("MESSENGER", "Plugin loaded — no providers currently enabled.")
+        return
+
+    active_names = [p.name for p in enabled]
+    logger.info("MESSENGER", f"Plugin loaded — active providers: {', '.join(active_names)}")
+    tools.status = "ONLINE"
+
+    def _inbound_cb(
+        platform: str,
+        chat_id: str,
+        text: str,
+        account_name: Optional[str] = None,
+        is_admin: bool = False,
+    ) -> None:
+        _inbound_router.handle_incoming(
+            platform=platform,
+            chat_id=chat_id,
+            text=text,
+            account_name=account_name,
+            is_admin=is_admin,
+            root_cfg=tools._require_config(),
+        )
+
+    for prov in registry.all():
+        if prov.is_enabled(cfg):
+            try:
+                prov.start_listener(prov.get_provider_config(cfg), inbound_callback=_inbound_cb)
+            except Exception as exc:
+                logger.error("MESSENGER", f"Failed to start listener for '{prov.name}': {exc}")
+        else:
+            prov.stop_listener()
 
 
-def on_unload():
-    """Called by the plugin loader when the plugin is disabled/unloaded.
-    Stops all active Telegram polling threads gracefully.
-    """
+def on_unload() -> None:
+    """Stops all background listeners cleanly when the plugin is unloaded."""
     logger.info("MESSENGER", "Plugin unloading — stopping all active listeners...")
-    try:
-        from .adapters import telegram as tg
-        active_names = list(tg._active_bots.keys())
-        for name in active_names:
-            tg.stop_bot(name)
-            logger.info("MESSENGER/Telegram", f"[{name}] Polling stopped (plugin unloaded).")
-    except Exception as e:
-        logger.error("MESSENGER", f"Error stopping Telegram listeners on unload: {e}")
+    for prov in registry.all():
+        try:
+            prov.stop_listener()
+        except Exception as exc:
+            logger.error("MESSENGER", f"Error stopping listener '{prov.name}': {exc}")
     tools.status = "OFFLINE"

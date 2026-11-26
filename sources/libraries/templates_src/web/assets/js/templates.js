@@ -143,9 +143,7 @@ window.TemplateManager = (() => {
       _setChannel(tpl.channel, tpl.body_html || '');
     } else {
       _setChannel(tpl.channel);
-      _val('tpl-edit-header',    tpl.header    || '');
-      _val('tpl-edit-body-text', tpl.body_text || '');
-      _val('tpl-edit-footer',    tpl.footer    || '');
+      _setMessengerFields(tpl.channel, tpl.header || '', tpl.body_text || '', tpl.footer || '');
       _renderTextPreview(tpl.header || '', tpl.body_text || '', tpl.footer || '');
     }
 
@@ -359,12 +357,33 @@ window.TemplateManager = (() => {
 
   /* â”€â”€ Messenger plain-text editor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
+  function _getMessengerEls(ch) {
+    const container = $('tpl-editor-' + (ch || _activeChannel));
+    return {
+      headerEl: (container && container.querySelector('.tpl-header-textarea')) || $('tpl-edit-header'),
+      bodyEl:   (container && (container.querySelector('.tpl-main-textarea') || container.querySelector('.tpl-body-textarea'))) || $('tpl-edit-body-text'),
+      footerEl: (container && container.querySelector('.tpl-footer-textarea')) || $('tpl-edit-footer'),
+    };
+  }
+
+  function _setMessengerFields(ch, header, body, footer) {
+    const { headerEl, bodyEl, footerEl } = _getMessengerEls(ch);
+    if (headerEl) headerEl.value = header || '';
+    if (bodyEl) {
+      bodyEl.value = body || '';
+      if (typeof window.tplUpdateCharCount === 'function') window.tplUpdateCharCount(bodyEl);
+    }
+    if (footerEl) footerEl.value = footer || '';
+  }
+
   function _renderTextPreview(header, text, footer) {
     const prev = $('tpl-text-preview');
     if (!prev) return;
-    const headerVal = header !== undefined ? header : (_getVal('tpl-edit-header') || '');
-    const footerVal = footer  !== undefined ? footer  : (_getVal('tpl-edit-footer')  || '');
-    const parts = [headerVal, text, footerVal].filter(Boolean);
+    const { headerEl, bodyEl, footerEl } = _getMessengerEls(_activeChannel);
+    const headerVal = header !== undefined ? header : (headerEl ? headerEl.value : '');
+    const bodyVal   = text   !== undefined ? text   : (bodyEl   ? bodyEl.value   : '');
+    const footerVal = footer !== undefined ? footer : (footerEl ? footerEl.value : '');
+    const parts = [headerVal, bodyVal, footerVal].filter(Boolean);
     prev.textContent = parts.join('\n\n') || '(empty)';
   }
 
@@ -397,7 +416,7 @@ window.TemplateManager = (() => {
   }
 
   function insertVar(placeholder) {
-    const ta = $('tpl-edit-body-text');
+    const { bodyEl: ta } = _getMessengerEls(_activeChannel);
     if (ta && (document.activeElement === ta || ta.matches(':focus'))) {
       const s = ta.selectionStart, e = ta.selectionEnd;
       ta.value = ta.value.slice(0, s) + placeholder + ta.value.slice(e);
@@ -437,7 +456,7 @@ window.TemplateManager = (() => {
     const channel = _getVal('tpl-edit-channel');
     if (!name) { _toast('Name is required', 'error'); return; }
 
-    let bodyHtml = '', bodyText = '', subject = '', footer = '';
+    let bodyHtml = '', bodyText = '', subject = '', header = '', footer = '';
 
     if (channel === 'email') {
       subject  = _getVal('tpl-edit-subject');
@@ -448,10 +467,11 @@ window.TemplateManager = (() => {
       bodyHtml = _getEmailBody();  // GrapeJS shared editor
       bodyText = _stripHtml(bodyHtml);
     } else {
-      bodyText = _getVal('tpl-edit-body-text');
-      footer   = _getVal('tpl-edit-footer');
+      const mEls = _getMessengerEls(channel);
+      header   = mEls.headerEl ? mEls.headerEl.value : '';
+      bodyText = mEls.bodyEl   ? mEls.bodyEl.value   : '';
+      footer   = mEls.footerEl ? mEls.footerEl.value : '';
     }
-    const header = (channel !== 'email' && channel !== 'document') ? _getVal('tpl-edit-header') : '';
     const isDefaultCb = $('tpl-edit-is-default');
     const isDefault = isDefaultCb ? isDefaultCb.checked : false;
 
