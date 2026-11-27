@@ -69,7 +69,7 @@ snooze_reminder = "Postpones a reminder by N minutes from now."
 
 [config_panel]
 api_routes_file = "web/routes.py"
-category = "SISTEMA"
+category = "RESOURCES"
 config_api_get = "/hecos/api/plugins/reminder/config"
 config_api_post = "/hecos/api/plugins/reminder/config"
 tab_icon = "fa-clock"

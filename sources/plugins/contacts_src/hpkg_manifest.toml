@@ -172,7 +172,7 @@ tab_label = "Contacts"
 tab_icon = "fas fa-address-book"
 template_file = "web_ui/templates/config_contacts.html"
 api_routes_file = "web_ui/routes.py"
-category = "CONNETTIVITÀ"
+category = "CONNECTIVITY"
 
 [capabilities]
 llm_tools = [

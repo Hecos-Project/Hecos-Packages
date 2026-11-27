@@ -57,7 +57,7 @@ unbind_event_destination = "Removes a destination from a system event."
 
 [config_panel]
 api_routes_file = "web/routes.py"
-category = "SISTEMA"
+category = "SYSTEM"
 config_api_get = "/hecos/api/plugins/notifications/config"
 config_api_post = "/hecos/api/plugins/notifications/config"
 js_file = "web/assets/js/notifications.js"

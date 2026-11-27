@@ -62,7 +62,7 @@ stop_reading = "Stop the current TTS reading session."
 
 [config_panel]
 api_routes_file = "web/routes.py"
-category = "MULTIMEDIA"
+category = "RESOURCES"
 config_api_get = "/hecos/api/plugins/document_reader/config"
 config_api_post = "/hecos/api/plugins/document_reader/config"
 css_file = "web/static/css/document_reader.css"

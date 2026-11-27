@@ -39,7 +39,7 @@ notes = "Full package development studio. Build, inspect, sign, and publish .hpk
 
 [config_panel]
 api_routes_file = "builder_studio/routes.py"
-category = "SISTEMA"
+category = "AUTOMATION"
 js_files = [
     "builder_studio/static/js/builder_core.js",
     "builder_studio/static/js/builder_ui.js",

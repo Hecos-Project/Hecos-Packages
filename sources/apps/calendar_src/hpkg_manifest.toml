@@ -39,7 +39,7 @@ tab_id = "calendar"
 tab_label = "Calendar"
 tab_icon = "<i class=\"far fa-calendar-alt\"></i>"
 template_file = "web_ui/templates/config_calendar.html"
-category = "SISTEMA"
+category = "RESOURCES"
 
 [commands]
 add_event = "Adds an event to the calendar."

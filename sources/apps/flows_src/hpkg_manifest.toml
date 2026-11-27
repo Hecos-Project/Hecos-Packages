@@ -43,7 +43,7 @@ notes = "Full visual automation system. Includes NLP-to-YAML compiler, scheduler
 
 [config_panel]
 api_routes_file = "api.py"
-category = "SISTEMA"
+category = "AUTOMATION"
 tab_icon = "fas fa-project-diagram"
 tab_id = "flows"
 tab_label = "Flows"

@@ -24,7 +24,7 @@ tab_label = "Sys Net"
 tab_icon = "fas fa-globe-europe"
 template_file = "web_ui/templates/panel.html"
 js_file = "web_ui/assets/js/panel.js"
-category = "SISTEMA"
+category = "CONNECTIVITY"
 
 [capabilities]
 llm_tools = []

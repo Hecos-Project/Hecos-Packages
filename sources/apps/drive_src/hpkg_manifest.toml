@@ -22,6 +22,7 @@ pip_requirements = []
 python_requires = ">=3.11"
 
 [config_panel]
+category = "RESOURCES"
 tab_id = "drive"
 tab_label = "Hecos Drive"
 tab_icon = "fas fa-hdd"

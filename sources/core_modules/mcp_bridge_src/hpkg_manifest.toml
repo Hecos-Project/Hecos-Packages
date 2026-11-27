@@ -25,7 +25,7 @@ signature = ""
 [config_panel]
 tab_id = "mcp"
 tab_label = "MCP Bridge"
-category = "CONNETTIVITÀ"
+category = "CONNECTIVITY"
 tab_icon = "<i class=\"fas fa-plug\"></i>"
 template_file = "web/templates/config_mcp.html"
 js_file = "web/static/js/mcp_panel.js"

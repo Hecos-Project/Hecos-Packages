@@ -25,7 +25,7 @@ tab_label = "Backup"
 tab_icon = "fas fa-save"
 template_file = "web_ui/templates/config_global_backup.html"
 js_file = "web_ui/assets/js/panel.js"
-category = "SISTEMA"
+category = "SYSTEM"
 api_routes_file = "core_logic/routes.py"
 
 [capabilities]

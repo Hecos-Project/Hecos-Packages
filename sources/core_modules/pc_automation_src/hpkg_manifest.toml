@@ -76,7 +76,7 @@ notes = "UIAutomation features (get_browser_tabs, focus_browser_tab, read_window
 
 [config_panel]
 api_routes_file = "web/routes.py"
-category = "SISTEMA"
+category = "AUTOMATION"
 config_api_get = "/hecos/api/plugins/pc_automation/config"
 config_api_post = "/hecos/api/plugins/pc_automation/config"
 js_file = "web/static/js/automation_panel.js"
